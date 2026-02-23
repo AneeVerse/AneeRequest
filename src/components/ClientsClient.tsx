@@ -426,10 +426,7 @@ export default function ClientsClient({ initialClients }: ClientsClientProps) {
                                                                     <span className="text-iron font-black group-hover/cell:text-[#279da6] transition-colors">{client.name}</span>
                                                                 </div>
                                                             </td>
-                                                            <td
-                                                                className="px-6 py-4.5 text-santas-gray border-r border-shark/60 cursor-pointer hover:bg-white/5 transition-colors group/cell-email font-black"
-                                                                onClick={() => router.push(`/clients/${client.id}`)}
-                                                            >
+                                                            <td className="px-6 py-4.5 text-santas-gray border-r border-shark/60 font-black">
                                                                 {client.email}
                                                             </td>
                                                             <td className="px-6 py-4.5 text-santas-gray border-r border-shark/60 font-black uppercase tracking-tight">{client.organization}</td>
@@ -530,6 +527,17 @@ export default function ClientsClient({ initialClients }: ClientsClientProps) {
 
                                     <div className="p-6 space-y-5">
                                         <div className="space-y-1.5">
+                                            <label className="text-[11px] font-bold text-santas-gray uppercase tracking-wider">Company/Organization Name</label>
+                                            <input
+                                                type="text"
+                                                placeholder="Organization name"
+                                                value={formData.organization}
+                                                onChange={(e) => setFormData({ ...formData, organization: e.target.value })}
+                                                className="w-full bg-[#09090B] border border-shark/60 rounded-xl py-2.5 px-4 text-sm text-iron focus:outline-none focus:border-[#279da6]/60"
+                                            />
+                                        </div>
+
+                                        <div className="space-y-1.5">
                                             <label className="text-[11px] font-bold text-santas-gray uppercase tracking-wider">Client Name *</label>
                                             <input
                                                 required
@@ -537,17 +545,6 @@ export default function ClientsClient({ initialClients }: ClientsClientProps) {
                                                 placeholder="Enter client name"
                                                 value={formData.name}
                                                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                                                className="w-full bg-[#09090B] border border-shark/60 rounded-xl py-2.5 px-4 text-sm text-iron focus:outline-none focus:border-[#279da6]/60"
-                                            />
-                                        </div>
-
-                                        <div className="space-y-1.5">
-                                            <label className="text-[11px] font-bold text-santas-gray uppercase tracking-wider">Company/Organization Name</label>
-                                            <input
-                                                type="text"
-                                                placeholder="Organization name"
-                                                value={formData.organization}
-                                                onChange={(e) => setFormData({ ...formData, organization: e.target.value })}
                                                 className="w-full bg-[#09090B] border border-shark/60 rounded-xl py-2.5 px-4 text-sm text-iron focus:outline-none focus:border-[#279da6]/60"
                                             />
                                         </div>
@@ -642,22 +639,22 @@ export default function ClientsClient({ initialClients }: ClientsClientProps) {
 
                                     <div className="p-6 space-y-5">
                                         <div className="space-y-1.5">
+                                            <label className="text-[11px] font-bold text-santas-gray uppercase tracking-wider">Company/Organization Name</label>
+                                            <input
+                                                type="text"
+                                                value={formData.organization}
+                                                onChange={(e) => setFormData({ ...formData, organization: e.target.value })}
+                                                className="w-full bg-[#09090B] border border-shark/60 rounded-xl py-2.5 px-4 text-sm text-iron focus:outline-none focus:border-[#279da6]/60"
+                                            />
+                                        </div>
+
+                                        <div className="space-y-1.5">
                                             <label className="text-[11px] font-bold text-santas-gray uppercase tracking-wider">Client Name *</label>
                                             <input
                                                 required
                                                 type="text"
                                                 value={formData.name}
                                                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                                                className="w-full bg-[#09090B] border border-shark/60 rounded-xl py-2.5 px-4 text-sm text-iron focus:outline-none focus:border-[#279da6]/60"
-                                            />
-                                        </div>
-
-                                        <div className="space-y-1.5">
-                                            <label className="text-[11px] font-bold text-santas-gray uppercase tracking-wider">Company/Organization Name</label>
-                                            <input
-                                                type="text"
-                                                value={formData.organization}
-                                                onChange={(e) => setFormData({ ...formData, organization: e.target.value })}
                                                 className="w-full bg-[#09090B] border border-shark/60 rounded-xl py-2.5 px-4 text-sm text-iron focus:outline-none focus:border-[#279da6]/60"
                                             />
                                         </div>
