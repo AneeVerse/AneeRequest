@@ -39,6 +39,7 @@ interface TeamMember {
     avatar_url?: string | null;
     request_count?: number;
     task_count?: number;
+    tasks?: string[];
 }
 
 interface TeamClientProps {
@@ -366,17 +367,17 @@ export default function TeamClient({ initialMembers, initialCounts }: TeamClient
                                         <table className="w-full text-left border-collapse table-auto text-xs">
                                             <thead>
                                                 <tr className="border-b border-shark text-storm-gray text-xs uppercase font-black tracking-widest bg-shark/20">
-                                                    <th className="px-5 py-5 w-12 border-r border-shark/60"><input type="checkbox" /></th>
+                                                    <th className="px-5 py-5 w-12 border-r border-shark/60 text-center">#</th>
                                                     {[
                                                         { label: 'Name', key: 'name' },
                                                         { label: 'Email', key: 'email' },
                                                         { label: 'Role', key: 'role', width: 'w-24' },
-                                                        { label: 'Requests', key: 'request_count' },
+                                                        { label: 'Requests', key: 'request_count', width: 'w-32' },
                                                         { label: 'Task', key: 'task_count', width: 'w-24' },
                                                         { label: 'Last Login', key: 'last_login', width: 'w-32' },
                                                         { label: 'Created At', key: 'created_at', width: 'w-32' }
                                                     ].map((header, idx) => (
-                                                        <th key={header.label} className={`px-6 py-5 border-r border-shark/60 group/header relative header-filter-container ${header.width || ''}`}>
+                                                        <th key={header.label} className={`px-4 py-5 border-r border-shark/60 group/header relative header-filter-container ${header.width || ''}`}>
                                                             <div className="flex items-center justify-between gap-2">
                                                                 <span className="cursor-default">{header.label}</span>
                                                                 <button
@@ -445,14 +446,16 @@ export default function TeamClient({ initialMembers, initialCounts }: TeamClient
                                             <tbody className="divide-y divide-shark/60">
                                                 {sortedMembers.length === 0 ? (
                                                     <tr>
-                                                        <td colSpan={8} className="px-6 py-12 text-center text-storm-gray font-medium uppercase tracking-widest opacity-40">
+                                                        <td colSpan={9} className="px-6 py-12 text-center text-storm-gray font-medium uppercase tracking-widest opacity-40">
                                                             No team members found matching your criteria.
                                                         </td>
                                                     </tr>
                                                 ) : (
-                                                    sortedMembers.map((member: TeamMember) => (
+                                                    sortedMembers.map((member: TeamMember, index: number) => (
                                                         <tr key={member.id} className="hover:bg-shark/10 transition-colors group text-sm">
-                                                            <td className="px-5 py-4.5 border-r border-shark/60"><input type="checkbox" /></td>
+                                                            <td className="px-5 py-4.5 border-r border-shark/60 text-center font-black text-storm-gray">
+                                                                {(index + 1).toString().padStart(2, '0')}
+                                                            </td>
                                                             <td className="px-6 py-4.5 border-r border-shark/60">
                                                                 <div
                                                                     className="flex items-center gap-3 cursor-pointer group/name"
@@ -490,18 +493,35 @@ export default function TeamClient({ initialMembers, initialCounts }: TeamClient
                                                                     {member.role}
                                                                 </span>
                                                             </td>
-                                                            <td className="px-6 py-4.5 border-r border-shark/60">
+                                                            <td className="px-4 py-4.5 border-r border-shark/60">
                                                                 <div className="flex items-center gap-2">
                                                                     <FileText size={14} className="text-[#279da6]" />
                                                                     <span className="text-iron font-black">{member.request_count || 0}</span>
                                                                     <span className="text-storm-gray text-[11px] font-bold">reqs</span>
                                                                 </div>
                                                             </td>
-                                                            <td className="px-6 py-4.5 border-r border-shark/60">
-                                                                <div className="flex items-center gap-2">
-                                                                    <Box size={14} className="text-amber-400" />
-                                                                    <span className="text-iron font-black">{member.task_count || 0}</span>
-                                                                    <span className="text-storm-gray text-[11px] font-bold">tasks</span>
+                                                            <td className="px-4 py-4.5 border-r border-shark/60">
+                                                                <div className="flex flex-col gap-1">
+                                                                    <div className="flex items-center gap-2">
+                                                                        <Box size={14} className="text-amber-400" />
+                                                                        <span className="text-iron font-black">{member.task_count || 0}</span>
+                                                                        <span className="text-storm-gray text-[11px] font-bold">tasks</span>
+                                                                    </div>
+                                                                    {member.tasks && member.tasks.length > 0 && (
+                                                                        <div className="flex flex-col gap-0.5 mt-1">
+                                                                            {member.tasks.slice(0, 2).map((title, i) => (
+                                                                                <div key={i} className="text-[10px] font-black text-[#279da6] truncate max-w-[140px] flex items-center gap-1" title={title}>
+                                                                                    <div className="w-1 h-1 rounded-full bg-[#279da6]/60" />
+                                                                                    {title}
+                                                                                </div>
+                                                                            ))}
+                                                                            {member.tasks.length > 2 && (
+                                                                                <span className="text-[9px] text-storm-gray font-black pl-2">
+                                                                                    + {member.tasks.length - 2} more tasks
+                                                                                </span>
+                                                                            )}
+                                                                        </div>
+                                                                    )}
                                                                 </div>
                                                             </td>
                                                             <td className="px-6 py-4.5 border-r border-shark/60 text-storm-gray font-black whitespace-nowrap text-xs">

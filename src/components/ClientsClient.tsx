@@ -338,7 +338,7 @@ export default function ClientsClient({ initialClients }: ClientsClientProps) {
                                         <table className="w-full text-left border-collapse table-auto text-xs">
                                             <thead>
                                                 <tr className="border-b border-shark text-storm-gray text-xs uppercase font-black tracking-widest bg-shark/20">
-                                                    <th className="px-5 py-5 w-12 border-r border-shark/60"><input type="checkbox" /></th>
+                                                    <th className="px-5 py-5 w-12 border-r border-shark/60 text-center">#</th>
                                                     {[
                                                         { label: 'User', key: 'name', filter: 'name' },
                                                         { label: 'Email', key: 'email', filter: 'email' },
@@ -410,9 +410,11 @@ export default function ClientsClient({ initialClients }: ClientsClientProps) {
                                                         </td>
                                                     </tr>
                                                 ) : (
-                                                    sortedClients.map((client: ClientItem) => (
+                                                    sortedClients.map((client: ClientItem, index: number) => (
                                                         <tr key={client.id} className="hover:bg-shark/10 transition-colors group text-sm">
-                                                            <td className="px-5 py-4.5 border-r border-shark/60"><input type="checkbox" /></td>
+                                                            <td className="px-5 py-4.5 border-r border-shark/60 text-center font-black text-storm-gray">
+                                                                {(index + 1).toString().padStart(2, '0')}
+                                                            </td>
                                                             <td
                                                                 className="px-6 py-4.5 border-r border-shark/60 cursor-pointer hover:bg-white/5 transition-colors group/cell"
                                                                 onClick={() => router.push(`/clients/${client.id}`)}

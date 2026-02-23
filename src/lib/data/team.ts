@@ -102,23 +102,52 @@ export async function getTeamMemberTaskCounts(): Promise<Record<string, number>>
 }
 
 /**
+ * Fetches tasks for each team member
+ */
+export async function getTeamMemberTasks(): Promise<Record<string, string[]>> {
+    const supabase = createServiceClient();
+
+    const { data, error } = await supabase
+        .from('tasks')
+        .select('assigned_to, title');
+
+    if (error) {
+        console.error('Error fetching task titles:', error);
+        return {};
+    }
+
+    const taskMap: Record<string, string[]> = {};
+    data?.forEach((task: any) => {
+        if (task.assigned_to) {
+            if (!taskMap[task.assigned_to]) {
+                taskMap[task.assigned_to] = [];
+            }
+            taskMap[task.assigned_to].push(task.title);
+        }
+    });
+
+    return taskMap;
+}
+
+/**
  * Fetches all team data (members + counts) in parallel
  */
 export async function getAllTeamData() {
-    const [members, counts, taskCounts] = await Promise.all([
+    const [members, counts, taskCounts, tasks] = await Promise.all([
         getTeamMembers(),
         getTeamMemberRequestCounts(),
         getTeamMemberTaskCounts(),
+        getTeamMemberTasks(),
     ]);
 
-    return { members, counts, taskCounts };
+    return { members, counts, taskCounts, tasks };
 }
 
 /**
  * Returns a single list of team members enriched with roles and request counts
  */
 export async function getEnrichedTeamMembers() {
-    const { members, counts, taskCounts } = await getAllTeamData();
+    const { members, counts, taskCounts, tasks } = await getAllTeamData();
 
     return members.map(m => {
         // Normalize role for UI - Prioritize position over generic role
@@ -131,7 +160,8 @@ export async function getEnrichedTeamMembers() {
             ...m,
             role: uiRole,
             request_count: (m.profile_id && counts[m.profile_id]) || 0,
-            task_count: (m.profile_id && taskCounts[m.profile_id]) || 0
+            task_count: (m.profile_id && taskCounts[m.profile_id]) || 0,
+            tasks: (m.profile_id && tasks[m.profile_id]) || []
         };
     });
 }

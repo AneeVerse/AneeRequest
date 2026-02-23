@@ -384,7 +384,7 @@ export default function RequestsClient({
                                         <table className="w-full text-left border-collapse table-auto">
                                             <thead>
                                                 <tr className="border-b border-shark text-storm-gray text-xs uppercase font-black tracking-widest bg-shark/20">
-                                                    <th className="px-5 py-5 w-12 border-r border-shark/60"><input type="checkbox" /></th>
+                                                    <th className="px-5 py-5 w-12 border-r border-shark/60 text-center">#</th>
                                                     <th className="px-6 py-5 border-r border-shark/60 w-[30%] min-w-[250px] group/header relative">
                                                         <div className="flex items-center justify-between">
                                                             <span className="cursor-default">Title</span>
@@ -725,14 +725,16 @@ export default function RequestsClient({
                                             <tbody className="divide-y divide-shark/60">
                                                 {sortedRequests.length === 0 ? (
                                                     <tr>
-                                                        <td colSpan={10} className="px-6 py-20 text-center text-storm-gray uppercase text-[10px] font-black tracking-widest opacity-40">
+                                                        <td colSpan={9} className="px-6 py-20 text-center text-storm-gray uppercase text-[10px] font-black tracking-widest opacity-40">
                                                             No matches found for your criteria.
                                                         </td>
                                                     </tr>
                                                 ) : (
-                                                    sortedRequests.map((item: RequestItem) => (
+                                                    sortedRequests.map((item: RequestItem, index: number) => (
                                                         <tr key={item.id} className="hover:bg-shark/10 transition-colors group text-sm">
-                                                            <td className="px-5 py-4.5 border-r border-shark/60"><input type="checkbox" /></td>
+                                                            <td className="px-5 py-4.5 border-r border-shark/60 text-center font-black text-storm-gray">
+                                                                {(index + 1).toString().padStart(2, '0')}
+                                                            </td>
                                                             <td
                                                                 className="px-6 py-4.5 font-black text-iron border-r border-shark/60 group-hover:text-[#279da6] cursor-pointer transition-colors"
                                                                 onClick={() => router.push(`/requests/${item.id}`)}

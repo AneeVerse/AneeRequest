@@ -69,6 +69,7 @@ export default function TasksTable({ tasks, onTaskUpdated, onTaskClick, onOpenCh
             <table className="w-full text-left border-collapse">
                 <thead>
                     <tr className="border-b border-shark">
+                        <th className="px-5 py-4 w-12 border-r border-shark/60 text-center text-[11px] font-black text-storm-gray uppercase tracking-widest">#</th>
                         <th className="px-6 py-4 text-[11px] font-black text-storm-gray uppercase tracking-widest">Task</th>
                         <th className="px-6 py-4 text-[11px] font-black text-storm-gray uppercase tracking-widest">Assignee</th>
                         <th className="px-6 py-4 text-[11px] font-black text-storm-gray uppercase tracking-widest">Status</th>
@@ -77,9 +78,11 @@ export default function TasksTable({ tasks, onTaskUpdated, onTaskClick, onOpenCh
                     </tr>
                 </thead>
                 <tbody className="divide-y divide-shark/40">
-                    {tasks.map((task) => (
+                    {tasks.map((task, index) => (
                         <tr key={task.id} className="group hover:bg-shark/20 transition-all cursor-pointer">
-                            <td className="px-6 py-5" onClick={() => onTaskClick?.(task)}>
+                            <td className="px-5 py-5 border-r border-shark/60 text-center text-[12px] font-black text-storm-gray" onClick={() => onTaskClick?.(task)}>
+                                {(index + 1).toString().padStart(2, '0')}
+                            </td>                            <td className="px-6 py-5" onClick={() => onTaskClick?.(task)}>
                                 <div className="flex flex-col gap-1">
                                     <span className="text-sm font-bold text-iron group-hover:text-[#279da6] transition-colors line-clamp-1">{task.title}</span>
                                     <div className="flex items-center gap-2 text-[10px] text-storm-gray font-medium">

@@ -79,7 +79,7 @@ const RequestsTable: React.FC<RequestsTableProps> = ({
                 <table className="w-full text-left border-collapse table-auto">
                     <thead>
                         <tr className="border-b border-shark text-storm-gray text-[10px] uppercase font-bold tracking-wider bg-shark/20">
-                            <th className="px-5 py-4 w-10 border-r border-shark/60"><input type="checkbox" /></th>
+                            <th className="px-5 py-4 w-12 border-r border-shark/60 text-center">#</th>
                             <th className="px-6 py-4 border-r border-shark/60">
                                 <div className="flex items-center gap-1 cursor-pointer hover:text-white transition-colors">
                                     Title <ChevronDown size={12} />
@@ -103,9 +103,11 @@ const RequestsTable: React.FC<RequestsTableProps> = ({
                         </tr>
                     </thead>
                     <tbody className="divide-y divide-shark/60">
-                        {requests.map((request) => (
+                        {requests.map((request, index) => (
                             <tr key={request.id} className="hover:bg-shark/10 transition-colors group cursor-pointer">
-                                <td className="px-5 py-3.5 border-r border-shark/60"><input type="checkbox" /></td>
+                                <td className="px-5 py-3.5 border-r border-shark/60 text-center text-[11px] font-black text-storm-gray">
+                                    {(index + 1).toString().padStart(2, '0')}
+                                </td>
                                 <td className="px-6 py-3.5 text-[12px] font-medium text-storm-gray border-r border-shark/60">
                                     <span className="group-hover:text-iron transition-colors">{request.title}</span>
                                 </td>
