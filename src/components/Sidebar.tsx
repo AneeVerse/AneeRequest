@@ -109,18 +109,34 @@ export default function Sidebar({ isCollapsed }: SidebarProps) {
     const isAdmin = isSuperAdmin || isAdminRole || (isTeamMember && displayProfile?.team_role === 'admin');
 
     const menuItems = [
-        { name: 'Overview', icon: Home, path: '/' },
-        { name: 'Requests', icon: MessageSquare, path: '/requests' },
-        { name: 'Tasks', icon: CheckSquare, path: '/tasks', isInternalOnly: true },
-        { name: 'Files', icon: FolderOpen, path: '/files', superAdminOnly: true },
-        { name: 'Clients', icon: Users, path: '/clients', section: 'Users', adminOnly: true },
-        { name: 'Team', icon: UserPlus, path: '/team', section: 'Users', adminOnly: true },
+        { name: 'Overview', icon: Home, path: '/', id: 'overview' },
+        { name: 'Requests', icon: MessageSquare, path: '/requests', id: 'requests' },
+        { name: 'Tasks', icon: CheckSquare, path: '/tasks', isInternalOnly: true, id: 'tasks' },
+        { name: 'Files', icon: FolderOpen, path: '/files', id: 'files' },
+        { name: 'Users', icon: Users, path: '/clients', id: 'users' },
     ];
 
     const filteredItems = menuItems.filter(item => {
-        if (item.superAdminOnly && !isSuperAdmin) return false;
-        if (item.adminOnly && !isAdmin) return false;
+        // 1. Super Admin/Admin (Global) bypasses all restrictions
+        if (isSuperAdmin || isAdminRole) return true;
+
+        // 2. Platform restrictions
+        if (item.id === 'files' && !isSuperAdmin) {
+            // Check if team member has specific 'files' permission
+            if (!displayProfile?.accessible_sections?.includes('files')) return false;
+        }
+
+        // 3. User section (Clients/Team)
+        if (item.id === 'users') {
+            // Internal check
+            if (!isInternal) return false;
+            // Check if team member has either 'clients' or 'team' permission
+            const sections = displayProfile?.accessible_sections || [];
+            if (!sections.includes('clients') && !sections.includes('team')) return false;
+        }
+
         if (item.isInternalOnly && !isInternal) return false;
+
         return true;
     });
     const isUsersActive = pathname.includes('/clients') || pathname.includes('/team');
@@ -148,17 +164,9 @@ export default function Sidebar({ isCollapsed }: SidebarProps) {
 
                 {/* Navigation */}
                 <div className="flex-1 px-4 py-2 flex flex-col gap-1 overflow-y-auto no-scrollbar">
-                    {filteredItems.filter(item => !item.section).map((item) => (
-                        <SidebarItem key={item.name} item={item} isCollapsed={isCollapsed} isActive={pathname === item.path} />
+                    {filteredItems.map((item) => (
+                        <SidebarItem key={item.name} item={item} isCollapsed={isCollapsed} isActive={pathname.startsWith(item.path) && (item.path !== '/' || pathname === '/')} />
                     ))}
-
-                    {isAdmin && (
-                        <SidebarItem
-                            item={{ name: 'Users', icon: Users, path: '/clients' }}
-                            isCollapsed={isCollapsed}
-                            isActive={pathname.includes('/clients') || pathname.includes('/team')}
-                        />
-                    )}
                 </div>
 
                 {/* User Footer - show even during impersonation to verify settings */}

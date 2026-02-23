@@ -15,7 +15,7 @@ export async function GET() {
 export async function POST(request: Request) {
     try {
         const body = await request.json();
-        const { name, email, department, position, password, role } = body;
+        const { name, email, department, position, password, role, accessible_sections } = body;
 
         if (!email || !name) {
             return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
@@ -53,6 +53,7 @@ export async function POST(request: Request) {
                     email,
                     department,
                     position,
+                    accessible_sections: accessible_sections || [],
                     status: 'Active'
                 }
             ])
@@ -80,7 +81,7 @@ export async function POST(request: Request) {
 export async function PATCH(request: Request) {
     try {
         const body = await request.json();
-        const { id, name, email, department, position, password, oldEmail } = body;
+        const { id, name, email, department, position, password, oldEmail, accessible_sections } = body;
 
         if (!id) {
             return NextResponse.json({ error: "Missing team member ID" }, { status: 400 });
@@ -94,6 +95,7 @@ export async function PATCH(request: Request) {
         if (email) updateData.email = email;
         if (department !== undefined) updateData.department = department;
         if (position !== undefined) updateData.position = position;
+        if (accessible_sections !== undefined) updateData.accessible_sections = accessible_sections;
 
         let memberData;
         if (Object.keys(updateData).length > 0) {

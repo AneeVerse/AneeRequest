@@ -12,6 +12,7 @@ export interface TeamMember {
     avatar_url?: string | null;
     department?: string | null;
     role?: string | null;
+    accessible_sections?: string[];
 }
 
 /**

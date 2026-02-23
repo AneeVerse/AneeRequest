@@ -64,7 +64,17 @@ const Header: React.FC<HeaderProps> = ({
                 {/* Section Label or Page Switcher */}
                 {pageSwitcher ? (
                     <div className="flex items-center bg-black/40 border border-shark p-1 rounded-xl overflow-hidden shrink-0">
-                        {pageSwitcher.map((page) => (
+                        {pageSwitcher.filter(page => {
+                            // 1. Super Admin/Admin (Global) bypasses all restrictions
+                            if (viewAsProfile?.role === 'super_admin' || viewAsProfile?.role === 'admin') return true;
+
+                            // 2. Specific section checks
+                            const sections = viewAsProfile?.accessible_sections || [];
+                            if (page.path === '/clients' && !sections.includes('clients')) return false;
+                            if (page.path === '/team' && !sections.includes('team')) return false;
+
+                            return true;
+                        }).map((page) => (
                             <Link
                                 key={page.path}
                                 href={page.path}

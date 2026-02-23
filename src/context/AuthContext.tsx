@@ -11,6 +11,7 @@ interface Profile {
     full_name: string;
     avatar_url?: string;
     team_role?: string; // stores 'admin', 'editor', or 'viewer'
+    accessible_sections?: string[];
 }
 
 interface AuthContextType {
@@ -105,7 +106,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         // we correctly identify them as staff.
         const { data: teamData } = await supabase
             .from('team_members')
-            .select('position')
+            .select('position, accessible_sections')
             .eq('profile_id', userId)
             .maybeSingle();
 
@@ -127,6 +128,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 // For admins/super_admins who are also in team table, just ensure team_role is set
                 profile.team_role = teamData.position || 'viewer';
             }
+            // Always set accessible_sections if teamData exists
+            profile.accessible_sections = teamData.accessible_sections || [];
         } else if (profile && profile.role === 'team_member') {
             // Default sub-role if missing from team_members table but marked as team_member
             profile.team_role = profile.team_role || 'viewer';
