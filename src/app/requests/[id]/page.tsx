@@ -42,6 +42,9 @@ import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/context/AuthContext';
 import ImpersonationWarning from '@/components/ImpersonationWarning';
 import FilePreviewModal from '@/components/FilePreviewModal';
+import TasksTable from '@/components/TasksTable';
+import { TaskItem } from '@/lib/data/tasks';
+import { formatDate } from '@/lib/dateUtils';
 
 interface Message {
     id: string;
@@ -88,6 +91,8 @@ interface Profile {
     id: string;
     full_name: string;
     avatar_url: string | null;
+    email?: string;
+    role?: string;
 }
 
 interface TeamMember {
@@ -183,7 +188,7 @@ export default function RequestDetailsPage() {
         params.set('tab', tab);
         router.replace(`/requests/${id}?${params.toString()}`);
     };
-    const [linkedTasks, setLinkedTasks] = useState<LinkedTask[]>([]);
+    const [linkedTasks, setLinkedTasks] = useState<TaskItem[]>([]);
     const [isLoadingTasks, setIsLoadingTasks] = useState(false);
     const [requestFiles, setRequestFiles] = useState<DriveFile[]>([]);
     const [isLoadingFiles, setIsLoadingFiles] = useState(false);
@@ -229,7 +234,8 @@ export default function RequestDetailsPage() {
                         fetchRequestDetails(),
                         fetchMessages(),
                         fetchAssignments(),
-                        fetchTeamMembers()
+                        fetchTeamMembers(),
+                        fetchProfiles()
                     ]);
                 } finally {
                     setIsLoading(false);
@@ -343,6 +349,16 @@ export default function RequestDetailsPage() {
             }
         } catch (error) {
             console.error('Error fetching team members:', error);
+        }
+    };
+
+    const fetchProfiles = async () => {
+        try {
+            const { data, error } = await supabase.from('profiles').select('id, full_name, avatar_url, email, role');
+            if (error) throw error;
+            setProfiles(data || []);
+        } catch (error) {
+            console.error('Error fetching profiles:', error);
         }
     };
 
@@ -1040,7 +1056,7 @@ export default function RequestDetailsPage() {
                                 {/* Tasks Tab */}
                                 {activeTab === 'tasks' && (
                                     <div className="flex-1 overflow-y-auto custom-scrollbar p-6">
-                                        <div className="max-w-4xl mx-auto">
+                                        <div className="w-full">
                                             {/* Create Task Quick-Add */}
                                             {isAdmin && (
                                                 <div className="flex flex-col md:flex-row items-stretch md:items-center gap-3 mb-8 bg-shark/10 p-4 rounded-2xl border border-shark/40">
@@ -1094,43 +1110,13 @@ export default function RequestDetailsPage() {
                                                 <div className="flex items-center justify-center py-20">
                                                     <Loader2 size={24} className="animate-spin text-[#279da6]" />
                                                 </div>
-                                            ) : linkedTasks.length === 0 ? (
-                                                <div className="flex flex-col items-center justify-center py-20 text-center">
-                                                    <div className="w-16 h-16 rounded-2xl bg-shark/30 border border-shark flex items-center justify-center mb-4">
-                                                        <CheckSquare size={28} className="text-storm-gray/50" />
-                                                    </div>
-                                                    <p className="text-sm font-bold text-iron mb-1">No tasks linked</p>
-                                                    <p className="text-[11px] text-storm-gray">Create a task above to link it to this request</p>
-                                                </div>
                                             ) : (
-                                                <div className="space-y-2">
-                                                    {linkedTasks.map(task => (
-                                                        <div
-                                                            key={task.id}
-                                                            onClick={() => router.push(`/tasks/${task.id}`)}
-                                                            className="flex items-center gap-4 p-4 rounded-xl bg-shark/15 border border-shark/40 hover:border-[#279da6]/30 hover:bg-shark/25 cursor-pointer transition-all group"
-                                                        >
-                                                            <div className={`w-2 h-2 rounded-full shrink-0 ${priorityColor(task.priority)}`} />
-                                                            <div className="flex-1 min-w-0">
-                                                                <p className="text-sm font-bold text-iron truncate group-hover:text-white transition-colors">{task.title}</p>
-                                                                {task.due_date && (
-                                                                    <p className="text-[10px] text-storm-gray mt-0.5">
-                                                                        Due {new Date(task.due_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
-                                                                    </p>
-                                                                )}
-                                                            </div>
-                                                            <span className={`px-2.5 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest shrink-0 ${statusColor(task.status)}`}>
-                                                                {task.status}
-                                                            </span>
-                                                            {task.assignee && (
-                                                                <div className="w-7 h-7 rounded-full bg-[#279da6] text-white flex items-center justify-center text-[9px] font-black shrink-0 border border-white/10">
-                                                                    {task.assignee.full_name?.split(' ').map(n => n[0]).join('')}
-                                                                </div>
-                                                            )}
-                                                            <ExternalLink size={14} className="text-storm-gray/40 group-hover:text-[#279da6] transition-colors shrink-0" />
-                                                        </div>
-                                                    ))}
-                                                </div>
+                                                <TasksTable
+                                                    tasks={linkedTasks}
+                                                    profiles={profiles}
+                                                    teamMembers={teamMembers}
+                                                    showRequestColumn={false}
+                                                />
                                             )}
                                         </div>
                                     </div>
@@ -1223,188 +1209,190 @@ export default function RequestDetailsPage() {
                             </div>
 
                             {/* Right Sidebar - Summary */}
-                            <div className="w-[340px] border-l border-shark bg-[#121214] flex flex-col p-6 overflow-y-auto custom-scrollbar">
-                                <h3 className="text-lg font-bold text-white mb-8">Summary</h3>
+                            {activeTab !== 'tasks' && (
+                                <div className="w-[340px] border-l border-shark bg-[#121214] flex flex-col p-6 overflow-y-auto custom-scrollbar">
+                                    <h3 className="text-lg font-bold text-white mb-8">Summary</h3>
 
-                                <div className="space-y-8">
-                                    {/* Base Info */}
-                                    <div>
-                                        <h4 className="text-sm font-bold text-white mb-1 uppercase tracking-tight">{request.title}</h4>
-                                        <div className="text-[12px] text-storm-gray">
-                                            <span className="font-bold">Created:</span> {new Date(request.created_at).toLocaleString('en-US', {
-                                                month: 'long',
-                                                day: 'numeric',
-                                                year: 'numeric',
-                                                hour: 'numeric',
-                                                minute: '2-digit'
-                                            })}
-                                        </div>
-                                    </div>
-
-                                    <div className="space-y-4 pt-4">
-                                        <div className="flex items-center justify-between gap-4">
-                                            <span className="text-[12px] font-bold text-storm-gray">Client:</span>
-                                            <div className="flex items-center gap-2.5 bg-shark/20 py-1.5 px-3 rounded-xl border border-white/5 hover:bg-shark/30 cursor-pointer transition-all">
-                                                <div className="w-7 h-7 rounded-full bg-shark flex items-center justify-center text-[10px] text-[#279da6] font-black shrink-0 border border-white/5 shadow-inner">
-                                                    {request.client?.full_name?.split(' ').map(n => n[0]).join('')}
-                                                </div>
-                                                <div className="min-w-0 pr-1">
-                                                    <p className="text-[11px] font-bold text-iron leading-tight truncate">{request.client?.full_name}</p>
-                                                    {request.client?.organization && (
-                                                        <p className="text-[9px] text-storm-gray font-bold truncate opacity-80">{request.client.organization}</p>
-                                                    )}
-                                                </div>
+                                    <div className="space-y-8">
+                                        {/* Base Info */}
+                                        <div>
+                                            <h4 className="text-sm font-bold text-white mb-1 uppercase tracking-tight">{request.title}</h4>
+                                            <div className="text-[12px] text-storm-gray">
+                                                <span className="font-bold">Created:</span> {new Date(request.created_at).toLocaleString('en-US', {
+                                                    month: 'long',
+                                                    day: 'numeric',
+                                                    year: 'numeric',
+                                                    hour: 'numeric',
+                                                    minute: '2-digit'
+                                                })}
                                             </div>
                                         </div>
 
-                                        <div className="flex items-center gap-2">
-                                            <span className="text-[12px] font-bold text-storm-gray w-20">Status</span>
-                                            <select
-                                                value={request.status}
-                                                onChange={(e) => handleUpdateField('status', e.target.value)}
-                                                className="flex-1 bg-shark/30 text-iron border border-shark/60 px-3 py-1.5 rounded-lg text-xs font-bold hover:bg-shark/50 focus:outline-none transition-all appearance-none cursor-pointer"
-                                            >
-                                                <option value="Todo">Todo</option>
-                                                <option value="In Progress">In Progress</option>
-                                                <option value="Review">Review</option>
-                                                <option value="Done">Done</option>
-                                            </select>
-                                        </div>
-
-                                        <div className="flex items-center gap-2">
-                                            <span className="text-[12px] font-bold text-storm-gray w-20">Priority</span>
-                                            <div className="flex-1 relative">
-                                                <select
-                                                    value={request.priority}
-                                                    onChange={(e) => handleUpdateField('priority', e.target.value)}
-                                                    className={`w-full bg-shark/20 border border-shark/40 pl-5 pr-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest focus:outline-none cursor-pointer hover:bg-shark/30 transition-all appearance-none ${request.priority === 'Critical' ? 'text-rose-500' :
-                                                        request.priority === 'High' ? 'text-amber-500' :
-                                                            request.priority === 'Medium' ? 'text-blue-400' :
-                                                                'text-storm-gray'
-                                                        }`}
-                                                >
-                                                    <option value="Low">Low</option>
-                                                    <option value="Medium">Medium</option>
-                                                    <option value="High">High</option>
-                                                    <option value="Critical">Critical</option>
-                                                </select>
-                                                <div className={`absolute left-2.5 top-1/2 -translate-y-1/2 w-1 h-1 rounded-full ${request.priority === 'Critical' ? 'bg-rose-500' :
-                                                    request.priority === 'High' ? 'bg-amber-500' :
-                                                        request.priority === 'Medium' ? 'bg-blue-400' :
-                                                            'bg-storm-gray'
-                                                    }`} />
-                                            </div>
-                                        </div>
-
-                                        <div className="flex items-center gap-2">
-                                            <span className="text-[12px] font-bold text-storm-gray w-20">Assigned To</span>
-                                            <div className="flex-1 flex items-center gap-2">
-                                                <select
-                                                    value={request.assigned_to || ''}
-                                                    onChange={(e) => handleUpdateField('assigned_to', e.target.value)}
-                                                    className="flex-1 bg-transparent text-[11px] font-bold text-iron focus:outline-none cursor-pointer hover:text-white transition-all appearance-none"
-                                                >
-                                                    <option value="">Unassigned</option>
-                                                    {teamMembers.filter((tm: any) => tm.profile_id).map((tm: any) => (
-                                                        <option key={tm.id} value={tm.profile_id}>{tm.name}</option>
-                                                    ))}
-                                                </select>
-                                                <div className="w-6 h-6 rounded-full bg-shark/40 border border-shark flex items-center justify-center text-storm-gray overflow-hidden">
-                                                    {request.assignee ? (
-                                                        <div className="w-full h-full bg-[#279da6] text-white flex items-center justify-center text-[10px] font-black">
-                                                            {request.assignee.full_name?.split(' ').map(n => n[0]).join('')}
-                                                        </div>
-                                                    ) : (
-                                                        <Plus size={14} />
-                                                    )}
-                                                </div>
-                                            </div>
-                                        </div>
-
-                                        <div className="flex items-center gap-2">
-                                            <span className="text-[12px] font-bold text-storm-gray w-20">Due Date</span>
-                                            <div className="flex-1 flex items-center justify-end gap-2 text-[11px] font-black text-iron">
-                                                <input
-                                                    ref={dateInputRef}
-                                                    type="date"
-                                                    value={request.due_date ? new Date(request.due_date).toISOString().split('T')[0] : ''}
-                                                    onChange={(e) => handleUpdateField('due_date', e.target.value)}
-                                                    className="bg-transparent text-iron border-none focus:outline-none text-right cursor-pointer hover:text-white transition-all uppercase"
-                                                />
-                                                <Calendar
-                                                    size={14}
-                                                    className="text-storm-gray cursor-pointer hover:text-white transition-all"
-                                                    onClick={() => dateInputRef.current?.showPicker()}
-                                                />
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    {/* Team Assignments */}
-                                    <div className="pt-6 border-t border-shark">
-                                        <div className="flex items-center justify-between mb-4">
-                                            <h4 className="text-[11px] font-black uppercase tracking-widest text-storm-gray">Team Members</h4>
-                                            <button
-                                                onClick={() => setIsAssignmentModalOpen(true)}
-                                                className="p-1 hover:bg-shark rounded-md text-storm-gray hover:text-[#279da6] transition-colors"
-                                            >
-                                                <Plus size={14} />
-                                            </button>
-                                        </div>
-                                        {assignments.length === 0 ? (
-                                            <p className="text-[11px] text-storm-gray/50 italic">No team members assigned.</p>
-                                        ) : (
-                                            <div className="space-y-2">
-                                                {assignments.map(a => (
-                                                    <div key={a.id} className="flex items-center gap-2 p-2 rounded-lg bg-shark/20 border border-shark/40 group hover:border-shark transition-all">
-                                                        <div className="w-7 h-7 rounded-full bg-shark flex items-center justify-center text-[9px] font-black text-[#279da6] shrink-0 overflow-hidden">
-                                                            {a.team_member.avatar_url ? (
-                                                                <img src={a.team_member.avatar_url} alt={a.team_member.name} className="w-full h-full object-cover" />
-                                                            ) : (
-                                                                a.team_member.name.split(' ').map(n => n[0]).join('')
-                                                            )}
-                                                        </div>
-                                                        <div className="flex-1 min-w-0">
-                                                            <p className="text-[11px] font-bold text-iron truncate">{a.team_member.name}</p>
-                                                            <select
-                                                                value={a.role}
-                                                                onChange={(e) => handleUpdateAssignmentRole(a.id, e.target.value)}
-                                                                className="bg-transparent text-[9px] font-black uppercase tracking-widest text-[#279da6] cursor-pointer focus:outline-none appearance-none"
-                                                            >
-                                                                <option value="viewer">Viewer</option>
-                                                                <option value="editor">Editor</option>
-                                                                <option value="admin">Admin</option>
-                                                            </select>
-                                                        </div>
-                                                        <button
-                                                            onClick={() => handleRemoveAssignment(a.id)}
-                                                            className="p-1 opacity-0 group-hover:opacity-100 hover:bg-rose-500/10 rounded text-rose-400 transition-all"
-                                                        >
-                                                            <X size={12} />
-                                                        </button>
+                                        <div className="space-y-4 pt-4">
+                                            <div className="flex items-center justify-between gap-4">
+                                                <span className="text-[12px] font-bold text-storm-gray">Client:</span>
+                                                <div className="flex items-center gap-2.5 bg-shark/20 py-1.5 px-3 rounded-xl border border-white/5 hover:bg-shark/30 cursor-pointer transition-all">
+                                                    <div className="w-7 h-7 rounded-full bg-shark flex items-center justify-center text-[10px] text-[#279da6] font-black shrink-0 border border-white/5 shadow-inner">
+                                                        {request.client?.full_name?.split(' ').map(n => n[0]).join('')}
                                                     </div>
-                                                ))}
+                                                    <div className="min-w-0 pr-1">
+                                                        <p className="text-[11px] font-bold text-iron leading-tight truncate">{request.client?.full_name}</p>
+                                                        {request.client?.organization && (
+                                                            <p className="text-[9px] text-storm-gray font-bold truncate opacity-80">{request.client.organization}</p>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            <div className="flex items-center gap-2">
+                                                <span className="text-[12px] font-bold text-storm-gray w-20">Status</span>
+                                                <select
+                                                    value={request.status}
+                                                    onChange={(e) => handleUpdateField('status', e.target.value)}
+                                                    className="flex-1 bg-shark/30 text-iron border border-shark/60 px-3 py-1.5 rounded-lg text-xs font-bold hover:bg-shark/50 focus:outline-none transition-all appearance-none cursor-pointer"
+                                                >
+                                                    <option value="Todo">Todo</option>
+                                                    <option value="In Progress">In Progress</option>
+                                                    <option value="Review">Review</option>
+                                                    <option value="Done">Done</option>
+                                                </select>
+                                            </div>
+
+                                            <div className="flex items-center gap-2">
+                                                <span className="text-[12px] font-bold text-storm-gray w-20">Priority</span>
+                                                <div className="flex-1 relative">
+                                                    <select
+                                                        value={request.priority}
+                                                        onChange={(e) => handleUpdateField('priority', e.target.value)}
+                                                        className={`w-full bg-shark/20 border border-shark/40 pl-5 pr-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest focus:outline-none cursor-pointer hover:bg-shark/30 transition-all appearance-none ${request.priority === 'Critical' ? 'text-rose-500' :
+                                                            request.priority === 'High' ? 'text-amber-500' :
+                                                                request.priority === 'Medium' ? 'text-blue-400' :
+                                                                    'text-storm-gray'
+                                                            }`}
+                                                    >
+                                                        <option value="Low">Low</option>
+                                                        <option value="Medium">Medium</option>
+                                                        <option value="High">High</option>
+                                                        <option value="Critical">Critical</option>
+                                                    </select>
+                                                    <div className={`absolute left-2.5 top-1/2 -translate-y-1/2 w-1 h-1 rounded-full ${request.priority === 'Critical' ? 'bg-rose-500' :
+                                                        request.priority === 'High' ? 'bg-amber-500' :
+                                                            request.priority === 'Medium' ? 'bg-blue-400' :
+                                                                'bg-storm-gray'
+                                                        }`} />
+                                                </div>
+                                            </div>
+
+                                            <div className="flex items-center gap-2">
+                                                <span className="text-[12px] font-bold text-storm-gray w-20">Assigned To</span>
+                                                <div className="flex-1 flex items-center gap-2">
+                                                    <select
+                                                        value={request.assigned_to || ''}
+                                                        onChange={(e) => handleUpdateField('assigned_to', e.target.value)}
+                                                        className="flex-1 bg-transparent text-[11px] font-bold text-iron focus:outline-none cursor-pointer hover:text-white transition-all appearance-none"
+                                                    >
+                                                        <option value="">Unassigned</option>
+                                                        {teamMembers.filter((tm: any) => tm.profile_id).map((tm: any) => (
+                                                            <option key={tm.id} value={tm.profile_id}>{tm.name}</option>
+                                                        ))}
+                                                    </select>
+                                                    <div className="w-6 h-6 rounded-full bg-shark/40 border border-shark flex items-center justify-center text-storm-gray overflow-hidden">
+                                                        {request.assignee ? (
+                                                            <div className="w-full h-full bg-[#279da6] text-white flex items-center justify-center text-[10px] font-black">
+                                                                {request.assignee.full_name?.split(' ').map(n => n[0]).join('')}
+                                                            </div>
+                                                        ) : (
+                                                            <Plus size={14} />
+                                                        )}
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            <div className="flex items-center gap-2">
+                                                <span className="text-[12px] font-bold text-storm-gray w-20">Due Date</span>
+                                                <div className="flex-1 flex items-center justify-end gap-2 text-[11px] font-black text-iron">
+                                                    <input
+                                                        ref={dateInputRef}
+                                                        type="date"
+                                                        value={request.due_date ? new Date(request.due_date).toISOString().split('T')[0] : ''}
+                                                        onChange={(e) => handleUpdateField('due_date', e.target.value)}
+                                                        className="bg-transparent text-iron border-none focus:outline-none text-right cursor-pointer hover:text-white transition-all uppercase"
+                                                    />
+                                                    <Calendar
+                                                        size={14}
+                                                        className="text-storm-gray cursor-pointer hover:text-white transition-all"
+                                                        onClick={() => dateInputRef.current?.showPicker()}
+                                                    />
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        {/* Team Assignments */}
+                                        <div className="pt-6 border-t border-shark">
+                                            <div className="flex items-center justify-between mb-4">
+                                                <h4 className="text-[11px] font-black uppercase tracking-widest text-storm-gray">Team Members</h4>
+                                                <button
+                                                    onClick={() => setIsAssignmentModalOpen(true)}
+                                                    className="p-1 hover:bg-shark rounded-md text-storm-gray hover:text-[#279da6] transition-colors"
+                                                >
+                                                    <Plus size={14} />
+                                                </button>
+                                            </div>
+                                            {assignments.length === 0 ? (
+                                                <p className="text-[11px] text-storm-gray/50 italic">No team members assigned.</p>
+                                            ) : (
+                                                <div className="space-y-2">
+                                                    {assignments.map(a => (
+                                                        <div key={a.id} className="flex items-center gap-2 p-2 rounded-lg bg-shark/20 border border-shark/40 group hover:border-shark transition-all">
+                                                            <div className="w-7 h-7 rounded-full bg-shark flex items-center justify-center text-[9px] font-black text-[#279da6] shrink-0 overflow-hidden">
+                                                                {a.team_member.avatar_url ? (
+                                                                    <img src={a.team_member.avatar_url} alt={a.team_member.name} className="w-full h-full object-cover" />
+                                                                ) : (
+                                                                    a.team_member.name.split(' ').map(n => n[0]).join('')
+                                                                )}
+                                                            </div>
+                                                            <div className="flex-1 min-w-0">
+                                                                <p className="text-[11px] font-bold text-iron truncate">{a.team_member.name}</p>
+                                                                <select
+                                                                    value={a.role}
+                                                                    onChange={(e) => handleUpdateAssignmentRole(a.id, e.target.value)}
+                                                                    className="bg-transparent text-[9px] font-black uppercase tracking-widest text-[#279da6] cursor-pointer focus:outline-none appearance-none"
+                                                                >
+                                                                    <option value="viewer">Viewer</option>
+                                                                    <option value="editor">Editor</option>
+                                                                    <option value="admin">Admin</option>
+                                                                </select>
+                                                            </div>
+                                                            <button
+                                                                onClick={() => handleRemoveAssignment(a.id)}
+                                                                className="p-1 opacity-0 group-hover:opacity-100 hover:bg-rose-500/10 rounded text-rose-400 transition-all"
+                                                            >
+                                                                <X size={12} />
+                                                            </button>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            )}
+                                        </div>
+
+                                        {isSuperAdmin && (
+                                            <div className="pt-6 border-t border-shark mt-auto">
+                                                <button
+                                                    onClick={() => setIsDeleteModalOpen(true)}
+                                                    className="w-full flex items-center justify-center gap-3 py-3 rounded-xl bg-rose-500/5 hover:bg-rose-500/10 text-rose-500 border border-rose-500/10 transition-all font-black text-[10px] uppercase tracking-widest group"
+                                                >
+                                                    <Trash2 size={14} className="group-hover:scale-110 transition-transform" />
+                                                    Delete Request
+                                                </button>
                                             </div>
                                         )}
                                     </div>
-
-                                    {isSuperAdmin && (
-                                        <div className="pt-6 border-t border-shark mt-auto">
-                                            <button
-                                                onClick={() => setIsDeleteModalOpen(true)}
-                                                className="w-full flex items-center justify-center gap-3 py-3 rounded-xl bg-rose-500/5 hover:bg-rose-500/10 text-rose-500 border border-rose-500/10 transition-all font-black text-[10px] uppercase tracking-widest group"
-                                            >
-                                                <Trash2 size={14} className="group-hover:scale-110 transition-transform" />
-                                                Delete Request
-                                            </button>
-                                        </div>
-                                    )}
                                 </div>
-                            </div>
+                            )}
                         </div>
                     </div>
                 </div>
-            </div >
+            </div>
 
             {/* Assignment Modal */}
             {

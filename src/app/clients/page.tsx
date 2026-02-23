@@ -1,4 +1,4 @@
-import { getClients } from '@/lib/data/clients';
+import { getEnrichedClients } from '@/lib/data/clients';
 import ClientsClient from '@/components/ClientsClient';
 import { formatDate, formatDateTime } from '@/lib/dateUtils';
 
@@ -7,7 +7,7 @@ export const dynamic = 'force-dynamic';
 
 export default async function ClientsPage() {
     // Fetch clients data on the server
-    const clientsData = await getClients();
+    const clientsData = await getEnrichedClients();
 
     // Map to UI format
     const mappedClients = clientsData.map((c: any) => {
@@ -22,9 +22,12 @@ export default async function ClientsPage() {
             lastLoginDate: lastLoginInfo.date,
             lastLoginTime: lastLoginInfo.time,
             lastLoginRaw: c.last_login,
-            status: c.status || 'Ongoing'
+            status: c.status || 'Ongoing',
+            request_count: c.request_count || 0,
+            task_count: c.task_count || 0
         };
     });
 
     return <ClientsClient initialClients={mappedClients} />;
 }
+

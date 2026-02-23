@@ -46,9 +46,14 @@ import {
 import { useAuth } from '@/context/AuthContext';
 import ImpersonationWarning from '@/components/ImpersonationWarning';
 import FilePreviewModal from '@/components/FilePreviewModal';
+import RequestsTable from '@/components/RequestsTable';
+import TasksTable from '@/components/TasksTable';
+import { RequestItem } from '@/lib/data/requests';
+import { TaskItem } from '@/lib/data/tasks';
 
 interface Client {
     id: string;
+    profile_id?: string | null;
     name: string;
     email: string;
     organization: string;
@@ -62,7 +67,7 @@ export default function ClientDetailPage() {
     const displayProfile = viewAsProfile || profile;
     const isSuperAdmin = displayProfile?.role === 'super_admin';
 
-    const tabs = ['Overview', 'Requests', 'Invoices', 'Folder', 'Settings'].filter(tab => {
+    const tabs = ['Overview', 'Requests', 'Tasks', 'Folder', 'Settings'].filter(tab => {
         if (tab === 'Folder' && !isSuperAdmin) return false;
         return true;
     });
@@ -70,9 +75,14 @@ export default function ClientDetailPage() {
     const { id } = useParams();
     const router = useRouter();
     const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
-    const [activeTab, setActiveTab] = useState('Overview');
+    const [activeTab, setActiveTab] = useState('Requests');
     const [client, setClient] = useState<Client | null>(null);
+    const [requests, setRequests] = useState<RequestItem[]>([]);
+    const [tasks, setTasks] = useState<TaskItem[]>([]);
+    const [profiles, setProfiles] = useState<any[]>([]);
+    const [teamMembers, setTeamMembers] = useState<any[]>([]);
     const [isLoading, setIsLoading] = useState(true);
+    const [isLoadingData, setIsLoadingData] = useState(false);
 
     useEffect(() => {
         const fetchClient = async () => {
@@ -94,6 +104,47 @@ export default function ClientDetailPage() {
 
         if (id) fetchClient();
     }, [id]);
+
+    useEffect(() => {
+        const fetchData = async () => {
+            if (!client?.profile_id) return;
+            setIsLoadingData(true);
+            try {
+                const [reqRes, profRes, teamRes, tasksRes] = await Promise.all([
+                    fetch(`/api/requests`).then(res => res.json()),
+                    fetch(`/api/profiles`).then(res => res.json()),
+                    fetch(`/api/team`).then(res => res.json()),
+                    fetch(`/api/tasks`).then(res => res.json())
+                ]);
+
+                // Filter requests by client_id
+                const clientRequests = Array.isArray(reqRes)
+                    ? reqRes.filter((r: RequestItem) => r.client?.id === client.profile_id)
+                    : [];
+                setRequests(clientRequests);
+
+                // Filter tasks by client_id (tasks linked to client's requests)
+                const requestIds = new Set(clientRequests.map(r => r.id));
+                const clientTasks = Array.isArray(tasksRes)
+                    ? tasksRes.filter((t: TaskItem) =>
+                        t.request_links?.some(link => requestIds.has(link.request?.id))
+                    )
+                    : [];
+                setTasks(clientTasks);
+
+                setProfiles(Array.isArray(profRes) ? profRes : []);
+                setTeamMembers(Array.isArray(teamRes) ? teamRes : []);
+            } catch (error) {
+                console.error('Error fetching client data:', error);
+            } finally {
+                setIsLoadingData(false);
+            }
+        };
+
+        if (client) {
+            fetchData();
+        }
+    }, [client]);
 
     // Settings Form State
     const [settingsEmail, setSettingsEmail] = useState('');
@@ -531,12 +582,8 @@ export default function ClientDetailPage() {
                                 <SettingsIcon size={16} className="group-hover:text-white" />
                                 <span>edit</span>
                             </button>
-                            <div className="h-4 w-[1px] bg-shark" />
-                            <button className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-[#279da6] text-white text-xs font-bold hover:bg-[#279da6]/90 transition-all shadow-lg hover:shadow-[#279da6]/20">
-                                <CreditCard size={14} />
-                                <span>Invoice</span>
-                            </button>
                         </div>
+
                     </div>
 
                     <main className="flex-1 overflow-y-auto custom-scrollbar relative">
@@ -601,7 +648,7 @@ export default function ClientDetailPage() {
                                             <div className="bg-[#18181B] border border-shark rounded-3xl p-6 flex items-center justify-between group hover:border-[#279da6]/20 transition-all">
                                                 <div>
                                                     <p className="text-[9px] font-black text-storm-gray uppercase tracking-[0.3em] mb-1">Total Requests</p>
-                                                    <p className="text-2xl font-black text-white">24</p>
+                                                    <p className="text-2xl font-black text-white">{requests.length}</p>
                                                 </div>
                                                 <div className="w-12 h-12 rounded-2xl bg-[#279da6]/10 flex items-center justify-center text-[#279da6] group-hover:scale-110 transition-transform">
                                                     <MessageSquare size={20} />
@@ -609,8 +656,8 @@ export default function ClientDetailPage() {
                                             </div>
                                             <div className="bg-[#18181B] border border-shark rounded-3xl p-6 flex items-center justify-between group hover:border-[#279da6]/20 transition-all">
                                                 <div>
-                                                    <p className="text-[9px] font-black text-storm-gray uppercase tracking-[0.3em] mb-1">Active Invoices</p>
-                                                    <p className="text-2xl font-black text-white">$12,450</p>
+                                                    <p className="text-[9px] font-black text-storm-gray uppercase tracking-[0.3em] mb-1">Total Tasks</p>
+                                                    <p className="text-2xl font-black text-white">{tasks.length}</p>
                                                 </div>
                                                 <div className="w-12 h-12 rounded-2xl bg-[#279da6]/10 flex items-center justify-center text-[#279da6] group-hover:scale-110 transition-transform">
                                                     <CreditCard size={20} />
@@ -630,10 +677,8 @@ export default function ClientDetailPage() {
                                                 <button className="w-full flex items-center justify-between px-4 py-3 rounded-xl bg-shark/20 border border-shark hover:bg-shark text-iron font-bold text-xs transition-all group">
                                                     Message Client <MessageSquare size={14} className="text-storm-gray group-hover:text-[#279da6] transition-colors" />
                                                 </button>
-                                                <button className="w-full flex items-center justify-between px-4 py-3 rounded-xl bg-[#279da6]/5 border border-[#279da6]/20 hover:bg-[#279da6]/10 text-[#279da6] font-bold text-xs transition-all">
-                                                    Create Invoice <CreditCard size={14} />
-                                                </button>
                                             </div>
+
                                         </div>
                                     </div>
                                 </div>
@@ -641,31 +686,35 @@ export default function ClientDetailPage() {
 
                             {activeTab === 'Requests' && (
                                 <div className="space-y-6 animate-fade-in">
-                                    <div className="flex items-center justify-between mb-4">
-                                        <h2 className="text-lg font-black text-iron tracking-tight uppercase">Recent Requests</h2>
-                                        <div className="flex items-center gap-2">
-                                            <div className="relative w-64">
-                                                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-storm-gray" size={14} />
-                                                <input
-                                                    type="text"
-                                                    placeholder="Search requests..."
-                                                    className="w-full bg-[#09090B] border border-shark/50 rounded-lg py-1.5 pl-9 pr-4 text-[11px] text-iron focus:outline-none focus:border-[#279da6]/40 transition-all font-bold"
-                                                />
-                                            </div>
-                                            <button className="p-2 bg-shark/20 border border-shark rounded-lg text-storm-gray hover:text-white transition-all"><Filter size={14} /></button>
-                                            <button className="p-2 bg-shark/20 border border-shark rounded-lg text-storm-gray hover:text-white transition-all"><Download size={14} /></button>
+                                    {isLoadingData ? (
+                                        <div className="flex items-center justify-center py-20">
+                                            <Loader2 size={24} className="animate-spin text-[#279da6]" />
                                         </div>
-                                    </div>
-
-                                    <div className="bg-[#18181B] border border-shark rounded-3xl overflow-hidden min-h-[400px] flex items-center justify-center text-storm-gray uppercase text-[10px] font-black tracking-widest opacity-40">
-                                        No requests found for this client.
-                                    </div>
+                                    ) : (
+                                        <RequestsTable
+                                            requests={requests}
+                                            profiles={profiles}
+                                            teamMembers={teamMembers}
+                                            showClientColumn={false}
+                                        />
+                                    )}
                                 </div>
                             )}
 
-                            {activeTab === 'Invoices' && (
-                                <div className="bg-[#18181B] border border-shark rounded-3xl overflow-hidden min-h-[400px] flex items-center justify-center text-storm-gray uppercase text-[10px] font-black tracking-widest opacity-40 animate-fade-in">
-                                    Invoices module coming soon.
+                            {activeTab === 'Tasks' && (
+                                <div className="space-y-6 animate-fade-in">
+                                    {isLoadingData ? (
+                                        <div className="flex items-center justify-center py-20">
+                                            <Loader2 size={24} className="animate-spin text-[#279da6]" />
+                                        </div>
+                                    ) : (
+                                        <TasksTable
+                                            tasks={tasks}
+                                            profiles={profiles}
+                                            teamMembers={teamMembers}
+                                            showRequestColumn={true}
+                                        />
+                                    )}
                                 </div>
                             )}
 
