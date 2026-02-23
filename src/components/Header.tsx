@@ -55,7 +55,7 @@ const Header: React.FC<HeaderProps> = ({
     return (
         <header className="h-16 flex items-center justify-between px-6 z-30 shrink-0">
             {/* Left side: Sidebar Toggle + Category Label + Tabs */}
-            <div className="flex items-center gap-4 flex-1 overflow-hidden">
+            <div className="flex items-center gap-4 flex-1 min-w-0">
                 <button
                     onClick={onToggleSidebar}
                     className="p-1 text-santas-gray hover:text-white transition-colors cursor-pointer"
@@ -98,7 +98,7 @@ const Header: React.FC<HeaderProps> = ({
 
                 {/* Dynamic Sub-Navigation */}
                 {tabs && tabs.length > 0 && (
-                    <div className="flex items-center bg-black/60 border border-shark/50 p-1 rounded-xl overflow-visible ml-2">
+                    <div className="flex items-center bg-black/60 border border-shark/50 p-1 pt-2 rounded-xl overflow-visible ml-2 shrink-0">
                         {tabs.map((tab) => {
                             const count = tabCounts?.[tab];
                             return (
@@ -112,7 +112,7 @@ const Header: React.FC<HeaderProps> = ({
                                 >
                                     {tab}
                                     {count !== undefined && count > 0 && (
-                                        <span className="absolute -top-1.5 -right-0.5 min-w-[17px] h-[17px] flex items-center justify-center rounded-full text-[9px] font-black px-1 border border-[#09090B] shadow-md bg-[#279da6] text-white">
+                                        <span className="absolute -top-1.5 right-1 min-w-[17px] h-[17px] flex items-center justify-center rounded-full text-[9px] font-black px-1 border border-[#09090B] shadow-md bg-[#279da6] text-white z-[20]">
                                             {count > 99 ? '99+' : count}
                                         </span>
                                     )}

@@ -65,16 +65,16 @@ export default function TasksTable({ tasks, onTaskUpdated, onTaskClick, onOpenCh
     }
 
     return (
-        <div className="overflow-x-auto">
+        <div className="overflow-x-auto custom-scrollbar">
             <table className="w-full text-left border-collapse">
                 <thead>
                     <tr className="border-b border-shark">
-                        <th className="px-5 py-4 w-12 border-r border-shark/60 text-center text-[11px] font-black text-storm-gray uppercase tracking-widest">#</th>
-                        <th className="px-6 py-4 text-[11px] font-black text-storm-gray uppercase tracking-widest">Task</th>
-                        <th className="px-6 py-4 text-[11px] font-black text-storm-gray uppercase tracking-widest">Assignee</th>
-                        <th className="px-6 py-4 text-[11px] font-black text-storm-gray uppercase tracking-widest">Status</th>
-                        <th className="px-6 py-4 text-[11px] font-black text-storm-gray uppercase tracking-widest">Priority</th>
-                        <th className="px-6 py-4 text-[11px] font-black text-storm-gray uppercase tracking-widest text-right">Actions</th>
+                        <th className="px-5 py-4 w-12 border-r border-shark/60 text-center text-[11px] font-black text-storm-gray uppercase tracking-widest min-w-[50px]">#</th>
+                        <th className="px-6 py-4 text-[11px] font-black text-storm-gray uppercase tracking-widest min-w-[200px]">Task</th>
+                        <th className="px-6 py-4 text-[11px] font-black text-storm-gray uppercase tracking-widest min-w-[150px]">Assignee</th>
+                        <th className="px-6 py-4 text-[11px] font-black text-storm-gray uppercase tracking-widest min-w-[120px]">Status</th>
+                        <th className="px-6 py-4 text-[11px] font-black text-storm-gray uppercase tracking-widest min-w-[120px]">Priority</th>
+                        <th className="px-6 py-4 text-[11px] font-black text-storm-gray uppercase tracking-widest text-right min-w-[100px]">Actions</th>
                     </tr>
                 </thead>
                 <tbody className="divide-y divide-shark/40">
@@ -97,7 +97,7 @@ export default function TasksTable({ tasks, onTaskUpdated, onTaskClick, onOpenCh
                             </td>
                             <td className="px-6 py-5">
                                 <div className="flex items-center gap-2.5">
-                                    <div className="w-7 h-7 rounded-full bg-shark border border-shark flex items-center justify-center text-[10px] font-black text-iron overflow-hidden">
+                                    <div className="w-7 h-7 rounded-full bg-shark border border-shark flex items-center justify-center text-[10px] font-black text-iron overflow-hidden shrink-0">
                                         {task.assignee ? (
                                             (task.assignee as any).team_members?.[0]?.name?.[0] || task.assignee.full_name?.[0] || <User size={12} className="text-storm-gray" />
                                         ) : (

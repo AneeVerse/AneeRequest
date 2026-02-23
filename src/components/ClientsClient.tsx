@@ -394,20 +394,20 @@ export default function ClientsClient({ initialClients }: ClientsClientProps) {
 
                                 {/* Clients Table */}
                                 <div className="border border-shark/60 rounded-xl bg-black/20">
-                                    <div className="overflow-visible">
+                                    <div className="overflow-x-auto custom-scrollbar">
                                         <table className="w-full text-left border-collapse table-auto text-xs">
                                             <thead>
                                                 <tr className="border-b border-shark text-storm-gray text-xs uppercase font-black tracking-widest bg-shark/20">
                                                     <th className="px-5 py-5 w-12 border-r border-shark/60 text-center">#</th>
                                                     {[
-                                                        { label: 'Organization', key: 'name', filter: 'name' },
-                                                        { label: 'Email', key: 'email', filter: 'email' },
-                                                        { label: 'User', key: 'organization', filter: 'organization' },
-                                                        { label: 'Created At', key: 'createdAt', filter: 'createdAt' },
-                                                        { label: 'Last Login', key: 'lastLoginDate', filter: 'lastLoginDate' },
-                                                        { label: 'Status', key: 'status', filter: 'status' }
+                                                        { label: 'Organization', key: 'name', filter: 'name', width: 'min-w-[200px]' },
+                                                        { label: 'Email', key: 'email', filter: 'email', width: 'min-w-[200px]' },
+                                                        { label: 'User', key: 'organization', filter: 'organization', width: 'min-w-[150px]' },
+                                                        { label: 'Created At', key: 'createdAt', filter: 'createdAt', width: 'min-w-[150px]' },
+                                                        { label: 'Last Login', key: 'lastLoginDate', filter: 'lastLoginDate', width: 'min-w-[150px]' },
+                                                        { label: 'Status', key: 'status', filter: 'status', width: 'min-w-[120px]' }
                                                     ].map((header, idx) => (
-                                                        <th key={header.label} className="px-6 py-5 border-r border-shark/60 group/header relative header-filter-container">
+                                                        <th key={header.label} className={`px-4 py-5 border-r border-shark/60 group/header relative header-filter-container ${header.width || ''}`}>
                                                             <div className="flex items-center justify-between gap-2">
                                                                 <span className="cursor-default">{header.label}</span>
                                                                 <button
@@ -481,7 +481,7 @@ export default function ClientsClient({ initialClients }: ClientsClientProps) {
                                                                 onClick={() => router.push(`/clients/${client.id}`)}
                                                             >
                                                                 <div className="flex items-center gap-3">
-                                                                    <div className="w-9 h-9 rounded-full bg-shark/80 border border-white/5 overflow-hidden flex items-center justify-center text-[11px] text-white font-black bg-gradient-to-br from-[#279da6]/20 to-transparent group-hover/cell:scale-110 transition-transform">
+                                                                    <div className="w-9 h-9 rounded-full bg-shark/80 border border-white/5 overflow-hidden flex items-center justify-center text-[11px] text-white font-black bg-gradient-to-br from-[#279da6]/20 to-transparent group-hover/cell:scale-110 transition-transform shrink-0">
                                                                         {client.avatar_url ? (
                                                                             <img src={client.avatar_url} alt={client.name} className="w-full h-full object-cover" />
                                                                         ) : (

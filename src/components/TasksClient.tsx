@@ -323,23 +323,23 @@ export default function TasksClient({ initialTasks, profiles, teamMembers, reque
 
                                 {/* Table */}
                                 <div className="border border-shark/60 rounded-xl overflow-hidden bg-black/20">
-                                    <div className="overflow-x-auto">
+                                    <div className="overflow-x-auto custom-scrollbar">
                                         <table className="w-full text-left border-collapse table-auto">
                                             <thead>
                                                 <tr className="border-b border-shark text-storm-gray text-xs uppercase font-black tracking-widest bg-shark/20">
                                                     <th className="px-5 py-5 w-12 border-r border-shark/60 text-center">#</th>
                                                     {[
-                                                        { label: 'Title', key: 'title', filter: 'title' },
-                                                        { label: 'Request', key: 'request', filter: 'request' },
-                                                        { label: 'Creator', key: 'creator', filter: 'creator' },
-                                                        { label: 'Status', key: 'status', filter: 'status' },
-                                                        { label: 'Assigned', key: 'assignee', filter: 'assigned_to' },
-                                                        { label: 'Priority', key: 'priority', filter: 'priority' },
-                                                        { label: 'Due Date', key: 'due_date', filter: 'due_date' },
-                                                        { label: 'Last Updated', key: 'updated_at', filter: 'updated_at' },
-                                                        { label: 'Created', key: 'created_at', filter: 'created_at' }
+                                                        { label: 'Title', key: 'title', filter: 'title', width: 'min-w-[200px]' },
+                                                        { label: 'Request', key: 'request', filter: 'request', width: 'min-w-[180px]' },
+                                                        { label: 'Creator', key: 'creator', filter: 'creator', width: 'min-w-[150px]' },
+                                                        { label: 'Status', key: 'status', filter: 'status', width: 'min-w-[120px]' },
+                                                        { label: 'Assigned', key: 'assignee', filter: 'assigned_to', width: 'min-w-[150px]' },
+                                                        { label: 'Priority', key: 'priority', filter: 'priority', width: 'min-w-[120px]' },
+                                                        { label: 'Due Date', key: 'due_date', filter: 'due_date', width: 'min-w-[150px]' },
+                                                        { label: 'Last Updated', key: 'updated_at', filter: 'updated_at', width: 'min-w-[150px]' },
+                                                        { label: 'Created', key: 'created_at', filter: 'created_at', width: 'min-w-[150px]' }
                                                     ].map((header, idx) => (
-                                                        <th key={header.label} className={`px-6 py-5 border-r border-shark/60 group/header relative header-filter-container ${idx === 8 ? 'border-r-0' : header.label === 'Request' ? 'min-w-[150px]' : ''}`}>
+                                                        <th key={header.label} className={`px-4 py-5 border-r border-shark/60 group/header relative header-filter-container ${header.width || ''} ${idx === 8 ? 'border-r-0' : ''}`}>
                                                             <div className="flex items-center justify-between gap-2">
                                                                 <span className="cursor-default">{header.label}</span>
                                                                 <button

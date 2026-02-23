@@ -380,7 +380,7 @@ export default function RequestsClient({
 
                                 {/* Table */}
                                 <div className="border border-shark/60 rounded-xl overflow-hidden bg-black/20">
-                                    <div className="overflow-x-auto">
+                                    <div className="overflow-x-auto custom-scrollbar">
                                         <table className="w-full text-left border-collapse table-auto">
                                             <thead>
                                                 <tr className="border-b border-shark text-storm-gray text-xs uppercase font-black tracking-widest bg-shark/20">
@@ -428,7 +428,7 @@ export default function RequestsClient({
                                                             </div>
                                                         )}
                                                     </th>
-                                                    <th className="px-6 py-5 border-r border-shark/60 w-[20%] group/header relative header-filter-container">
+                                                    <th className="px-6 py-5 border-r border-shark/60 w-[20%] min-w-[200px] group/header relative header-filter-container">
                                                         <div className="flex items-center justify-between">
                                                             <span className="cursor-default">Client</span>
                                                             <button
@@ -484,7 +484,7 @@ export default function RequestsClient({
                                                             </div>
                                                         )}
                                                     </th>
-                                                    <th className="px-4 py-5 border-r border-shark/60 w-32 text-center group/header relative header-filter-container">
+                                                    <th className="px-4 py-5 border-r border-shark/60 w-32 min-w-[120px] text-center group/header relative header-filter-container">
                                                         <div className="flex items-center justify-center gap-2">
                                                             <span className="cursor-default">Status</span>
                                                             <button
@@ -530,7 +530,7 @@ export default function RequestsClient({
                                                             </div>
                                                         )}
                                                     </th>
-                                                    <th className="px-4 py-5 border-r border-shark/60 w-36 group/header relative header-filter-container">
+                                                    <th className="px-4 py-5 border-r border-shark/60 w-36 min-w-[150px] group/header relative header-filter-container">
                                                         <div className="flex items-center justify-between">
                                                             <span className="cursor-default">Assigned</span>
                                                             <button
@@ -573,7 +573,7 @@ export default function RequestsClient({
                                                             </div>
                                                         )}
                                                     </th>
-                                                    <th className="px-4 py-5 border-r border-shark/60 w-28 group/header relative header-filter-container">
+                                                    <th className="px-4 py-5 border-r border-shark/60 w-28 min-w-[120px] group/header relative header-filter-container">
                                                         <div className="flex items-center justify-between">
                                                             <span className="cursor-default">Priority</span>
                                                             <button
@@ -619,7 +619,7 @@ export default function RequestsClient({
                                                             </div>
                                                         )}
                                                     </th>
-                                                    <th className="px-4 py-5 border-r border-shark/60 w-32 group/header relative header-filter-container">
+                                                    <th className="px-4 py-5 border-r border-shark/60 w-32 min-w-[130px] group/header relative header-filter-container">
                                                         <div className="flex items-center justify-between">
                                                             <span className="cursor-default">Due Date</span>
                                                             <button
@@ -660,7 +660,7 @@ export default function RequestsClient({
                                                             </div>
                                                         )}
                                                     </th>
-                                                    <th className="px-4 py-5 border-r border-shark/60 w-32 group/header relative header-filter-container">
+                                                    <th className="px-4 py-5 border-r border-shark/60 w-32 min-w-[150px] group/header relative header-filter-container">
                                                         <div className="flex items-center justify-between">
                                                             <span className="cursor-default">Last Updated</span>
                                                             <button
@@ -690,7 +690,7 @@ export default function RequestsClient({
                                                             </div>
                                                         )}
                                                     </th>
-                                                    <th className="px-6 py-5 w-32 group/header relative header-filter-container">
+                                                    <th className="px-6 py-5 w-32 min-w-[150px] group/header relative header-filter-container">
                                                         <div className="flex items-center justify-between">
                                                             <span className="cursor-default">Created</span>
                                                             <button

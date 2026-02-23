@@ -20,6 +20,7 @@ export interface Profile {
     full_name: string;
     email: string;
     role?: string;
+    accessible_sections?: string[];
 }
 
 export interface TeamMember {

@@ -381,19 +381,19 @@ export default function TeamClient({ initialMembers, initialCounts }: TeamClient
 
                                 {/* Team Members Table */}
                                 <div className="border border-shark/60 rounded-xl bg-black/20">
-                                    <div className="overflow-visible">
+                                    <div className="overflow-x-auto custom-scrollbar">
                                         <table className="w-full text-left border-collapse table-auto text-xs">
                                             <thead>
                                                 <tr className="border-b border-shark text-storm-gray text-xs uppercase font-black tracking-widest bg-shark/20">
                                                     <th className="px-5 py-5 w-12 border-r border-shark/60 text-center">#</th>
                                                     {[
-                                                        { label: 'Name', key: 'name' },
-                                                        { label: 'Email', key: 'email' },
-                                                        { label: 'Role', key: 'role', width: 'w-24' },
-                                                        { label: 'Requests', key: 'request_count', width: 'w-32' },
-                                                        { label: 'Task', key: 'task_count', width: 'w-24' },
-                                                        { label: 'Last Login', key: 'last_login', width: 'w-32' },
-                                                        { label: 'Created At', key: 'created_at', width: 'w-32' }
+                                                        { label: 'Name', key: 'name', width: 'min-w-[200px]' },
+                                                        { label: 'Email', key: 'email', width: 'min-w-[200px]' },
+                                                        { label: 'Role', key: 'role', width: 'w-24 min-w-[100px]' },
+                                                        { label: 'Requests', key: 'request_count', width: 'w-32 min-w-[120px]' },
+                                                        { label: 'Task', key: 'task_count', width: 'w-24 min-w-[100px]' },
+                                                        { label: 'Last Login', key: 'last_login', width: 'w-32 min-w-[150px]' },
+                                                        { label: 'Created At', key: 'created_at', width: 'w-32 min-w-[150px]' }
                                                     ].map((header, idx) => (
                                                         <th key={header.label} className={`px-4 py-5 border-r border-shark/60 group/header relative header-filter-container ${header.width || ''}`}>
                                                             <div className="flex items-center justify-between gap-2">
@@ -489,7 +489,7 @@ export default function TeamClient({ initialMembers, initialCounts }: TeamClient
                                                                         }
                                                                     }}
                                                                 >
-                                                                    <div className="w-9 h-9 rounded-full bg-shark flex items-center justify-center text-[11px] font-black text-white overflow-hidden border border-white/5 group-hover/name:ring-2 ring-[#279da6]/50 transition-all">
+                                                                    <div className="w-9 h-9 rounded-full bg-shark flex items-center justify-center text-[11px] font-black text-white overflow-hidden border border-white/5 group-hover/name:ring-2 ring-[#279da6]/50 transition-all shrink-0">
                                                                         {member.avatar_url ? (
                                                                             <img src={member.avatar_url} alt={member.name} className="w-full h-full object-cover" />
                                                                         ) : (
