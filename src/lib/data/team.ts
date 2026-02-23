@@ -77,22 +77,48 @@ export async function getTeamMemberRequestCounts(): Promise<Record<string, numbe
 }
 
 /**
+ * Fetches task counts for each team member
+ */
+export async function getTeamMemberTaskCounts(): Promise<Record<string, number>> {
+    const supabase = createServiceClient();
+
+    const { data, error } = await supabase
+        .from('tasks')
+        .select('assigned_to');
+
+    if (error) {
+        console.error('Error fetching task counts:', error);
+        return {};
+    }
+
+    const countMap: Record<string, number> = {};
+    data?.forEach((task: any) => {
+        if (task.assigned_to) {
+            countMap[task.assigned_to] = (countMap[task.assigned_to] || 0) + 1;
+        }
+    });
+
+    return countMap;
+}
+
+/**
  * Fetches all team data (members + counts) in parallel
  */
 export async function getAllTeamData() {
-    const [members, counts] = await Promise.all([
+    const [members, counts, taskCounts] = await Promise.all([
         getTeamMembers(),
         getTeamMemberRequestCounts(),
+        getTeamMemberTaskCounts(),
     ]);
 
-    return { members, counts };
+    return { members, counts, taskCounts };
 }
 
 /**
  * Returns a single list of team members enriched with roles and request counts
  */
 export async function getEnrichedTeamMembers() {
-    const { members, counts } = await getAllTeamData();
+    const { members, counts, taskCounts } = await getAllTeamData();
 
     return members.map(m => {
         // Normalize role for UI - Prioritize position over generic role
@@ -104,7 +130,8 @@ export async function getEnrichedTeamMembers() {
         return {
             ...m,
             role: uiRole,
-            request_count: (m.profile_id && counts[m.profile_id]) || 0
+            request_count: (m.profile_id && counts[m.profile_id]) || 0,
+            task_count: (m.profile_id && taskCounts[m.profile_id]) || 0
         };
     });
 }

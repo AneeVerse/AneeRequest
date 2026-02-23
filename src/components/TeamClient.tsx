@@ -15,12 +15,13 @@ import {
     Edit2,
     Trash2,
     AlertTriangle,
-    MoreHorizontal,
-    UserCog,
-    FileText,
     Check,
     SortAsc,
-    SortDesc
+    SortDesc,
+    Settings,
+    Box,
+    FileText,
+    UserCog
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
@@ -37,6 +38,7 @@ interface TeamMember {
     last_login: string | null;
     avatar_url?: string | null;
     request_count?: number;
+    task_count?: number;
 }
 
 interface TeamClientProps {
@@ -63,6 +65,7 @@ export default function TeamClient({ initialMembers, initialCounts }: TeamClient
         email: '',
         role: '',
         request_count: '',
+        task_count: '',
         last_login: '',
         created_at: ''
     });
@@ -267,11 +270,12 @@ export default function TeamClient({ initialMembers, initialCounts }: TeamClient
         const matchesEmail = !filters.email || member.email.toLowerCase().includes(filters.email.toLowerCase());
         const matchesRole = !filters.role || member.role.toLowerCase() === filters.role.toLowerCase();
         const matchesRequests = !filters.request_count || (member.request_count || 0) >= parseInt(filters.request_count);
+        const matchesTasks = !filters.task_count || (member.task_count || 0) >= parseInt(filters.task_count);
 
         const matchesLastLogin = !filters.last_login || (member.last_login && formatDate(member.last_login).includes(filters.last_login));
         const matchesCreatedAt = !filters.created_at || formatDate(member.created_at).includes(filters.created_at);
 
-        return matchesTab && matchesSearch && matchesName && matchesEmail && matchesRole && matchesRequests && matchesLastLogin && matchesCreatedAt;
+        return matchesTab && matchesSearch && matchesName && matchesEmail && matchesRole && matchesRequests && matchesTasks && matchesLastLogin && matchesCreatedAt;
     });
 
     const sortedMembers = [...filteredMembers].sort((a, b) => {
@@ -340,6 +344,7 @@ export default function TeamClient({ initialMembers, initialCounts }: TeamClient
                                                         email: '',
                                                         role: '',
                                                         request_count: '',
+                                                        task_count: '',
                                                         last_login: '',
                                                         created_at: ''
                                                     });
@@ -363,86 +368,78 @@ export default function TeamClient({ initialMembers, initialCounts }: TeamClient
                                                 <tr className="border-b border-shark text-storm-gray text-xs uppercase font-black tracking-widest bg-shark/20">
                                                     <th className="px-5 py-5 w-12 border-r border-shark/60"><input type="checkbox" /></th>
                                                     {[
-                                                        { label: 'Name', key: 'name', filter: 'name' },
-                                                        { label: 'Email', key: 'email', filter: 'email' },
-                                                        { label: 'Role', key: 'role', filter: 'role' },
-                                                        { label: 'Requests', key: 'request_count', filter: 'request_count' },
-                                                        { label: 'Last Login', key: 'last_login', filter: 'last_login' },
-                                                        { label: 'Created At', key: 'created_at', filter: 'created_at' }
+                                                        { label: 'Name', key: 'name' },
+                                                        { label: 'Email', key: 'email' },
+                                                        { label: 'Role', key: 'role', width: 'w-24' },
+                                                        { label: 'Requests', key: 'request_count' },
+                                                        { label: 'Task', key: 'task_count', width: 'w-24' },
+                                                        { label: 'Last Login', key: 'last_login', width: 'w-32' },
+                                                        { label: 'Created At', key: 'created_at', width: 'w-32' }
                                                     ].map((header, idx) => (
-                                                        <th key={header.label} className="px-6 py-5 border-r border-shark/60 group/header relative header-filter-container">
+                                                        <th key={header.label} className={`px-6 py-5 border-r border-shark/60 group/header relative header-filter-container ${header.width || ''}`}>
                                                             <div className="flex items-center justify-between gap-2">
                                                                 <span className="cursor-default">{header.label}</span>
                                                                 <button
-                                                                    onClick={() => setActiveFilterHeader(activeFilterHeader === header.filter ? null : header.filter)}
-                                                                    className={`p-1 rounded hover:bg-shark/40 transition-colors cursor-pointer ${(filters as any)[header.filter] || sortConfig.key === header.key ? 'text-[#279da6]' : 'text-storm-gray'}`}
+                                                                    onClick={() => setActiveFilterHeader(activeFilterHeader === header.key ? null : header.key)}
+                                                                    className={`p-1 rounded hover:bg-shark/40 transition-colors ${filters[header.key as keyof typeof filters] || sortConfig.key === header.key ? 'text-[#279da6]' : 'text-storm-gray'}`}
                                                                 >
                                                                     <Filter size={10} />
                                                                 </button>
                                                             </div>
-                                                            {activeFilterHeader === header.filter && (
+
+                                                            {activeFilterHeader === header.key && (
                                                                 <div className={`absolute top-full ${idx > 3 ? 'right-0' : 'left-0'} mt-1 w-48 bg-[#121214] border border-shark rounded-lg shadow-2xl p-2 z-[60] normal-case tracking-normal`}>
                                                                     <div className="mb-2 border-b border-shark/40 pb-2">
                                                                         <div className="text-[10px] font-bold text-storm-gray uppercase mb-1 px-1">Sort</div>
-                                                                        <button
-                                                                            onClick={() => { setSortConfig({ key: header.key, direction: 'asc' }); setActiveFilterHeader(null); }}
-                                                                            className={`flex items-center gap-2 w-full px-2 py-1.5 rounded-md text-[11px] hover:bg-shark/40 transition-colors cursor-pointer ${sortConfig.key === header.key && sortConfig.direction === 'asc' ? 'text-[#279da6] bg-shark/20' : 'text-iron'}`}
-                                                                        >
-                                                                            <SortAsc size={12} />
-                                                                            <span>Sort A-Z</span>
-                                                                        </button>
-                                                                        <button
-                                                                            onClick={() => { setSortConfig({ key: header.key, direction: 'desc' }); setActiveFilterHeader(null); }}
-                                                                            className={`flex items-center gap-2 w-full px-2 py-1.5 rounded-md text-[11px] hover:bg-shark/40 transition-colors cursor-pointer ${sortConfig.key === header.key && sortConfig.direction === 'desc' ? 'text-[#279da6] bg-shark/20' : 'text-iron'}`}
-                                                                        >
-                                                                            <SortDesc size={12} />
-                                                                            <span>Sort Z-A</span>
-                                                                        </button>
-                                                                    </div>
-                                                                    <div>
-                                                                        <div className="text-[10px] font-bold text-storm-gray uppercase mb-1 px-1">Filter</div>
-                                                                        {header.filter === 'role' ? (
-                                                                            <select
-                                                                                value={filters.role}
-                                                                                onChange={(e) => { setFilters(f => ({ ...f, role: e.target.value })); setActiveFilterHeader(null); }}
-                                                                                className="w-full bg-[#09090B] border border-shark/50 rounded-md py-1 px-1 text-[10px] text-iron focus:outline-none"
+                                                                        <div className="flex flex-col gap-0.5">
+                                                                            <button
+                                                                                onClick={() => { handleSort(header.key); setActiveFilterHeader(null); }}
+                                                                                className={`w-full text-left px-2 py-1.5 rounded text-[11px] font-bold flex items-center justify-between group transition-colors ${sortConfig.key === header.key && sortConfig.direction === 'asc' ? 'bg-[#279da6]/10 text-[#279da6]' : 'text-iron hover:bg-shark/40'}`}
                                                                             >
-                                                                                <option value="">All Roles</option>
-                                                                                <option value="admin">Admin</option>
-                                                                                <option value="editor">Editor</option>
-                                                                                <option value="viewer">Viewer</option>
-                                                                            </select>
-                                                                        ) : header.filter === 'request_count' ? (
-                                                                            <input
-                                                                                type="number"
-                                                                                placeholder="Min requests..."
-                                                                                value={filters.request_count}
-                                                                                onChange={(e) => setFilters(f => ({ ...f, request_count: e.target.value }))}
-                                                                                className="w-full bg-[#09090B] border border-shark/50 rounded-md py-1.5 px-2 text-[10px] text-iron focus:outline-none"
-                                                                            />
-                                                                        ) : ['created_at', 'last_login'].includes(header.filter) ? (
-                                                                            <input
-                                                                                type="date"
-                                                                                value={(filters as any)[header.filter]}
-                                                                                onChange={(e) => setFilters(f => ({ ...f, [header.filter]: e.target.value }))}
-                                                                                className="w-full bg-[#09090B] border border-shark/50 rounded-md py-1.5 px-2 text-[10px] text-iron focus:outline-none [color-scheme:dark]"
-                                                                            />
-                                                                        ) : (
-                                                                            <input
-                                                                                type="text"
-                                                                                placeholder={`Filter by ${header.label.toLowerCase()}...`}
-                                                                                value={(filters as any)[header.filter]}
-                                                                                onChange={(e) => setFilters(f => ({ ...f, [header.filter]: e.target.value }))}
-                                                                                className="w-full bg-[#09090B] border border-shark/50 rounded-md py-1.5 px-2 text-[10px] text-iron focus:outline-none"
-                                                                                autoFocus
-                                                                            />
+                                                                                <div className="flex items-center gap-2">
+                                                                                    <SortAsc size={12} className={sortConfig.key === header.key && sortConfig.direction === 'asc' ? 'text-[#279da6]' : 'text-storm-gray'} />
+                                                                                    Ascending
+                                                                                </div>
+                                                                                {sortConfig.key === header.key && sortConfig.direction === 'asc' && <Check size={10} />}
+                                                                            </button>
+                                                                            <button
+                                                                                onClick={() => { handleSort(header.key); setActiveFilterHeader(null); }}
+                                                                                className={`w-full text-left px-2 py-1.5 rounded text-[11px] font-bold flex items-center justify-between group transition-colors ${sortConfig.key === header.key && sortConfig.direction === 'desc' ? 'bg-[#279da6]/10 text-[#279da6]' : 'text-iron hover:bg-shark/40'}`}
+                                                                            >
+                                                                                <div className="flex items-center gap-2">
+                                                                                    <SortDesc size={12} className={sortConfig.key === header.key && sortConfig.direction === 'desc' ? 'text-[#279da6]' : 'text-storm-gray'} />
+                                                                                    Descending
+                                                                                </div>
+                                                                                {sortConfig.key === header.key && sortConfig.direction === 'desc' && <Check size={10} />}
+                                                                            </button>
+                                                                        </div>
+                                                                    </div>
+
+                                                                    <div className="text-[10px] font-bold text-storm-gray uppercase mb-1 px-1">Filter</div>
+                                                                    <div className="relative">
+                                                                        <Search size={10} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-storm-gray" />
+                                                                        <input
+                                                                            type="text"
+                                                                            value={(filters as any)[header.key] || ''}
+                                                                            onChange={(e) => setFilters({ ...filters, [header.key]: e.target.value })}
+                                                                            className="w-full bg-shark/30 border border-shark/50 rounded px-8 py-1.5 text-[11px] text-iron focus:outline-none focus:border-[#279da6]/40 transition-all font-bold"
+                                                                            placeholder={`Filter ${header.label}...`}
+                                                                            autoFocus
+                                                                        />
+                                                                        {(filters as any)[header.key] && (
+                                                                            <button
+                                                                                onClick={() => setFilters({ ...filters, [header.key]: '' })}
+                                                                                className="absolute right-2 top-1/2 -translate-y-1/2 text-storm-gray hover:text-white"
+                                                                            >
+                                                                                <X size={10} />
+                                                                            </button>
                                                                         )}
                                                                     </div>
                                                                 </div>
                                                             )}
                                                         </th>
                                                     ))}
-                                                    <th className="px-6 py-5 w-24">Actions</th>
+                                                    <th className="px-6 py-5 w-20 text-center">Actions</th>
                                                 </tr>
                                             </thead>
                                             <tbody className="divide-y divide-shark/60">
@@ -457,8 +454,21 @@ export default function TeamClient({ initialMembers, initialCounts }: TeamClient
                                                         <tr key={member.id} className="hover:bg-shark/10 transition-colors group text-sm">
                                                             <td className="px-5 py-4.5 border-r border-shark/60"><input type="checkbox" /></td>
                                                             <td className="px-6 py-4.5 border-r border-shark/60">
-                                                                <div className="flex items-center gap-3">
-                                                                    <div className="w-9 h-9 rounded-full bg-shark flex items-center justify-center text-[11px] font-black text-white overflow-hidden border border-white/5">
+                                                                <div
+                                                                    className="flex items-center gap-3 cursor-pointer group/name"
+                                                                    onClick={() => {
+                                                                        if (member.profile_id) {
+                                                                            impersonate({
+                                                                                id: member.profile_id,
+                                                                                email: member.email,
+                                                                                full_name: member.name,
+                                                                                role: 'team_member',
+                                                                                team_role: member.role
+                                                                            });
+                                                                        }
+                                                                    }}
+                                                                >
+                                                                    <div className="w-9 h-9 rounded-full bg-shark flex items-center justify-center text-[11px] font-black text-white overflow-hidden border border-white/5 group-hover/name:ring-2 ring-[#279da6]/50 transition-all">
                                                                         {member.avatar_url ? (
                                                                             <img src={member.avatar_url} alt={member.name} className="w-full h-full object-cover" />
                                                                         ) : (
@@ -466,12 +476,13 @@ export default function TeamClient({ initialMembers, initialCounts }: TeamClient
                                                                         )}
                                                                     </div>
                                                                     <div className="flex flex-col">
-                                                                        <span className="font-black text-iron">{member.name}</span>
+                                                                        <span className="font-black text-iron group-hover/name:text-[#279da6] transition-colors">{member.name}</span>
+                                                                        <span className="text-[10px] text-[#279da6] font-bold opacity-0 group-hover/name:opacity-100 transition-opacity">Click to impersonate</span>
                                                                     </div>
                                                                 </div>
                                                             </td>
                                                             <td className="px-6 py-4.5 border-r border-shark/60 text-storm-gray font-black">{member.email}</td>
-                                                            <td className="px-6 py-4.5 border-r border-shark/60">
+                                                            <td className="px-6 py-4.5 border-r border-shark/60 text-center">
                                                                 <span className={`px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider ${member.role === 'admin' ? 'bg-purple-500/10 text-purple-400 border border-purple-500/20' :
                                                                     member.role === 'editor' ? 'bg-blue-500/10 text-blue-400 border border-blue-500/20' :
                                                                         'bg-amber-500/10 text-amber-400 border border-amber-500/20'
@@ -483,7 +494,14 @@ export default function TeamClient({ initialMembers, initialCounts }: TeamClient
                                                                 <div className="flex items-center gap-2">
                                                                     <FileText size={14} className="text-[#279da6]" />
                                                                     <span className="text-iron font-black">{member.request_count || 0}</span>
-                                                                    <span className="text-storm-gray text-[11px] font-bold">requests</span>
+                                                                    <span className="text-storm-gray text-[11px] font-bold">reqs</span>
+                                                                </div>
+                                                            </td>
+                                                            <td className="px-6 py-4.5 border-r border-shark/60">
+                                                                <div className="flex items-center gap-2">
+                                                                    <Box size={14} className="text-amber-400" />
+                                                                    <span className="text-iron font-black">{member.task_count || 0}</span>
+                                                                    <span className="text-storm-gray text-[11px] font-bold">tasks</span>
                                                                 </div>
                                                             </td>
                                                             <td className="px-6 py-4.5 border-r border-shark/60 text-storm-gray font-black whitespace-nowrap text-xs">
@@ -500,18 +518,18 @@ export default function TeamClient({ initialMembers, initialCounts }: TeamClient
                                                                     <span className="opacity-50 font-bold">{formatTime(member.created_at)}</span>
                                                                 </div>
                                                             </td>
-                                                            <td className="px-6 py-4.5 relative">
+                                                            <td className="px-6 py-4.5 text-center relative">
                                                                 <button
                                                                     onClick={() => setActiveDropdown(activeDropdown === member.id ? null : member.id)}
-                                                                    className="p-1 hover:bg-shark rounded-md transition-colors text-storm-gray hover:text-white cursor-pointer"
+                                                                    className={`p-1.5 rounded-md transition-all cursor-pointer ${activeDropdown === member.id ? 'bg-[#279da6] text-white' : 'text-storm-gray hover:bg-shark hover:text-white'}`}
                                                                 >
-                                                                    <MoreHorizontal size={14} />
+                                                                    <Eye size={16} />
                                                                 </button>
 
                                                                 {activeDropdown === member.id && (
                                                                     <>
                                                                         <div className="fixed inset-0 z-10" onClick={() => setActiveDropdown(null)} />
-                                                                        <div className="absolute right-0 top-8 z-20 bg-[#18181B] border border-shark rounded-lg shadow-2xl py-1.5 w-48 animate-slide-up">
+                                                                        <div className="absolute right-0 top-full mt-1 z-20 bg-[#18181B] border border-shark rounded-lg shadow-2xl py-1.5 w-48 animate-slide-up">
                                                                             <button
                                                                                 onClick={() => {
                                                                                     if (member.profile_id) {
@@ -538,13 +556,6 @@ export default function TeamClient({ initialMembers, initialCounts }: TeamClient
                                                                             >
                                                                                 <Edit2 size={14} className="text-blue-400" />
                                                                                 Edit
-                                                                            </button>
-                                                                            <button
-                                                                                onClick={() => handleDeleteClick(member)}
-                                                                                className="w-full px-4 py-2 text-left text-xs font-bold text-rose-400 hover:bg-shark/40 transition-colors flex items-center gap-2 cursor-pointer"
-                                                                            >
-                                                                                <Trash2 size={14} />
-                                                                                Delete
                                                                             </button>
                                                                         </div>
                                                                     </>
@@ -751,21 +762,31 @@ export default function TeamClient({ initialMembers, initialCounts }: TeamClient
                                                 </div>
                                             </div>
 
-                                            <div className="flex justify-end gap-3 pt-4">
+                                            <div className="flex justify-between gap-3 pt-4">
                                                 <button
                                                     type="button"
-                                                    onClick={() => { setIsEditModalOpen(false); resetForm(); }}
-                                                    className="px-5 py-2.5 bg-shark/50 hover:bg-shark text-iron rounded-lg font-bold text-sm transition-all"
+                                                    onClick={() => handleDeleteClick(selectedMember)}
+                                                    className="px-4 py-2.5 text-rose-500 hover:bg-rose-500/10 rounded-lg font-bold text-sm transition-all flex items-center gap-2 border border-rose-500/20"
                                                 >
-                                                    Cancel
+                                                    <Trash2 size={16} />
+                                                    Delete Member
                                                 </button>
-                                                <button
-                                                    type="submit"
-                                                    disabled={isSubmitting}
-                                                    className="px-5 py-2.5 bg-[#279da6] hover:bg-[#279da6]/90 text-white rounded-lg font-bold text-sm transition-all flex items-center gap-2 shadow-lg shadow-[#279da6]/20"
-                                                >
-                                                    {isSubmitting ? <Loader2 size={16} className="animate-spin" /> : 'Update Member'}
-                                                </button>
+                                                <div className="flex gap-3">
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => { setIsEditModalOpen(false); resetForm(); }}
+                                                        className="px-5 py-2.5 bg-shark/50 hover:bg-shark text-iron rounded-lg font-bold text-sm transition-all"
+                                                    >
+                                                        Cancel
+                                                    </button>
+                                                    <button
+                                                        type="submit"
+                                                        disabled={isSubmitting}
+                                                        className="px-5 py-2.5 bg-[#279da6] hover:bg-[#279da6]/90 text-white rounded-lg font-bold text-sm transition-all flex items-center gap-2 shadow-lg shadow-[#279da6]/20"
+                                                    >
+                                                        {isSubmitting ? <Loader2 size={16} className="animate-spin" /> : 'Update Member'}
+                                                    </button>
+                                                </div>
                                             </div>
                                         </form>
                                     </div>
