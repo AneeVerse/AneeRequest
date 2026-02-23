@@ -65,7 +65,7 @@ const Header: React.FC<HeaderProps> = ({
 
                 {/* Section Label or Page Switcher */}
                 {pageSwitcher ? (
-                    <div className="flex items-center bg-black/40 border border-shark p-1 rounded-xl overflow-hidden shrink-0">
+                    <div className="flex items-center bg-black/60 border border-shark/50 p-1 rounded-xl overflow-hidden shrink-0">
                         {pageSwitcher.filter(page => {
                             // 1. Super Admin/Admin (Global) bypasses all restrictions
                             if (viewAsProfile?.role === 'super_admin' || viewAsProfile?.role === 'admin') return true;
@@ -81,7 +81,7 @@ const Header: React.FC<HeaderProps> = ({
                                 key={page.path}
                                 href={page.path}
                                 className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all whitespace-nowrap cursor-pointer ${activePath === page.path
-                                    ? 'bg-[#1E1E22] text-[#279da6] border border-[#279da6]/20 shadow-lg'
+                                    ? 'bg-shark/80 text-[#279da6] shadow-lg'
                                     : 'text-santas-gray hover:text-iron hover:bg-white/5'
                                     }`}
                             >
@@ -98,21 +98,21 @@ const Header: React.FC<HeaderProps> = ({
 
                 {/* Dynamic Sub-Navigation */}
                 {tabs && tabs.length > 0 && (
-                    <div className="flex items-center bg-black/40 border border-shark p-1 rounded-xl overflow-visible no-scrollbar ml-2 pt-3 pr-2">
+                    <div className="flex items-center bg-black/60 border border-shark/50 p-1 rounded-xl overflow-visible ml-2">
                         {tabs.map((tab) => {
                             const count = tabCounts?.[tab];
                             return (
                                 <button
                                     key={tab}
                                     onClick={() => setActiveTab?.(tab)}
-                                    className={`relative px-4 py-1.5 rounded-lg text-[11px] font-bold transition-all whitespace-nowrap cursor-pointer ${activeTab === tab
-                                        ? 'bg-[#1E1E22] text-[#279da6] border border-[#279da6]/20 shadow-lg'
-                                        : 'text-santas-gray hover:text-iron hover:bg-white/5'
+                                    className={`relative px-4 py-1.5 rounded-lg text-[11px] font-bold transition-all whitespace-nowrap cursor-pointer tracking-tight ${activeTab === tab
+                                        ? 'bg-shark/80 text-[#279da6] shadow-lg'
+                                        : 'text-storm-gray hover:text-iron hover:bg-white/5'
                                         }`}
                                 >
                                     {tab}
                                     {count !== undefined && count > 0 && (
-                                        <span className="absolute -top-2 -right-1.5 min-w-[18px] h-[18px] flex items-center justify-center rounded-full text-[9px] font-black px-1 border-2 border-[#09090B] shadow-md bg-[#279da6] text-white">
+                                        <span className="absolute -top-1.5 -right-0.5 min-w-[17px] h-[17px] flex items-center justify-center rounded-full text-[9px] font-black px-1 border border-[#09090B] shadow-md bg-[#279da6] text-white">
                                             {count > 99 ? '99+' : count}
                                         </span>
                                     )}
