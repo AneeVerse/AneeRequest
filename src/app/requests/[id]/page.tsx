@@ -667,6 +667,8 @@ export default function RequestDetailsPage() {
     // Check user roles
     const isSuperAdmin = displayProfile?.role === 'super_admin';
     const isTeamMember = displayProfile?.role === 'team_member';
+    const isTeamAdmin = displayProfile?.team_role === 'admin';
+    const isAdmin = isSuperAdmin || isTeamAdmin || displayProfile?.role === 'admin';
     const isInternal = isSuperAdmin || isTeamMember;
     const showTabs = isInternal; // Only show tabs for internal users
 
@@ -763,7 +765,7 @@ export default function RequestDetailsPage() {
                                                     </span>
                                                 )}
                                             </button>
-                                            {isSuperAdmin && (
+                                            {(isSuperAdmin || isTeamAdmin) && (
                                                 <button
                                                     onClick={() => setActiveTab('files')}
                                                     className={`flex items-center gap-1.5 px-3 py-1.5 text-[9px] font-black uppercase tracking-wider transition-all rounded-[10px] ${activeTab === 'files'
@@ -1040,7 +1042,7 @@ export default function RequestDetailsPage() {
                                     <div className="flex-1 overflow-y-auto custom-scrollbar p-6">
                                         <div className="max-w-4xl mx-auto">
                                             {/* Create Task Quick-Add */}
-                                            {displayProfile?.role === 'super_admin' && (
+                                            {isAdmin && (
                                                 <div className="flex flex-col md:flex-row items-stretch md:items-center gap-3 mb-8 bg-shark/10 p-4 rounded-2xl border border-shark/40">
                                                     <div className="flex-1 relative group">
                                                         <div className="absolute left-4 top-1/2 -translate-y-1/2 text-storm-gray group-focus-within:text-[#279da6] transition-colors pointer-events-none">

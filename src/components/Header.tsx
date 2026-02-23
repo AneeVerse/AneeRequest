@@ -51,7 +51,7 @@ const Header: React.FC<HeaderProps> = ({
             <div className="flex items-center gap-4 flex-1 overflow-hidden">
                 <button
                     onClick={onToggleSidebar}
-                    className="p-1 text-santas-gray hover:text-white transition-colors"
+                    className="p-1 text-santas-gray hover:text-white transition-colors cursor-pointer"
                 >
                     <PanelLeft size={18} />
                 </button>
@@ -69,7 +69,7 @@ const Header: React.FC<HeaderProps> = ({
                             <button
                                 key={tab}
                                 onClick={() => setActiveTab?.(tab)}
-                                className={`px-4 py-1.5 rounded-lg text-[11px] font-bold transition-all whitespace-nowrap ${activeTab === tab
+                                className={`px-4 py-1.5 rounded-lg text-[11px] font-bold transition-all whitespace-nowrap cursor-pointer ${activeTab === tab
                                     ? 'bg-[#1E1E22] text-[#279da6] border border-[#279da6]/20 shadow-lg'
                                     : 'text-santas-gray hover:text-iron hover:bg-white/5'
                                     }`}
@@ -88,7 +88,7 @@ const Header: React.FC<HeaderProps> = ({
             <div className="flex items-center gap-3 ml-4">
                 <button
                     onClick={onCreate}
-                    className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-santas-gray hover:text-white transition-colors group"
+                    className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-santas-gray hover:text-white transition-colors group cursor-pointer"
                 >
                     <Plus size={16} className="group-hover:text-white" />
                     <span>new</span>
@@ -96,11 +96,11 @@ const Header: React.FC<HeaderProps> = ({
                 <div className="h-4 w-[1px] bg-shark" />
                 <button
                     onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
-                    className="p-2 text-santas-gray hover:text-white rounded-lg hover:bg-shark/40 transition-all"
+                    className="p-2 text-santas-gray hover:text-white rounded-lg hover:bg-shark/40 transition-all cursor-pointer"
                 >
                     {theme === 'dark' ? <Moon size={18} /> : <Sun size={18} />}
                 </button>
-                <button className="p-2 text-santas-gray hover:text-white rounded-lg hover:bg-shark/40 transition-all relative">
+                <button className="p-2 text-santas-gray hover:text-white rounded-lg hover:bg-shark/40 transition-all relative cursor-pointer">
                     <Bell size={18} />
                     <div className="absolute top-2 right-2.5 w-1.5 h-1.5 bg-red-500 rounded-full border border-black" />
                 </button>

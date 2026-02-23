@@ -91,29 +91,54 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }, []);
 
     const fetchProfile = async (userId: string) => {
-        const { data, error } = await supabase
+        // 1. Fetch basic profile
+        const { data: profileData, error } = await supabase
             .from('profiles')
             .select('*')
             .eq('id', userId)
-            .single();
+            .maybeSingle();
 
-        if (!error && data) {
-            let profileData = data as Profile;
+        let profile = profileData as Profile;
 
-            // If team member, fetch their sub-role from team_members table
-            if (profileData.role === 'team_member') {
-                const { data: teamData } = await supabase
-                    .from('team_members')
-                    .select('position')
-                    .eq('profile_id', userId)
-                    .maybeSingle();
+        // 2. Critical Fix: Check team_members table regardless of profile role
+        // This ensures if someone is in team_members but marked as 'client' in profiles (or profiles record is missing),
+        // we correctly identify them as staff.
+        const { data: teamData } = await supabase
+            .from('team_members')
+            .select('position')
+            .eq('profile_id', userId)
+            .maybeSingle();
 
-                if (teamData) {
-                    profileData.team_role = teamData.position || 'viewer';
-                }
+        if (teamData) {
+            if (!profile) {
+                // Fallback for missing profile record
+                profile = {
+                    id: userId,
+                    email: user?.email || '',
+                    full_name: user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'User',
+                    role: 'team_member',
+                    team_role: teamData.position || 'viewer'
+                };
+            } else if (profile.role !== 'super_admin' && profile.role !== 'admin') {
+                // Upgrade to team_member if they are in the team table
+                profile.role = 'team_member';
+                profile.team_role = teamData.position || 'viewer';
+            } else {
+                // For admins/super_admins who are also in team table, just ensure team_role is set
+                profile.team_role = teamData.position || 'viewer';
             }
+        } else if (profile && profile.role === 'team_member') {
+            // Default sub-role if missing from team_members table but marked as team_member
+            profile.team_role = profile.team_role || 'viewer';
+        }
 
-            setProfile(profileData);
+        if (profile) {
+            setProfile(profile);
+
+            // Auto-sync database if profiles role is incorrect
+            if (profileData && profileData.role !== profile.role && !isLoading) {
+                supabase.from('profiles').update({ role: profile.role }).eq('id', userId).then();
+            }
         }
     };
 

@@ -300,7 +300,7 @@ export default function TaskDetailsPage() {
 
 
     const handleUpdateField = async (field: string, value: any) => {
-        if (!task || !isSuperAdmin) return;
+        if (!task || !isAdmin) return;
 
         const originalTask = { ...task };
         const newTask = { ...task, [field]: value };
@@ -382,6 +382,8 @@ export default function TaskDetailsPage() {
     }
 
     const isSuperAdmin = displayProfile?.role === 'super_admin';
+    const isTeamAdmin = displayProfile?.team_role === 'admin';
+    const isAdmin = isSuperAdmin || isTeamAdmin || displayProfile?.role === 'admin';
 
     return (
         <>
@@ -636,7 +638,7 @@ export default function TaskDetailsPage() {
                                             <div className="flex-1 relative">
                                                 <select
                                                     value={task.priority}
-                                                    disabled={!isSuperAdmin}
+                                                    disabled={!isAdmin}
                                                     onChange={(e) => handleUpdateField('priority', e.target.value)}
                                                     className={`w-full bg-shark/20 border border-shark/40 pl-5 pr-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest focus:outline-none cursor-not-allowed disabled:opacity-70 transition-all appearance-none ${task.priority === 'Critical' ? 'text-rose-500' :
                                                         task.priority === 'High' ? 'text-amber-500' :
@@ -663,7 +665,7 @@ export default function TaskDetailsPage() {
                                             <div className="flex-1 flex items-center gap-2">
                                                 <select
                                                     value={task.assigned_to || ''}
-                                                    disabled={!isSuperAdmin}
+                                                    disabled={!isAdmin}
                                                     onChange={(e) => handleUpdateField('assigned_to', e.target.value)}
                                                     className="flex-1 bg-transparent text-[11px] font-bold text-iron focus:outline-none cursor-not-allowed disabled:opacity-70 hover:text-white transition-all appearance-none"
                                                 >
@@ -690,9 +692,9 @@ export default function TaskDetailsPage() {
                                             <div className="flex-1 relative group">
                                                 <select
                                                     value=""
-                                                    disabled={!isSuperAdmin}
+                                                    disabled={!isAdmin}
                                                     onChange={(e) => {
-                                                        if (e.target.value && isSuperAdmin) {
+                                                        if (e.target.value && isAdmin) {
                                                             const id = e.target.value;
                                                             const currentIds = task.request_links?.map(l => l.request?.id).filter(Boolean) as string[] || [];
                                                             if (!currentIds.includes(id)) {
@@ -724,7 +726,7 @@ export default function TaskDetailsPage() {
                                                         >
                                                             {link.request ? link.request.title : 'Unknown'}
                                                         </span>
-                                                        {isSuperAdmin && (
+                                                        {isAdmin && (
                                                             <button
                                                                 type="button"
                                                                 onClick={() => {
@@ -762,7 +764,7 @@ export default function TaskDetailsPage() {
                                     </div>
 
                                     {/* Delete Button */}
-                                    {isSuperAdmin && (
+                                    {isAdmin && (
                                         <div className="pt-6 border-t border-shark mt-auto">
                                             <button
                                                 onClick={() => setIsDeleteModalOpen(true)}

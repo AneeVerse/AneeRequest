@@ -346,7 +346,7 @@ export default function TeamClient({ initialMembers, initialCounts }: TeamClient
                                                     setSearchQuery('');
                                                     setSortConfig({ key: '', direction: null });
                                                 }}
-                                                className={`relative flex items-center gap-2 px-3 py-1.5 rounded-lg border transition-all text-[11px] font-bold z-10 ${Object.values(filters).some(v => v !== '') || searchQuery !== '' || (sortConfig.key !== '' && !(sortConfig.key === 'created_at' && sortConfig.direction === 'desc')) ? 'bg-[#279da6]/20 border-[#279da6]/60 text-[#279da6] active:scale-95' : 'border-shark bg-shark/20 text-santas-gray hover:text-white hover:bg-shark/40'}`}
+                                                className={`relative flex items-center gap-2 px-3 py-1.5 rounded-lg border transition-all text-[11px] font-bold z-10 cursor-pointer ${Object.values(filters).some(v => v !== '') || searchQuery !== '' || (sortConfig.key !== '' && !(sortConfig.key === 'created_at' && sortConfig.direction === 'desc')) ? 'bg-[#279da6]/20 border-[#279da6]/60 text-[#279da6] active:scale-95' : 'border-shark bg-shark/20 text-santas-gray hover:text-white hover:bg-shark/40'}`}
                                             >
                                                 <Filter size={14} className={Object.values(filters).some(v => v !== '') || searchQuery !== '' || (sortConfig.key !== '' && !(sortConfig.key === 'created_at' && sortConfig.direction === 'desc')) ? 'fill-[#279da6]/20' : ''} />
                                                 <span>{Object.values(filters).some(v => v !== '') || searchQuery !== '' || (sortConfig.key !== '' && !(sortConfig.key === 'created_at' && sortConfig.direction === 'desc')) ? 'Reset Filters' : 'Filters'}</span>
@@ -375,7 +375,7 @@ export default function TeamClient({ initialMembers, initialCounts }: TeamClient
                                                                 <span className="cursor-default">{header.label}</span>
                                                                 <button
                                                                     onClick={() => setActiveFilterHeader(activeFilterHeader === header.filter ? null : header.filter)}
-                                                                    className={`p-1 rounded hover:bg-shark/40 transition-colors ${(filters as any)[header.filter] || sortConfig.key === header.key ? 'text-[#279da6]' : 'text-storm-gray'}`}
+                                                                    className={`p-1 rounded hover:bg-shark/40 transition-colors cursor-pointer ${(filters as any)[header.filter] || sortConfig.key === header.key ? 'text-[#279da6]' : 'text-storm-gray'}`}
                                                                 >
                                                                     <Filter size={10} />
                                                                 </button>
@@ -386,14 +386,14 @@ export default function TeamClient({ initialMembers, initialCounts }: TeamClient
                                                                         <div className="text-[10px] font-bold text-storm-gray uppercase mb-1 px-1">Sort</div>
                                                                         <button
                                                                             onClick={() => { setSortConfig({ key: header.key, direction: 'asc' }); setActiveFilterHeader(null); }}
-                                                                            className={`flex items-center gap-2 w-full px-2 py-1.5 rounded-md text-[11px] hover:bg-shark/40 transition-colors ${sortConfig.key === header.key && sortConfig.direction === 'asc' ? 'text-[#279da6] bg-shark/20' : 'text-iron'}`}
+                                                                            className={`flex items-center gap-2 w-full px-2 py-1.5 rounded-md text-[11px] hover:bg-shark/40 transition-colors cursor-pointer ${sortConfig.key === header.key && sortConfig.direction === 'asc' ? 'text-[#279da6] bg-shark/20' : 'text-iron'}`}
                                                                         >
                                                                             <SortAsc size={12} />
                                                                             <span>Sort A-Z</span>
                                                                         </button>
                                                                         <button
                                                                             onClick={() => { setSortConfig({ key: header.key, direction: 'desc' }); setActiveFilterHeader(null); }}
-                                                                            className={`flex items-center gap-2 w-full px-2 py-1.5 rounded-md text-[11px] hover:bg-shark/40 transition-colors ${sortConfig.key === header.key && sortConfig.direction === 'desc' ? 'text-[#279da6] bg-shark/20' : 'text-iron'}`}
+                                                                            className={`flex items-center gap-2 w-full px-2 py-1.5 rounded-md text-[11px] hover:bg-shark/40 transition-colors cursor-pointer ${sortConfig.key === header.key && sortConfig.direction === 'desc' ? 'text-[#279da6] bg-shark/20' : 'text-iron'}`}
                                                                         >
                                                                             <SortDesc size={12} />
                                                                             <span>Sort Z-A</span>
@@ -503,7 +503,7 @@ export default function TeamClient({ initialMembers, initialCounts }: TeamClient
                                                             <td className="px-6 py-4.5 relative">
                                                                 <button
                                                                     onClick={() => setActiveDropdown(activeDropdown === member.id ? null : member.id)}
-                                                                    className="p-1 hover:bg-shark rounded-md transition-colors text-storm-gray hover:text-white"
+                                                                    className="p-1 hover:bg-shark rounded-md transition-colors text-storm-gray hover:text-white cursor-pointer"
                                                                 >
                                                                     <MoreHorizontal size={14} />
                                                                 </button>
@@ -519,28 +519,29 @@ export default function TeamClient({ initialMembers, initialCounts }: TeamClient
                                                                                             id: member.profile_id,
                                                                                             email: member.email,
                                                                                             full_name: member.name,
-                                                                                            role: 'team_member'
+                                                                                            role: 'team_member',
+                                                                                            team_role: member.role
                                                                                         });
                                                                                         setActiveDropdown(null);
                                                                                     } else {
                                                                                         alert('This team member does not have an account yet.');
                                                                                     }
                                                                                 }}
-                                                                                className="w-full px-4 py-2 text-left text-xs font-bold text-iron hover:bg-shark/40 transition-colors flex items-center gap-2"
+                                                                                className="w-full px-4 py-2 text-left text-xs font-bold text-iron hover:bg-shark/40 transition-colors flex items-center gap-2 cursor-pointer"
                                                                             >
                                                                                 <UserCog size={14} className="text-[#279da6]" />
                                                                                 Impersonate
                                                                             </button>
                                                                             <button
                                                                                 onClick={() => handleEditClick(member)}
-                                                                                className="w-full px-4 py-2 text-left text-xs font-bold text-iron hover:bg-shark/40 transition-colors flex items-center gap-2"
+                                                                                className="w-full px-4 py-2 text-left text-xs font-bold text-iron hover:bg-shark/40 transition-colors flex items-center gap-2 cursor-pointer"
                                                                             >
                                                                                 <Edit2 size={14} className="text-blue-400" />
                                                                                 Edit
                                                                             </button>
                                                                             <button
                                                                                 onClick={() => handleDeleteClick(member)}
-                                                                                className="w-full px-4 py-2 text-left text-xs font-bold text-rose-400 hover:bg-shark/40 transition-colors flex items-center gap-2"
+                                                                                className="w-full px-4 py-2 text-left text-xs font-bold text-rose-400 hover:bg-shark/40 transition-colors flex items-center gap-2 cursor-pointer"
                                                                             >
                                                                                 <Trash2 size={14} />
                                                                                 Delete
@@ -572,29 +573,25 @@ export default function TeamClient({ initialMembers, initialCounts }: TeamClient
                                         </div>
 
                                         <form onSubmit={handleSubmit} className="space-y-5">
-                                            <div className="grid grid-cols-2 gap-4">
-                                                <div>
-                                                    <label className="block text-[10px] font-black uppercase tracking-widest text-storm-gray mb-2">Full Name *</label>
-                                                    <input
-                                                        type="text"
-                                                        value={formData.name}
-                                                        onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                                                        required
-                                                        className="w-full bg-[#09090B] border border-shark rounded-lg px-4 py-2.5 text-sm text-iron focus:outline-none focus:border-[#279da6]/40 transition-all"
-                                                        placeholder="Enter full name"
-                                                    />
-                                                </div>
-                                                <div>
-                                                    <label className="block text-[10px] font-black uppercase tracking-widest text-storm-gray mb-2">Email Address *</label>
-                                                    <input
-                                                        type="email"
-                                                        value={formData.email}
-                                                        onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                                                        required
-                                                        className="w-full bg-[#09090B] border border-shark rounded-lg px-4 py-2.5 text-sm text-iron focus:outline-none focus:border-[#279da6]/40 transition-all"
-                                                        placeholder="email@example.com"
-                                                    />
-                                                </div>
+                                            <div className="grid grid-cols-2 gap-x-4 gap-y-2">
+                                                <label className="block text-[10px] font-black uppercase tracking-widest text-storm-gray">Full Name *</label>
+                                                <label className="block text-[10px] font-black uppercase tracking-widest text-storm-gray">Email Address *</label>
+                                                <input
+                                                    type="text"
+                                                    value={formData.name}
+                                                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                                                    required
+                                                    className="w-full bg-[#09090B] border border-shark rounded-lg px-4 py-2.5 text-sm text-iron focus:outline-none focus:border-[#279da6]/40 transition-all"
+                                                    placeholder="Enter full name"
+                                                />
+                                                <input
+                                                    type="email"
+                                                    value={formData.email}
+                                                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                                                    required
+                                                    className="w-full bg-[#09090B] border border-shark rounded-lg px-4 py-2.5 text-sm text-iron focus:outline-none focus:border-[#279da6]/40 transition-all"
+                                                    placeholder="email@example.com"
+                                                />
                                             </div>
 
                                             <div>
@@ -610,9 +607,10 @@ export default function TeamClient({ initialMembers, initialCounts }: TeamClient
                                                 </select>
                                             </div>
 
-                                            <div className="grid grid-cols-2 gap-4">
+                                            <div className="grid grid-cols-2 gap-x-4 gap-y-2">
+                                                <label className="block text-[10px] font-black uppercase tracking-widest text-storm-gray">Password (Optional)</label>
+                                                <label className="block text-[10px] font-black uppercase tracking-widest text-storm-gray">Confirm Password</label>
                                                 <div>
-                                                    <label className="block text-[10px] font-black uppercase tracking-widest text-storm-gray mb-2">Password (Optional)</label>
                                                     <div className="relative">
                                                         <input
                                                             type={showPassword ? "text" : "password"}
@@ -631,15 +629,21 @@ export default function TeamClient({ initialMembers, initialCounts }: TeamClient
                                                     </div>
                                                     <p className="text-[10px] text-storm-gray mt-1.5">If provided, a login account will be created</p>
                                                 </div>
-                                                <div>
-                                                    <label className="block text-[10px] font-black uppercase tracking-widest text-storm-gray mb-2">Confirm Password</label>
+                                                <div className="relative">
                                                     <input
                                                         type={showPassword ? "text" : "password"}
                                                         value={formData.confirmPassword}
                                                         onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
-                                                        className="w-full bg-[#09090B] border border-shark rounded-lg px-4 py-2.5 text-sm text-iron focus:outline-none focus:border-[#279da6]/40 transition-all"
+                                                        className="w-full bg-[#09090B] border border-shark rounded-lg px-4 py-2.5 text-sm text-iron focus:outline-none focus:border-[#279da6]/40 transition-all pr-10"
                                                         placeholder="••••••••"
                                                     />
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => setShowPassword(!showPassword)}
+                                                        className="absolute right-3 top-1/2 -translate-y-1/2 text-storm-gray hover:text-white transition-colors"
+                                                    >
+                                                        {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                                                    </button>
                                                 </div>
                                             </div>
 
@@ -678,27 +682,23 @@ export default function TeamClient({ initialMembers, initialCounts }: TeamClient
                                         </div>
 
                                         <form onSubmit={handleEditSubmit} className="space-y-5">
-                                            <div className="grid grid-cols-2 gap-4">
-                                                <div>
-                                                    <label className="block text-[10px] font-black uppercase tracking-widest text-storm-gray mb-2">Full Name *</label>
-                                                    <input
-                                                        type="text"
-                                                        value={formData.name}
-                                                        onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                                                        required
-                                                        className="w-full bg-[#09090B] border border-shark rounded-lg px-4 py-2.5 text-sm text-iron focus:outline-none focus:border-[#279da6]/40 transition-all"
-                                                    />
-                                                </div>
-                                                <div>
-                                                    <label className="block text-[10px] font-black uppercase tracking-widest text-storm-gray mb-2">Email Address *</label>
-                                                    <input
-                                                        type="email"
-                                                        value={formData.email}
-                                                        onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                                                        required
-                                                        className="w-full bg-[#09090B] border border-shark rounded-lg px-4 py-2.5 text-sm text-iron focus:outline-none focus:border-[#279da6]/40 transition-all"
-                                                    />
-                                                </div>
+                                            <div className="grid grid-cols-2 gap-x-4 gap-y-2">
+                                                <label className="block text-[10px] font-black uppercase tracking-widest text-storm-gray">Full Name *</label>
+                                                <label className="block text-[10px] font-black uppercase tracking-widest text-storm-gray">Email Address *</label>
+                                                <input
+                                                    type="text"
+                                                    value={formData.name}
+                                                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                                                    required
+                                                    className="w-full bg-[#09090B] border border-shark rounded-lg px-4 py-2.5 text-sm text-iron focus:outline-none focus:border-[#279da6]/40 transition-all"
+                                                />
+                                                <input
+                                                    type="email"
+                                                    value={formData.email}
+                                                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                                                    required
+                                                    className="w-full bg-[#09090B] border border-shark rounded-lg px-4 py-2.5 text-sm text-iron focus:outline-none focus:border-[#279da6]/40 transition-all"
+                                                />
                                             </div>
 
                                             <div>
@@ -714,35 +714,40 @@ export default function TeamClient({ initialMembers, initialCounts }: TeamClient
                                                 </select>
                                             </div>
 
-                                            <div className="grid grid-cols-2 gap-4">
-                                                <div>
-                                                    <label className="block text-[10px] font-black uppercase tracking-widest text-storm-gray mb-2">New Password (Leave blank to keep current)</label>
-                                                    <div className="relative">
-                                                        <input
-                                                            type={showPassword ? "text" : "password"}
-                                                            value={formData.password}
-                                                            onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                                                            className="w-full bg-[#09090B] border border-shark rounded-lg px-4 py-2.5 text-sm text-iron focus:outline-none focus:border-[#279da6]/40 transition-all pr-10"
-                                                            placeholder="••••••••"
-                                                        />
-                                                        <button
-                                                            type="button"
-                                                            onClick={() => setShowPassword(!showPassword)}
-                                                            className="absolute right-3 top-1/2 -translate-y-1/2 text-storm-gray hover:text-white transition-colors"
-                                                        >
-                                                            {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
-                                                        </button>
-                                                    </div>
+                                            <div className="grid grid-cols-2 gap-x-4 gap-y-2">
+                                                <label className="block text-[10px] font-black uppercase tracking-widest text-storm-gray">New Password (Leave blank to keep current)</label>
+                                                <label className="block text-[10px] font-black uppercase tracking-widest text-storm-gray">Confirm Password</label>
+                                                <div className="relative">
+                                                    <input
+                                                        type={showPassword ? "text" : "password"}
+                                                        value={formData.password}
+                                                        onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                                                        className="w-full bg-[#09090B] border border-shark rounded-lg px-4 py-2.5 text-sm text-iron focus:outline-none focus:border-[#279da6]/40 transition-all pr-10"
+                                                        placeholder="••••••••"
+                                                    />
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => setShowPassword(!showPassword)}
+                                                        className="absolute right-3 top-1/2 -translate-y-1/2 text-storm-gray hover:text-white transition-colors"
+                                                    >
+                                                        {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                                                    </button>
                                                 </div>
-                                                <div>
-                                                    <label className="block text-[10px] font-black uppercase tracking-widest text-storm-gray mb-2">Confirm Password</label>
+                                                <div className="relative">
                                                     <input
                                                         type={showPassword ? "text" : "password"}
                                                         value={formData.confirmPassword}
                                                         onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
-                                                        className="w-full bg-[#09090B] border border-shark rounded-lg px-4 py-2.5 text-sm text-iron focus:outline-none focus:border-[#279da6]/40 transition-all"
+                                                        className="w-full bg-[#09090B] border border-shark rounded-lg px-4 py-2.5 text-sm text-iron focus:outline-none focus:border-[#279da6]/40 transition-all pr-10"
                                                         placeholder="••••••••"
                                                     />
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => setShowPassword(!showPassword)}
+                                                        className="absolute right-3 top-1/2 -translate-y-1/2 text-storm-gray hover:text-white transition-colors"
+                                                    >
+                                                        {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                                                    </button>
                                                 </div>
                                             </div>
 
