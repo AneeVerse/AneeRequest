@@ -31,6 +31,8 @@ import {
 import AvatarUpload from '@/components/AvatarUpload';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
+import CustomDropdown from '@/components/CustomDropdown';
+import { CheckCircle2, Users as UsersIcon, XCircle, Archive, Plus as PlusIcon } from 'lucide-react';
 
 interface ClientItem {
     id: string;
@@ -506,28 +508,17 @@ export default function ClientsClient({ initialClients }: ClientsClientProps) {
                                                             </td>
                                                             <td className="px-6 py-4.5 text-iron border-r border-shark/60 font-medium">
                                                                 <div className="flex items-center gap-2">
-                                                                    <div className={`w-1.5 h-1.5 rounded-full shrink-0 ${client.status === 'Ongoing' ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.4)]' :
-                                                                        client.status === 'Leads' ? 'bg-[#279da6] shadow-[0_0_8px_rgba(39,157,166,0.4)]' :
-                                                                            client.status === 'Closed' ? 'bg-rose-500 shadow-[0_0_8px_rgba(244,63,94,0.4)]' :
-                                                                                client.status === 'Archive' ? 'bg-[#F28C28] shadow-[0_0_8px_rgba(242,140,40,0.4)]' :
-                                                                                    'bg-storm-gray shadow-[0_0_8px_rgba(148,163,184,0.4)]'
-                                                                        }`} />
-                                                                    <select
+                                                                    <CustomDropdown
                                                                         value={client.status || 'Ongoing'}
-                                                                        onChange={(e) => handleStatusUpdate(client.id, e.target.value)}
-                                                                        className={`bg-transparent text-[11px] font-black uppercase tracking-wider focus:outline-none cursor-pointer hover:underline appearance-none
-                                                                        ${client.status === 'Ongoing' ? 'text-emerald-400' :
-                                                                                client.status === 'Leads' ? 'text-[#279da6]' :
-                                                                                    client.status === 'Closed' ? 'text-rose-400' :
-                                                                                        client.status === 'Archive' ? 'text-[#F28C28]' :
-                                                                                            'text-storm-gray'
-                                                                            }`}
-                                                                    >
-                                                                        <option value="Ongoing" className="bg-[#121214]">Ongoing</option>
-                                                                        <option value="Leads" className="bg-[#121214]">Leads</option>
-                                                                        <option value="Closed" className="bg-[#121214]">Closed</option>
-                                                                        <option value="Archive" className="bg-[#121214]">Archive</option>
-                                                                    </select>
+                                                                        onChange={(val) => handleStatusUpdate(client.id, val)}
+                                                                        options={[
+                                                                            { label: 'Ongoing', value: 'Ongoing', icon: <CheckCircle2 size={12} className="text-emerald-400" />, color: 'text-emerald-400' },
+                                                                            { label: 'Leads', value: 'Leads', icon: <UsersIcon size={12} className="text-[#279da6]" />, color: 'text-[#279da6]' },
+                                                                            { label: 'Closed', value: 'Closed', icon: <XCircle size={12} className="text-rose-400" />, color: 'text-rose-400' },
+                                                                            { label: 'Archive', value: 'Archive', icon: <Archive size={12} className="text-[#F28C28]" />, color: 'text-[#F28C28]' },
+                                                                        ]}
+                                                                        className="w-28"
+                                                                    />
                                                                 </div>
                                                             </td>
                                                             <td className="px-6 py-4.5 relative group/actions">
@@ -694,16 +685,16 @@ export default function ClientsClient({ initialClients }: ClientsClientProps) {
 
                                         <div className="space-y-1.5">
                                             <label className="text-[11px] font-bold text-santas-gray uppercase tracking-wider">Status</label>
-                                            <select
+                                            <CustomDropdown
                                                 value={formData.status}
-                                                onChange={(e) => setFormData({ ...formData, status: e.target.value })}
-                                                className="w-full bg-[#09090B] border border-shark/60 rounded-xl py-2.5 px-4 text-sm text-iron focus:outline-none focus:border-[#279da6]/60 appearance-none cursor-pointer"
-                                            >
-                                                <option value="Ongoing">Ongoing</option>
-                                                <option value="Leads">Leads</option>
-                                                <option value="Closed">Closed</option>
-                                                <option value="Archive">Archive</option>
-                                            </select>
+                                                onChange={(val) => setFormData({ ...formData, status: val })}
+                                                options={[
+                                                    { label: 'Ongoing', value: 'Ongoing', icon: <CheckCircle2 size={12} className="text-emerald-400" />, color: 'text-emerald-400' },
+                                                    { label: 'Leads', value: 'Leads', icon: <UsersIcon size={12} className="text-[#279da6]" />, color: 'text-[#279da6]' },
+                                                    { label: 'Closed', value: 'Closed', icon: <XCircle size={12} className="text-rose-400" />, color: 'text-rose-400' },
+                                                    { label: 'Archive', value: 'Archive', icon: <Archive size={12} className="text-[#F28C28]" />, color: 'text-[#F28C28]' },
+                                                ]}
+                                            />
                                         </div>
 
                                         <div className="flex items-center gap-3 p-4 bg-[#279da6]/5 border border-[#279da6]/20 rounded-xl mt-2 group cursor-pointer" onClick={() => setFormData({ ...formData, create_folder: !formData.create_folder })}>
@@ -799,16 +790,16 @@ export default function ClientsClient({ initialClients }: ClientsClientProps) {
 
                                         <div className="space-y-1.5">
                                             <label className="text-[11px] font-bold text-santas-gray uppercase tracking-wider">Status</label>
-                                            <select
+                                            <CustomDropdown
                                                 value={formData.status}
-                                                onChange={(e) => setFormData({ ...formData, status: e.target.value })}
-                                                className="w-full bg-[#09090B] border border-shark/60 rounded-xl py-2.5 px-4 text-sm text-iron focus:outline-none focus:border-[#279da6]/60 appearance-none cursor-pointer"
-                                            >
-                                                <option value="Ongoing">Ongoing</option>
-                                                <option value="Leads">Leads</option>
-                                                <option value="Closed">Closed</option>
-                                                <option value="Archive">Archive</option>
-                                            </select>
+                                                onChange={(val) => setFormData({ ...formData, status: val })}
+                                                options={[
+                                                    { label: 'Ongoing', value: 'Ongoing', icon: <CheckCircle2 size={12} className="text-emerald-400" />, color: 'text-emerald-400' },
+                                                    { label: 'Leads', value: 'Leads', icon: <UsersIcon size={12} className="text-[#279da6]" />, color: 'text-[#279da6]' },
+                                                    { label: 'Closed', value: 'Closed', icon: <XCircle size={12} className="text-rose-400" />, color: 'text-rose-400' },
+                                                    { label: 'Archive', value: 'Archive', icon: <Archive size={12} className="text-[#F28C28]" />, color: 'text-[#F28C28]' },
+                                                ]}
+                                            />
                                         </div>
 
                                         <p className="text-[10px] text-storm-gray">Note: Password changes are handled via individual account settings.</p>

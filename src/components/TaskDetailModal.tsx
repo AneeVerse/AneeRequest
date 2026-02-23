@@ -5,11 +5,13 @@ import Linkify from 'linkify-react';
 import {
     X, Send, User, Calendar, Flag, Loader2, Trash2,
     CheckCircle2, CircleDashed, RefreshCcw, AlertCircle,
-    MessageSquare, CheckCheck, Check, Shield, ChevronLeft, FileText
+    MessageSquare, CheckCheck, Check, Shield, ChevronLeft, FileText,
+    User as UserIcon, Plus as PlusIcon
 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { TaskItem } from '@/lib/data/tasks';
 import { supabase } from '@/lib/supabase';
+import CustomDropdown from '@/components/CustomDropdown';
 
 interface TaskDetailModalProps {
     isOpen: boolean;
@@ -323,43 +325,34 @@ export default function TaskDetailModal({
                         <div className="grid grid-cols-2 gap-4">
                             <div className="space-y-1.5">
                                 <label className="text-[10px] font-black text-storm-gray uppercase tracking-widest ml-1">Status</label>
-                                <div className="flex items-center bg-black/40 border border-shark rounded-xl focus-within:border-[#279da6]/50 transition-all group overflow-hidden relative">
-                                    <div className="pl-3 text-storm-gray group-focus-within:text-[#279da6] transition-colors pointer-events-none">
-                                        {getStatusIcon(formData.status)}
-                                    </div>
-                                    <select
-                                        value={formData.status}
-                                        disabled={displayProfile?.role !== 'super_admin'}
-                                        onChange={e => handleUpdate('status', e.target.value)}
-                                        className="flex-1 bg-transparent p-3 pl-2 pr-10 !text-white appearance-none focus:outline-none transition-all cursor-not-allowed disabled:opacity-70 font-bold text-xs [color-scheme:dark]"
-                                    >
-                                        {['Todo', 'In Progress', 'Review', 'Done'].map(s => (
-                                            <option key={s} value={s} className="bg-[#18181B] !text-white">{s}</option>
-                                        ))}
-                                    </select>
-                                </div>
+                                <CustomDropdown
+                                    value={formData.status}
+                                    disabled={displayProfile?.role !== 'super_admin'}
+                                    onChange={val => handleUpdate('status', val)}
+                                    options={[
+                                        { label: 'Todo', value: 'Todo', icon: <CircleDashed size={14} className="text-storm-gray" /> },
+                                        { label: 'In Progress', value: 'In Progress', icon: <RefreshCcw size={14} className="text-malibu" /> },
+                                        { label: 'Review', value: 'Review', icon: <AlertCircle size={14} className="text-amber-400" /> },
+                                        { label: 'Done', value: 'Done', icon: <CheckCircle2 size={14} className="text-emerald-400" /> },
+                                    ]}
+                                    className="flex-1"
+                                />
                             </div>
 
                             <div className="space-y-1.5">
                                 <label className="text-[10px] font-black text-storm-gray uppercase tracking-widest ml-1">Priority</label>
-                                <div className="flex items-center bg-black/40 border border-shark rounded-xl focus-within:border-[#279da6]/50 transition-all group overflow-hidden relative">
-                                    <div className="pl-3 text-storm-gray group-focus-within:text-[#279da6] transition-colors pointer-events-none">
-                                        <Flag size={14} />
-                                    </div>
-                                    <select
-                                        value={formData.priority}
-                                        disabled={displayProfile?.role !== 'super_admin'}
-                                        onChange={e => handleUpdate('priority', e.target.value)}
-                                        className={`flex-1 bg-transparent p-3 pl-2 pr-10 appearance-none focus:outline-none transition-all cursor-not-allowed disabled:opacity-70 font-bold text-xs [color-scheme:dark] ${formData.priority === 'Critical' ? '!text-rose-500' :
-                                            formData.priority === 'High' ? '!text-amber-500' :
-                                                formData.priority === 'Medium' ? '!text-malibu' : '!text-storm-gray'
-                                            }`}
-                                    >
-                                        {['Low', 'Medium', 'High', 'Critical'].map(p => (
-                                            <option key={p} value={p} className="bg-[#18181B] !text-white">{p}</option>
-                                        ))}
-                                    </select>
-                                </div>
+                                <CustomDropdown
+                                    value={formData.priority}
+                                    disabled={displayProfile?.role !== 'super_admin'}
+                                    onChange={val => handleUpdate('priority', val)}
+                                    options={[
+                                        { label: 'Low', value: 'Low', icon: <Flag size={14} className="text-storm-gray" />, color: 'text-storm-gray' },
+                                        { label: 'Medium', value: 'Medium', icon: <Flag size={14} className="text-malibu" />, color: 'text-malibu' },
+                                        { label: 'High', value: 'High', icon: <Flag size={14} className="text-amber-500" />, color: 'text-amber-500' },
+                                        { label: 'Critical', value: 'Critical', icon: <Flag size={14} className="text-rose-500" />, color: 'text-rose-500' },
+                                    ]}
+                                    className="flex-1"
+                                />
                             </div>
                         </div>
 
@@ -367,22 +360,20 @@ export default function TaskDetailModal({
                         <div className="grid grid-cols-2 gap-4">
                             <div className="space-y-1.5">
                                 <label className="text-[10px] font-black text-storm-gray uppercase tracking-widest ml-1">Assigned To</label>
-                                <div className="flex items-center bg-black/40 border border-shark rounded-xl focus-within:border-[#279da6]/50 transition-all group overflow-hidden relative">
-                                    <div className="pl-3 text-storm-gray group-focus-within:text-[#279da6] transition-colors pointer-events-none">
-                                        <User size={14} />
-                                    </div>
-                                    <select
-                                        value={formData.assigned_to}
-                                        disabled={displayProfile?.role !== 'super_admin'}
-                                        onChange={e => handleUpdate('assigned_to', e.target.value)}
-                                        className="flex-1 bg-transparent p-3 pl-2 pr-10 !text-white appearance-none focus:outline-none transition-all cursor-not-allowed disabled:opacity-70 font-bold text-xs [color-scheme:dark]"
-                                    >
-                                        <option value="" className="bg-[#18181B] !text-white">Unassigned</option>
-                                        {assignees.map((a: any) => (
-                                            <option key={a.id} value={a.id} className="bg-[#18181B] !text-white">{a.name}</option>
-                                        ))}
-                                    </select>
-                                </div>
+                                <CustomDropdown
+                                    value={formData.assigned_to}
+                                    disabled={displayProfile?.role !== 'super_admin'}
+                                    onChange={val => handleUpdate('assigned_to', val)}
+                                    options={[
+                                        { label: 'Unassigned', value: '', icon: <PlusIcon size={14} className="text-storm-gray" /> },
+                                        ...assignees.map((a: any) => ({
+                                            label: a.name,
+                                            value: a.id,
+                                            icon: <UserIcon size={14} className="text-[#279da6]" />
+                                        }))
+                                    ]}
+                                    className="flex-1"
+                                />
                             </div>
 
                             <div className="space-y-1.5">
@@ -405,32 +396,26 @@ export default function TaskDetailModal({
                         <div className="space-y-1.5">
                             <label className="text-[10px] font-black text-storm-gray uppercase tracking-widest ml-1">Linked Request(s)</label>
                             <div className="space-y-3">
-                                <div className="flex items-center bg-transparent border border-shark rounded-xl focus-within:border-[#279da6]/50 transition-all group overflow-hidden relative">
-                                    <div className="pl-3 text-storm-gray group-focus-within:text-[#279da6] transition-colors pointer-events-none">
-                                        <FileText size={14} />
-                                    </div>
-                                    <select
-                                        value=""
-                                        disabled={displayProfile?.role !== 'super_admin'}
-                                        onChange={e => {
-                                            if (e.target.value) {
-                                                const id = e.target.value;
-                                                const newIds = formData.request_ids.includes(id)
-                                                    ? formData.request_ids
-                                                    : [...formData.request_ids, id];
-                                                handleUpdate('request_ids', newIds);
-                                            }
-                                        }}
-                                        className="flex-1 bg-transparent p-3 pl-2 pr-10 !text-white appearance-none focus:outline-none transition-all cursor-not-allowed disabled:opacity-50 font-bold text-xs [color-scheme:dark]"
-                                    >
-                                        <option value="" className="bg-[#18181B] !text-white">Add connection...</option>
-                                        {requests.filter(r => !formData.request_ids.includes(r.id)).map((r: any) => (
-                                            <option key={r.id} value={r.id} className="bg-[#18181B] !text-white">
-                                                {r.title}
-                                            </option>
-                                        ))}
-                                    </select>
-                                </div>
+                                <CustomDropdown
+                                    value=""
+                                    placeholder="Add connection..."
+                                    disabled={displayProfile?.role !== 'super_admin'}
+                                    onChange={val => {
+                                        if (val) {
+                                            const newIds = formData.request_ids.includes(val)
+                                                ? formData.request_ids
+                                                : [...formData.request_ids, val];
+                                            handleUpdate('request_ids', newIds);
+                                        }
+                                    }}
+                                    options={[
+                                        ...requests.filter(r => !formData.request_ids.includes(r.id)).map((r: any) => ({
+                                            label: r.title,
+                                            value: r.id,
+                                            icon: <FileText size={14} className="text-[#279da6]" />
+                                        }))
+                                    ]}
+                                />
 
                                 {/* Selected Requests Pills */}
                                 {formData.request_ids.length > 0 && (
