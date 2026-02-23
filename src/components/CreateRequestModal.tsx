@@ -12,11 +12,12 @@ import {
     CheckCircle2,
     Loader2,
     User,
-    ChevronDown,
-    Plus,
-    Check
+    Check,
+    Flag,
+    Plus
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
+import CustomDropdown from '@/components/CustomDropdown';
 
 interface Profile {
     id: string;
@@ -171,30 +172,17 @@ export default function CreateRequestModal({ isOpen, onClose, onSuccess }: Creat
                                 <label className="text-[10px] font-black text-storm-gray uppercase tracking-[0.2em] ml-1">
                                     Client <span className="text-rose-500">(Required)</span>
                                 </label>
-                                <div className="flex items-center bg-[#09090B] border border-shark/60 rounded-xl focus-within:border-[#279da6]/60 transition-all group overflow-hidden relative">
-                                    <div className="pl-4 text-storm-gray group-focus-within:text-[#279da6] transition-colors pointer-events-none">
-                                        <User size={18} />
-                                    </div>
-                                    <select
-                                        className="flex-1 bg-transparent py-3 pl-2 pr-10 text-sm text-iron focus:outline-none appearance-none cursor-pointer"
-                                        value={selectedClientId}
-                                        onChange={(e) => setSelectedClientId(e.target.value)}
-                                    >
-                                        <option value="">Select a client...</option>
-                                        {clients.map(client => (
-                                            <option
-                                                key={client.id}
-                                                value={client.profile_id || ''}
-                                                disabled={!client.profile_id}
-                                            >
-                                                {client.full_name || client.name} ({client.organization || client.email}) {!client.profile_id ? '- (Account Not Activated)' : ''}
-                                            </option>
-                                        ))}
-                                    </select>
-                                    <div className="absolute right-4 top-1/2 -translate-y-1/2 text-storm-gray pointer-events-none">
-                                        <ChevronDown size={18} />
-                                    </div>
-                                </div>
+                                <CustomDropdown
+                                    value={selectedClientId}
+                                    onChange={(val) => setSelectedClientId(val)}
+                                    placeholder="Select a client..."
+                                    options={clients.map(client => ({
+                                        label: `${client.full_name || client.name} (${client.organization || client.email}) ${!client.profile_id ? '- (Account Not Activated)' : ''}`,
+                                        value: client.profile_id || '',
+                                        disabled: !client.profile_id,
+                                        icon: <User size={16} className="text-[#279da6]" />
+                                    }))}
+                                />
                                 {isLoadingClients && (
                                     <p className="text-[10px] font-bold text-[#279da6] uppercase tracking-widest ml-1 animate-pulse">Loading clients...</p>
                                 )}
@@ -264,24 +252,16 @@ export default function CreateRequestModal({ isOpen, onClose, onSuccess }: Creat
                                 <label className="text-[10px] font-black text-storm-gray uppercase tracking-[0.2em] ml-1">
                                     Priority
                                 </label>
-                                <div className="flex items-center bg-[#09090B] border border-shark/60 rounded-xl focus-within:border-[#279da6]/60 transition-all group overflow-hidden relative">
-                                    <div className="pl-4 text-storm-gray group-focus-within:text-[#279da6] transition-colors pointer-events-none">
-                                        <BarChart size={18} />
-                                    </div>
-                                    <select
-                                        value={priority}
-                                        onChange={(e) => setPriority(e.target.value)}
-                                        className="flex-1 bg-transparent py-3 pl-2 pr-10 text-sm text-iron focus:outline-none appearance-none cursor-pointer font-bold"
-                                    >
-                                        <option value="Low">Low</option>
-                                        <option value="Medium">Medium</option>
-                                        <option value="High">High</option>
-                                        <option value="Critical">Critical</option>
-                                    </select>
-                                    <div className="absolute right-4 top-1/2 -translate-y-1/2 text-storm-gray pointer-events-none">
-                                        <ChevronDown size={18} />
-                                    </div>
-                                </div>
+                                <CustomDropdown
+                                    value={priority}
+                                    onChange={(val) => setPriority(val)}
+                                    options={[
+                                        { label: 'Low', value: 'Low', icon: <Flag size={16} className="text-storm-gray" />, color: 'text-storm-gray' },
+                                        { label: 'Medium', value: 'Medium', icon: <Flag size={16} className="text-malibu" />, color: 'text-malibu' },
+                                        { label: 'High', value: 'High', icon: <Flag size={16} className="text-amber-500" />, color: 'text-amber-500' },
+                                        { label: 'Critical', value: 'Critical', icon: <Flag size={16} className="text-rose-500" />, color: 'text-rose-500' },
+                                    ]}
+                                />
                             </div>
 
                             <div className="flex items-center gap-3 p-4 bg-[#279da6]/5 border border-[#279da6]/20 rounded-2xl mt-4 group cursor-pointer" onClick={() => setCreateFolder(!createFolder)}>

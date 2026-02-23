@@ -1,8 +1,9 @@
 'use client';
 
 import React, { useState } from 'react';
-import { X, Send, User, Calendar, Flag, AlertTriangle, Loader2 } from 'lucide-react';
+import { X, Send, User, Calendar, Flag, AlertTriangle, Loader2, LayoutList } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
+import CustomDropdown from '@/components/CustomDropdown';
 
 interface CreateTaskModalProps {
     isOpen: boolean;
@@ -150,54 +151,39 @@ export default function CreateTaskModal({ isOpen, onClose, onSuccess, profiles, 
                             {/* Assisnee */}
                             <div className="space-y-2">
                                 <label className="text-[11px] font-black text-storm-gray uppercase tracking-widest ml-1">Assign To</label>
-                                <div className="flex items-center bg-[#09090B] border border-shark rounded-2xl focus-within:border-[#279da6]/50 transition-all group overflow-hidden relative">
-                                    <div className="pl-4 text-storm-gray group-focus-within:text-[#279da6] transition-colors pointer-events-none">
-                                        <User size={16} />
-                                    </div>
-                                    <select
-                                        value={selectedTeamMemberId}
-                                        onChange={e => {
-                                            const tmId = e.target.value;
-                                            const tm = assignees.find(a => a.tmId === tmId);
-                                            setSelectedTeamMemberId(tmId);
-                                            setFormData(prev => ({ ...prev, assigned_to: tm?.profileId || '' }));
-                                            setSuggestedRequests([]);
-                                        }}
-                                        className="flex-1 bg-transparent p-4 pl-2 pr-10 !text-white appearance-none focus:outline-none transition-all cursor-pointer [color-scheme:dark]"
-                                    >
-                                        <option value="" className="bg-[#18181B] !text-white">Unassigned</option>
-                                        {assignees.map(a => (
-                                            <option key={a.tmId} value={a.tmId} className="bg-[#18181B] !text-white">
-                                                {a.name}
-                                            </option>
-                                        ))}
-                                    </select>
-                                    <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-storm-gray">
-                                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m6 9 6 6 6-6" /></svg>
-                                    </div>
-                                </div>
+                                <CustomDropdown
+                                    value={selectedTeamMemberId}
+                                    onChange={val => {
+                                        const tm = assignees.find(a => a.tmId === val);
+                                        setSelectedTeamMemberId(val);
+                                        setFormData(prev => ({ ...prev, assigned_to: tm?.profileId || '' }));
+                                        setSuggestedRequests([]);
+                                    }}
+                                    placeholder="Unassigned"
+                                    options={[
+                                        { label: 'Unassigned', value: '' },
+                                        ...assignees.map(a => ({
+                                            label: a.name,
+                                            value: a.tmId,
+                                            icon: <User size={14} className="text-[#279da6]" />
+                                        }))
+                                    ]}
+                                />
                             </div>
 
                             {/* Priority */}
                             <div className="space-y-2">
                                 <label className="text-[11px] font-black text-storm-gray uppercase tracking-widest ml-1">Priority Level</label>
-                                <div className="flex items-center bg-[#09090B] border border-shark rounded-2xl focus-within:border-[#279da6]/50 transition-all group overflow-hidden relative">
-                                    <div className="pl-4 text-storm-gray group-focus-within:text-[#279da6] transition-colors pointer-events-none">
-                                        <Flag size={16} />
-                                    </div>
-                                    <select
-                                        value={formData.priority}
-                                        onChange={e => setFormData({ ...formData, priority: e.target.value })}
-                                        className="flex-1 bg-transparent p-4 pl-2 pr-10 !text-white appearance-none focus:outline-none transition-all cursor-pointer [color-scheme:dark]"
-                                    >
-                                        {['Low', 'Medium', 'High', 'Critical'].map(p => (
-                                            <option key={p} value={p} className="bg-[#18181B] !text-white">{p}</option>
-                                        ))}
-                                    </select>
-                                    <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-storm-gray">
-                                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m6 9 6 6 6-6" /></svg>
-                                    </div>
-                                </div>
+                                <CustomDropdown
+                                    value={formData.priority}
+                                    onChange={val => setFormData({ ...formData, priority: val })}
+                                    options={[
+                                        { label: 'Low', value: 'Low', icon: <Flag size={14} className="text-storm-gray" />, color: 'text-storm-gray' },
+                                        { label: 'Medium', value: 'Medium', icon: <Flag size={14} className="text-blue-400" />, color: 'text-blue-400' },
+                                        { label: 'High', value: 'High', icon: <Flag size={14} className="text-amber-500" />, color: 'text-amber-500' },
+                                        { label: 'Critical', value: 'Critical', icon: <Flag size={14} className="text-rose-500" />, color: 'text-rose-500' },
+                                    ]}
+                                />
                             </div>
                         </div>
 
@@ -207,36 +193,28 @@ export default function CreateTaskModal({ isOpen, onClose, onSuccess, profiles, 
                             <div className="space-y-2">
                                 <label className="text-[11px] font-black text-storm-gray uppercase tracking-widest ml-1">Link to Request(s) (Optional)</label>
                                 <div className="space-y-3">
-                                    <div className="flex items-center bg-[#09090B] border border-shark rounded-2xl focus-within:border-[#279da6]/50 transition-all group overflow-hidden relative">
-                                        <div className="pl-4 text-storm-gray group-focus-within:text-[#279da6] transition-colors pointer-events-none">
-                                            <AlertTriangle size={16} />
-                                        </div>
-                                        <select
-                                            value=""
-                                            onChange={e => {
-                                                if (e.target.value) {
-                                                    const id = e.target.value;
-                                                    setFormData(prev => ({
-                                                        ...prev,
-                                                        request_ids: prev.request_ids.includes(id)
-                                                            ? prev.request_ids
-                                                            : [...prev.request_ids, id]
-                                                    }));
-                                                }
-                                            }}
-                                            className="flex-1 bg-transparent p-4 pl-2 pr-10 !text-white appearance-none focus:outline-none transition-all cursor-pointer [color-scheme:dark]"
-                                        >
-                                            <option value="" className="bg-[#18181B] !text-white">Add Request Link...</option>
-                                            {requests.filter(r => !formData.request_ids.includes(r.id)).map(r => (
-                                                <option key={r.id} value={r.id} className="bg-[#18181B] !text-white">
-                                                    {r.title}
-                                                </option>
-                                            ))}
-                                        </select>
-                                        <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-storm-gray">
-                                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m6 9 6 6 6-6" /></svg>
-                                        </div>
-                                    </div>
+                                    <CustomDropdown
+                                        value=""
+                                        onChange={val => {
+                                            if (val) {
+                                                setFormData(prev => ({
+                                                    ...prev,
+                                                    request_ids: prev.request_ids.includes(val)
+                                                        ? prev.request_ids
+                                                        : [...prev.request_ids, val]
+                                                }));
+                                            }
+                                        }}
+                                        placeholder="Add Request Link..."
+                                        options={[
+                                            { label: 'Add Request Link...', value: '' },
+                                            ...requests.filter(r => !formData.request_ids.includes(r.id)).map(r => ({
+                                                label: r.title,
+                                                value: r.id,
+                                                icon: <LayoutList size={14} className="text-[#279da6]" />
+                                            }))
+                                        ]}
+                                    />
 
                                     {/* Suggested Requests Section — shown whenever a team member is selected */}
                                     {selectedTeamMemberId && (

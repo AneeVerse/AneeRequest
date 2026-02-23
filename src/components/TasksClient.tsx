@@ -19,8 +19,10 @@ import {
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import CreateTaskModal from '@/components/CreateTaskModal';
+import CustomDropdown from '@/components/CustomDropdown';
 import { TaskItem } from '@/lib/data/tasks';
 import { formatDate, formatTime } from '@/lib/dateUtils';
+import { CircleDashed, RefreshCcw, AlertCircle, CheckCircle2, Flag, User as UserIcon } from 'lucide-react';
 
 interface TasksClientProps {
     initialTasks: TaskItem[];
@@ -250,45 +252,49 @@ export default function TasksClient({ initialTasks, profiles, teamMembers, reque
                                                         <div className="grid grid-cols-2 gap-3">
                                                             <div className="space-y-1.5">
                                                                 <label className="text-[10px] font-bold text-storm-gray uppercase">Assigned To</label>
-                                                                <select
+                                                                <CustomDropdown
                                                                     value={filters.assigned_to}
-                                                                    onChange={(e) => setFilters(f => ({ ...f, assigned_to: e.target.value }))}
-                                                                    className="w-full bg-[#09090B] border border-shark rounded-lg px-2 py-1.5 text-[11px] font-bold focus:outline-none focus:border-[#279da6]/40 text-iron"
-                                                                >
-                                                                    <option value="">All</option>
-                                                                    {teamMembers.map((m: any) => <option key={m.id} value={m.profile_id || m.id}>{m.full_name || (m as any).name}</option>)}
-                                                                </select>
+                                                                    onChange={(val) => setFilters(f => ({ ...f, assigned_to: val }))}
+                                                                    options={[
+                                                                        { label: 'All Members', value: '' },
+                                                                        ...teamMembers.map((m: any) => ({
+                                                                            label: m.full_name || (m as any).name,
+                                                                            value: m.profile_id || m.id,
+                                                                            icon: <UserIcon size={12} className="text-storm-gray" />
+                                                                        }))
+                                                                    ]}
+                                                                />
                                                             </div>
                                                             <div className="space-y-1.5">
                                                                 <label className="text-[10px] font-bold text-storm-gray uppercase">Status</label>
-                                                                <select
+                                                                <CustomDropdown
                                                                     value={filters.status}
-                                                                    onChange={(e) => setFilters(f => ({ ...f, status: e.target.value }))}
-                                                                    className="w-full bg-[#09090B] border border-shark rounded-lg px-2 py-1.5 text-[11px] font-bold focus:outline-none focus:border-[#279da6]/40 text-iron"
-                                                                >
-                                                                    <option value="">All</option>
-                                                                    <option value="Todo">Todo</option>
-                                                                    <option value="In Progress">In Progress</option>
-                                                                    <option value="Review">Review</option>
-                                                                    <option value="Done">Done</option>
-                                                                </select>
+                                                                    onChange={(val) => setFilters(f => ({ ...f, status: val }))}
+                                                                    options={[
+                                                                        { label: 'All Statuses', value: '' },
+                                                                        { label: 'Todo', value: 'Todo', icon: <CircleDashed size={12} className="text-storm-gray" /> },
+                                                                        { label: 'In Progress', value: 'In Progress', icon: <RefreshCcw size={12} className="text-malibu" /> },
+                                                                        { label: 'Review', value: 'Review', icon: <AlertCircle size={12} className="text-amber-400" /> },
+                                                                        { label: 'Done', value: 'Done', icon: <CheckCircle2 size={12} className="text-emerald-400" /> },
+                                                                    ]}
+                                                                />
                                                             </div>
                                                         </div>
 
                                                         <div className="grid grid-cols-2 gap-3">
                                                             <div className="space-y-1.5">
                                                                 <label className="text-[10px] font-bold text-storm-gray uppercase">Priority</label>
-                                                                <select
+                                                                <CustomDropdown
                                                                     value={filters.priority}
-                                                                    onChange={(e) => setFilters(f => ({ ...f, priority: e.target.value }))}
-                                                                    className="w-full bg-[#09090B] border border-shark rounded-lg px-2 py-1.5 text-[11px] font-bold focus:outline-none focus:border-[#279da6]/40 text-iron"
-                                                                >
-                                                                    <option value="">All</option>
-                                                                    <option value="Low">Low</option>
-                                                                    <option value="Medium">Medium</option>
-                                                                    <option value="High">High</option>
-                                                                    <option value="Critical">Critical</option>
-                                                                </select>
+                                                                    onChange={(val) => setFilters(f => ({ ...f, priority: val }))}
+                                                                    options={[
+                                                                        { label: 'All Priorities', value: '' },
+                                                                        { label: 'Low', value: 'Low', icon: <Flag size={12} className="text-storm-gray" />, color: 'text-storm-gray' },
+                                                                        { label: 'Medium', value: 'Medium', icon: <Flag size={12} className="text-malibu" />, color: 'text-malibu' },
+                                                                        { label: 'High', value: 'High', icon: <Flag size={12} className="text-amber-500" />, color: 'text-amber-500' },
+                                                                        { label: 'Critical', value: 'Critical', icon: <Flag size={12} className="text-rose-500" />, color: 'text-rose-500' },
+                                                                    ]}
+                                                                />
                                                             </div>
                                                             <div className="space-y-1.5">
                                                                 <label className="text-[10px] font-bold text-storm-gray uppercase">Due Date</label>
@@ -374,40 +380,44 @@ export default function TasksClient({ initialTasks, profiles, teamMembers, reque
                                                                         <div>
                                                                             <div className="text-[10px] font-bold text-storm-gray uppercase mb-1 px-1">Filter</div>
                                                                             {header.filter === 'status' && (
-                                                                                <select
+                                                                                <CustomDropdown
                                                                                     value={filters.status}
-                                                                                    onChange={(e) => { setFilters(f => ({ ...f, status: e.target.value })); setActiveFilterHeader(null); }}
-                                                                                    className="w-full bg-[#09090B] border border-shark/50 rounded-md py-1 px-2 text-[10px] text-iron focus:outline-none"
-                                                                                >
-                                                                                    <option value="">All Status</option>
-                                                                                    <option value="Todo">Todo</option>
-                                                                                    <option value="In Progress">In Progress</option>
-                                                                                    <option value="Review">Review</option>
-                                                                                    <option value="Done">Done</option>
-                                                                                </select>
+                                                                                    onChange={(val) => { setFilters(f => ({ ...f, status: val })); setActiveFilterHeader(null); }}
+                                                                                    options={[
+                                                                                        { label: 'All Status', value: '' },
+                                                                                        { label: 'Todo', value: 'Todo', icon: <CircleDashed size={12} className="text-storm-gray" /> },
+                                                                                        { label: 'In Progress', value: 'In Progress', icon: <RefreshCcw size={12} className="text-malibu" /> },
+                                                                                        { label: 'Review', value: 'Review', icon: <AlertCircle size={12} className="text-amber-400" /> },
+                                                                                        { label: 'Done', value: 'Done', icon: <CheckCircle2 size={12} className="text-emerald-400" /> },
+                                                                                    ]}
+                                                                                />
                                                                             )}
                                                                             {header.filter === 'assigned_to' && (
-                                                                                <select
+                                                                                <CustomDropdown
                                                                                     value={filters.assigned_to}
-                                                                                    onChange={(e) => { setFilters(f => ({ ...f, assigned_to: e.target.value })); setActiveFilterHeader(null); }}
-                                                                                    className="w-full bg-[#09090B] border border-shark/50 rounded-md py-1 px-2 text-[10px] text-iron focus:outline-none"
-                                                                                >
-                                                                                    <option value="">All Team</option>
-                                                                                    {teamMembers.map((m: any) => <option key={m.id} value={m.profile_id || m.id}>{m.full_name || (m as any).name}</option>)}
-                                                                                </select>
+                                                                                    onChange={(val) => { setFilters(f => ({ ...f, assigned_to: val })); setActiveFilterHeader(null); }}
+                                                                                    options={[
+                                                                                        { label: 'All Team', value: '' },
+                                                                                        ...teamMembers.map((m: any) => ({
+                                                                                            label: m.full_name || (m as any).name,
+                                                                                            value: m.profile_id || m.id,
+                                                                                            icon: <UserIcon size={12} className="text-storm-gray" />
+                                                                                        }))
+                                                                                    ]}
+                                                                                />
                                                                             )}
                                                                             {header.filter === 'priority' && (
-                                                                                <select
+                                                                                <CustomDropdown
                                                                                     value={filters.priority}
-                                                                                    onChange={(e) => { setFilters(f => ({ ...f, priority: e.target.value })); setActiveFilterHeader(null); }}
-                                                                                    className="w-full bg-[#09090B] border border-shark/50 rounded-md py-1 px-2 text-[10px] text-iron focus:outline-none"
-                                                                                >
-                                                                                    <option value="">All Priority</option>
-                                                                                    <option value="Low">Low</option>
-                                                                                    <option value="Medium">Medium</option>
-                                                                                    <option value="High">High</option>
-                                                                                    <option value="Critical">Critical</option>
-                                                                                </select>
+                                                                                    onChange={(val) => { setFilters(f => ({ ...f, priority: val })); setActiveFilterHeader(null); }}
+                                                                                    options={[
+                                                                                        { label: 'All Priority', value: '' },
+                                                                                        { label: 'Low', value: 'Low', icon: <Flag size={12} className="text-storm-gray" />, color: 'text-storm-gray' },
+                                                                                        { label: 'Medium', value: 'Medium', icon: <Flag size={12} className="text-malibu" />, color: 'text-malibu' },
+                                                                                        { label: 'High', value: 'High', icon: <Flag size={12} className="text-amber-500" />, color: 'text-amber-500' },
+                                                                                        { label: 'Critical', value: 'Critical', icon: <Flag size={12} className="text-rose-500" />, color: 'text-rose-500' },
+                                                                                    ]}
+                                                                                />
                                                                             )}
                                                                             {header.filter === 'due_date' && (
                                                                                 <input
@@ -480,61 +490,47 @@ export default function TasksClient({ initialTasks, profiles, teamMembers, reque
                                                                 {item.creator?.full_name || 'System'}
                                                             </td>
                                                             <td className="px-6 py-4.5 border-r border-shark/60">
-                                                                <select
+                                                                <CustomDropdown
                                                                     value={item.status}
-                                                                    onChange={(e) => handleUpdateField(item.id, 'status', e.target.value)}
-                                                                    className={`bg-transparent font-black text-[10px] uppercase tracking-wider focus:outline-none cursor-pointer hover:underline py-1 px-2.5 rounded-md border
-                                                                    ${item.status === 'Done' ? 'bg-[#10B981]/5 text-[#10B981] border-[#10B981]/20' :
-                                                                            item.status === 'In Progress' ? 'bg-[#EAB308]/5 text-[#EAB308] border-[#EAB308]/20' :
-                                                                                item.status === 'Review' ? 'bg-blue-500/5 text-blue-400 border-blue-400/20' :
-                                                                                    'bg-[#279da6]/5 text-[#279da6] border-[#279da6]/20'
-                                                                        }`}
-                                                                >
-                                                                    <option value="Todo" className="bg-[#121214]">Todo</option>
-                                                                    <option value="In Progress" className="bg-[#121214]">In Progress</option>
-                                                                    <option value="Review" className="bg-[#121214]">Review</option>
-                                                                    <option value="Done" className="bg-[#121214]">Done</option>
-                                                                </select>
+                                                                    onChange={(val) => handleUpdateField(item.id, 'status', val)}
+                                                                    options={[
+                                                                        { label: 'Todo', value: 'Todo', icon: <CircleDashed size={12} className="text-storm-gray" /> },
+                                                                        { label: 'In Progress', value: 'In Progress', icon: <RefreshCcw size={12} className="text-malibu" /> },
+                                                                        { label: 'Review', value: 'Review', icon: <AlertCircle size={12} className="text-amber-400" /> },
+                                                                        { label: 'Done', value: 'Done', icon: <CheckCircle2 size={12} className="text-emerald-400" /> },
+                                                                    ]}
+                                                                    className="w-28"
+                                                                />
                                                             </td>
-                                                            <td className="px-6 py-4.5 text-santas-gray border-r border-shark/60 whitespace-nowrap">
+                                                            <td className="px-4 py-4.5 text-santas-gray border-r border-shark/60 whitespace-nowrap">
                                                                 <div className="flex items-center gap-2">
-                                                                    <div className="w-6 h-6 rounded-full bg-shark/40 border border-shark flex items-center justify-center text-storm-gray overflow-hidden shrink-0">
-                                                                        {item.assignee ? (
-                                                                            <div className="w-full h-full bg-[#279da6] text-white flex items-center justify-center text-[8px] font-black">
-                                                                                {item.assignee.full_name?.split(' ').map((n: string) => n[0]).join('')}
-                                                                            </div>
-                                                                        ) : (
-                                                                            <PlusIcon size={12} />
-                                                                        )}
-                                                                    </div>
-                                                                    <select
+                                                                    <CustomDropdown
                                                                         value={item.assigned_to || ''}
-                                                                        onChange={(e) => handleUpdateField(item.id, 'assigned_to', e.target.value)}
-                                                                        className="bg-transparent text-[11px] font-black text-iron focus:outline-none cursor-pointer hover:text-white transition-all appearance-none"
-                                                                    >
-                                                                        <option value="" className="bg-[#121214]">Unassigned</option>
-                                                                        {teamMembers.filter((tm: any) => tm.profile_id).map((tm: any) => (
-                                                                            <option key={tm.id} value={tm.profile_id} className="bg-[#121214]">{tm.name}</option>
-                                                                        ))}
-                                                                    </select>
+                                                                        onChange={(val) => handleUpdateField(item.id, 'assigned_to', val)}
+                                                                        options={[
+                                                                            { label: 'Unassigned', value: '', icon: <PlusIcon size={12} className="text-storm-gray" /> },
+                                                                            ...teamMembers.filter((tm: any) => tm.profile_id).map((tm: any) => ({
+                                                                                label: tm.name || tm.full_name,
+                                                                                value: tm.profile_id,
+                                                                                icon: <UserIcon size={12} className="text-[#279da6]" />
+                                                                            }))
+                                                                        ]}
+                                                                        className="w-36"
+                                                                    />
                                                                 </div>
                                                             </td>
-                                                            <td className="px-6 py-4.5 border-r border-shark/60 font-black">
-                                                                <select
+                                                            <td className="px-4 py-4.5 border-r border-shark/60 font-black text-center">
+                                                                <CustomDropdown
                                                                     value={item.priority}
-                                                                    onChange={(e) => handleUpdateField(item.id, 'priority', e.target.value)}
-                                                                    className={`bg-transparent text-[11px] font-black focus:outline-none cursor-pointer hover:underline
-                                                                    ${item.priority === 'Critical' ? 'text-rose-500' :
-                                                                            item.priority === 'High' ? 'text-amber-500' :
-                                                                                item.priority === 'Medium' ? 'text-blue-400' :
-                                                                                    'text-storm-gray'
-                                                                        }`}
-                                                                >
-                                                                    <option value="Low" className="bg-[#121214]">Low</option>
-                                                                    <option value="Medium" className="bg-[#121214]">Medium</option>
-                                                                    <option value="High" className="bg-[#121214]">High</option>
-                                                                    <option value="Critical" className="bg-[#121214]">Critical</option>
-                                                                </select>
+                                                                    onChange={(val) => handleUpdateField(item.id, 'priority', val)}
+                                                                    options={[
+                                                                        { label: 'Low', value: 'Low', icon: <Flag size={12} className="text-storm-gray" />, color: 'text-storm-gray' },
+                                                                        { label: 'Medium', value: 'Medium', icon: <Flag size={12} className="text-malibu" />, color: 'text-malibu' },
+                                                                        { label: 'High', value: 'High', icon: <Flag size={12} className="text-amber-500" />, color: 'text-amber-500' },
+                                                                        { label: 'Critical', value: 'Critical', icon: <Flag size={12} className="text-rose-500" />, color: 'text-rose-500' },
+                                                                    ]}
+                                                                    className="w-28"
+                                                                />
                                                             </td>
                                                             <td className="px-6 py-4.5 text-storm-gray border-r border-shark/60 whitespace-nowrap">
                                                                 <div className="flex items-center gap-2 group/date relative">

@@ -22,12 +22,14 @@ import {
     Box,
     FileText,
     UserCog,
-    Camera
+    Camera,
+    Shield
 } from 'lucide-react';
 import AvatarUpload from '@/components/AvatarUpload';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import { formatDate, formatTime } from '@/lib/dateUtils';
+import CustomDropdown from '@/components/CustomDropdown';
 
 interface TeamMember {
     id: string;
@@ -656,15 +658,15 @@ export default function TeamClient({ initialMembers, initialCounts }: TeamClient
 
                                             <div>
                                                 <label className="block text-[10px] font-black uppercase tracking-widest text-storm-gray mb-2">Role *</label>
-                                                <select
+                                                <CustomDropdown
                                                     value={formData.role}
-                                                    onChange={(e) => setFormData({ ...formData, role: e.target.value })}
-                                                    className="w-full bg-[#09090B] border border-shark rounded-lg px-4 py-2.5 text-sm text-iron focus:outline-none focus:border-[#279da6]/40 transition-all"
-                                                >
-                                                    <option value="viewer">Viewer – (view, chat)</option>
-                                                    <option value="editor">Editor – (view, add, edit, chat)</option>
-                                                    <option value="admin">Admin – (view, add, edit, delete, chat)</option>
-                                                </select>
+                                                    onChange={(val) => setFormData({ ...formData, role: val })}
+                                                    options={[
+                                                        { label: 'Viewer – (view, chat)', value: 'viewer', icon: <Eye size={12} className="text-amber-400" />, color: 'text-amber-400' },
+                                                        { label: 'Editor – (view, add, edit, chat)', value: 'editor', icon: <Edit2 size={12} className="text-blue-400" />, color: 'text-blue-400' },
+                                                        { label: 'Admin – (view, add, edit, delete, chat)', value: 'admin', icon: <Shield size={12} className="text-purple-400" />, color: 'text-purple-400' },
+                                                    ]}
+                                                />
                                             </div>
 
                                             <div>
@@ -810,15 +812,15 @@ export default function TeamClient({ initialMembers, initialCounts }: TeamClient
 
                                             <div>
                                                 <label className="block text-[10px] font-black uppercase tracking-widest text-storm-gray mb-2">Role *</label>
-                                                <select
+                                                <CustomDropdown
                                                     value={formData.role}
-                                                    onChange={(e) => setFormData({ ...formData, role: e.target.value })}
-                                                    className="w-full bg-[#09090B] border border-shark rounded-lg px-4 py-2.5 text-sm text-iron focus:outline-none focus:border-[#279da6]/40 transition-all"
-                                                >
-                                                    <option value="viewer">Viewer – (view, chat)</option>
-                                                    <option value="editor">Editor – (view, add, edit, chat)</option>
-                                                    <option value="admin">Admin – (view, add, edit, delete, chat)</option>
-                                                </select>
+                                                    onChange={(val) => setFormData({ ...formData, role: val })}
+                                                    options={[
+                                                        { label: 'Viewer – (view, chat)', value: 'viewer', icon: <Eye size={12} className="text-amber-400" />, color: 'text-amber-400' },
+                                                        { label: 'Editor – (view, add, edit, chat)', value: 'editor', icon: <Edit2 size={12} className="text-blue-400" />, color: 'text-blue-400' },
+                                                        { label: 'Admin – (view, add, edit, delete, chat)', value: 'admin', icon: <Shield size={12} className="text-purple-400" />, color: 'text-purple-400' },
+                                                    ]}
+                                                />
                                             </div>
 
                                             <div>
