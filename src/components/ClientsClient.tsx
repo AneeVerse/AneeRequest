@@ -25,8 +25,10 @@ import {
     ExternalLink,
     Check,
     SortAsc,
-    SortDesc
+    SortDesc,
+    Camera
 } from 'lucide-react';
+import AvatarUpload from '@/components/AvatarUpload';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 
@@ -40,7 +42,7 @@ interface ClientItem {
     lastLoginDate: string;
     lastLoginTime: string;
     lastLoginRaw: string | null;
-    avatar?: string;
+    avatar_url?: string | null;
     status: string;
 }
 
@@ -93,7 +95,8 @@ export default function ClientsClient({ initialClients }: ClientsClientProps) {
         password: '',
         confirmPassword: '',
         create_folder: true,
-        status: 'Ongoing'
+        status: 'Ongoing',
+        avatarUrl: ''
     });
 
     const clientCategories = ['Ongoing', 'Leads', 'Closed', 'Archive', 'All'];
@@ -112,7 +115,7 @@ export default function ClientsClient({ initialClients }: ClientsClientProps) {
     }, [clients]);
 
     const resetForm = () => {
-        setFormData({ name: '', organization: '', email: '', password: '', confirmPassword: '', create_folder: true, status: 'Ongoing' });
+        setFormData({ name: '', organization: '', email: '', password: '', confirmPassword: '', create_folder: true, status: 'Ongoing', avatarUrl: '' });
         setSelectedClient(null);
     };
 
@@ -157,7 +160,8 @@ export default function ClientsClient({ initialClients }: ClientsClientProps) {
             password: '',
             confirmPassword: '',
             create_folder: true,
-            status: client.status || 'Ongoing'
+            status: client.status || 'Ongoing',
+            avatarUrl: client.avatar_url || ''
         });
         setIsEditModalOpen(true);
         setActiveDropdown(null);
@@ -187,7 +191,8 @@ export default function ClientsClient({ initialClients }: ClientsClientProps) {
                     name: formData.name,
                     organization: formData.organization,
                     email: formData.email,
-                    status: formData.status
+                    status: formData.status,
+                    avatarUrl: formData.avatarUrl
                 })
             });
 
@@ -340,6 +345,11 @@ export default function ClientsClient({ initialClients }: ClientsClientProps) {
                         setActiveTab={setActiveTab}
                         onCreate={() => setIsModalOpen(true)}
                         tabCounts={tabCounts}
+                        pageSwitcher={[
+                            { name: 'Clients', path: '/clients' },
+                            { name: 'Team', path: '/team' }
+                        ]}
+                        activePath="/clients"
                     />
 
                     <main className="flex-1 overflow-y-auto custom-scrollbar">
@@ -390,9 +400,9 @@ export default function ClientsClient({ initialClients }: ClientsClientProps) {
                                                 <tr className="border-b border-shark text-storm-gray text-xs uppercase font-black tracking-widest bg-shark/20">
                                                     <th className="px-5 py-5 w-12 border-r border-shark/60 text-center">#</th>
                                                     {[
-                                                        { label: 'User', key: 'name', filter: 'name' },
+                                                        { label: 'Organization', key: 'name', filter: 'name' },
                                                         { label: 'Email', key: 'email', filter: 'email' },
-                                                        { label: 'Organization', key: 'organization', filter: 'organization' },
+                                                        { label: 'User', key: 'organization', filter: 'organization' },
                                                         { label: 'Created At', key: 'createdAt', filter: 'createdAt' },
                                                         { label: 'Last Login', key: 'lastLoginDate', filter: 'lastLoginDate' },
                                                         { label: 'Status', key: 'status', filter: 'status' }
@@ -472,15 +482,19 @@ export default function ClientsClient({ initialClients }: ClientsClientProps) {
                                                             >
                                                                 <div className="flex items-center gap-3">
                                                                     <div className="w-9 h-9 rounded-full bg-shark/80 border border-white/5 overflow-hidden flex items-center justify-center text-[11px] text-white font-black bg-gradient-to-br from-[#279da6]/20 to-transparent group-hover/cell:scale-110 transition-transform">
-                                                                        {client.name.split(' ').map((n: string) => n[0]).join('')}
+                                                                        {client.avatar_url ? (
+                                                                            <img src={client.avatar_url} alt={client.name} className="w-full h-full object-cover" />
+                                                                        ) : (
+                                                                            (client.name || client.organization).split(' ').map((n: string) => n[0]).join('').slice(0, 2)
+                                                                        )}
                                                                     </div>
-                                                                    <span className="text-iron font-black group-hover/cell:text-[#279da6] transition-colors">{client.name}</span>
+                                                                    <span className="text-iron font-black group-hover/cell:text-[#279da6] transition-colors uppercase tracking-tight">{client.name}</span>
                                                                 </div>
                                                             </td>
                                                             <td className="px-6 py-4.5 text-santas-gray border-r border-shark/60 font-black">
                                                                 {client.email}
                                                             </td>
-                                                            <td className="px-6 py-4.5 text-santas-gray border-r border-shark/60 font-black uppercase tracking-tight">{client.organization}</td>
+                                                            <td className="px-6 py-4.5 text-santas-gray border-r border-shark/60 font-black">{client.organization}</td>
                                                             <td className="px-6 py-4.5 text-storm-gray border-r border-shark/60 font-black whitespace-nowrap">{client.createdAt}</td>
                                                             <td className="px-6 py-4.5 text-storm-gray border-r border-shark/60 font-black whitespace-nowrap">
                                                                 {client.lastLoginRaw ? (
@@ -603,6 +617,17 @@ export default function ClientsClient({ initialClients }: ClientsClientProps) {
                                     </div>
 
                                     <div className="p-6 space-y-5">
+                                        <div className="flex flex-col items-center mb-2">
+                                            <AvatarUpload
+                                                currentAvatarUrl={formData.avatarUrl}
+                                                onUploadSuccess={(url) => setFormData(prev => ({ ...prev, avatarUrl: url }))}
+                                                onRemove={() => setFormData(prev => ({ ...prev, avatarUrl: '' }))}
+                                                name={formData.name || formData.organization}
+                                                email={formData.email}
+                                            />
+                                            <p className="text-[10px] font-bold text-storm-gray uppercase tracking-widest mt-1">Client Photo</p>
+                                        </div>
+
                                         <div className="space-y-1.5">
                                             <label className="text-[11px] font-bold text-santas-gray uppercase tracking-wider">Company/Organization Name</label>
                                             <input
@@ -729,6 +754,17 @@ export default function ClientsClient({ initialClients }: ClientsClientProps) {
                                     </div>
 
                                     <div className="p-6 space-y-5">
+                                        <div className="flex flex-col items-center mb-2">
+                                            <AvatarUpload
+                                                currentAvatarUrl={formData.avatarUrl}
+                                                onUploadSuccess={(url) => setFormData(prev => ({ ...prev, avatarUrl: url }))}
+                                                onRemove={() => setFormData(prev => ({ ...prev, avatarUrl: '' }))}
+                                                name={formData.name || formData.organization}
+                                                email={formData.email}
+                                            />
+                                            <p className="text-[10px] font-bold text-storm-gray uppercase tracking-widest mt-1">Client Photo</p>
+                                        </div>
+
                                         <div className="space-y-1.5">
                                             <label className="text-[11px] font-bold text-santas-gray uppercase tracking-wider">Company/Organization Name</label>
                                             <input
@@ -760,6 +796,7 @@ export default function ClientsClient({ initialClients }: ClientsClientProps) {
                                                 className="w-full bg-[#09090B] border border-shark/60 rounded-xl py-2.5 px-4 text-sm text-iron focus:outline-none focus:border-[#279da6]/60"
                                             />
                                         </div>
+
                                         <div className="space-y-1.5">
                                             <label className="text-[11px] font-bold text-santas-gray uppercase tracking-wider">Status</label>
                                             <select
@@ -800,49 +837,51 @@ export default function ClientsClient({ initialClients }: ClientsClientProps) {
                     )}
 
                     {/* --- Delete Confirmation Modal --- */}
-                    {isDeleteModalOpen && (
-                        <div className="fixed inset-0 z-[100] flex items-center justify-center">
-                            <div className="absolute inset-0 bg-black/80 backdrop-blur-sm animate-fade-in" onClick={() => setIsDeleteModalOpen(false)} />
+                    {
+                        isDeleteModalOpen && (
+                            <div className="fixed inset-0 z-[100] flex items-center justify-center">
+                                <div className="absolute inset-0 bg-black/80 backdrop-blur-sm animate-fade-in" onClick={() => setIsDeleteModalOpen(false)} />
 
-                            <div className="relative bg-[#18181B] border border-shark w-full max-w-sm rounded-3xl shadow-2xl overflow-hidden animate-slide-up mx-4 p-8">
-                                <div className="flex justify-between items-start mb-6">
-                                    <div className="w-12 h-12 rounded-2xl bg-rose-500/10 flex items-center justify-center text-rose-500">
-                                        <AlertTriangle size={24} />
+                                <div className="relative bg-[#18181B] border border-shark w-full max-w-sm rounded-3xl shadow-2xl overflow-hidden animate-slide-up mx-4 p-8">
+                                    <div className="flex justify-between items-start mb-6">
+                                        <div className="w-12 h-12 rounded-2xl bg-rose-500/10 flex items-center justify-center text-rose-500">
+                                            <AlertTriangle size={24} />
+                                        </div>
+                                        <button
+                                            onClick={() => setIsDeleteModalOpen(false)}
+                                            className="text-storm-gray hover:text-iron transition-colors"
+                                        >
+                                            <X size={20} />
+                                        </button>
                                     </div>
-                                    <button
-                                        onClick={() => setIsDeleteModalOpen(false)}
-                                        className="text-storm-gray hover:text-iron transition-colors"
-                                    >
-                                        <X size={20} />
-                                    </button>
-                                </div>
 
-                                <h2 className="text-xl font-bold text-iron mb-2">Delete Client?</h2>
-                                <p className="text-storm-gray text-sm mb-8 leading-relaxed">
-                                    Are you sure you want to delete <span className="text-white font-bold">{selectedClient?.name}</span>? This will permanently remove their access and all associated data.
-                                </p>
+                                    <h2 className="text-xl font-bold text-iron mb-2">Delete Client?</h2>
+                                    <p className="text-storm-gray text-sm mb-8 leading-relaxed">
+                                        Are you sure you want to delete <span className="text-white font-bold">{selectedClient?.name}</span>? This will permanently remove their access and all associated data.
+                                    </p>
 
-                                <div className="flex flex-col gap-3">
-                                    <button
-                                        onClick={handleDeleteConfirm}
-                                        disabled={isSubmitting}
-                                        className="w-full bg-rose-600 hover:bg-rose-700 text-white py-3 rounded-xl font-bold text-sm transition-all shadow-lg shadow-rose-600/20 active:scale-[0.98] flex items-center justify-center gap-2 disabled:opacity-50"
-                                    >
-                                        {isSubmitting ? <Loader2 size={16} className="animate-spin" /> : null}
-                                        Yes, Delete Account
-                                    </button>
-                                    <button
-                                        onClick={() => setIsDeleteModalOpen(false)}
-                                        className="w-full bg-shark/50 hover:bg-shark text-iron py-3 rounded-xl font-bold text-sm transition-all active:scale-[0.98]"
-                                    >
-                                        Cancel
-                                    </button>
+                                    <div className="flex flex-col gap-3">
+                                        <button
+                                            onClick={handleDeleteConfirm}
+                                            disabled={isSubmitting}
+                                            className="w-full bg-rose-600 hover:bg-rose-700 text-white py-3 rounded-xl font-bold text-sm transition-all shadow-lg shadow-rose-600/20 active:scale-[0.98] flex items-center justify-center gap-2 disabled:opacity-50"
+                                        >
+                                            {isSubmitting ? <Loader2 size={16} className="animate-spin" /> : null}
+                                            Yes, Delete Account
+                                        </button>
+                                        <button
+                                            onClick={() => setIsDeleteModalOpen(false)}
+                                            className="w-full bg-shark/50 hover:bg-shark text-iron py-3 rounded-xl font-bold text-sm transition-all active:scale-[0.98]"
+                                        >
+                                            Cancel
+                                        </button>
+                                    </div>
                                 </div>
                             </div>
-                        </div>
-                    )}
-                </div>
-            </div>
-        </div>
+                        )
+                    }
+                </div >
+            </div >
+        </div >
     );
 }

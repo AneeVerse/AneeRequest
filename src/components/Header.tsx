@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import ImpersonationWarning from '@/components/ImpersonationWarning';
+import Link from 'next/link';
 
 interface HeaderProps {
     onToggleSidebar: () => void;
@@ -22,6 +23,8 @@ interface HeaderProps {
     setActiveTab?: (tab: string) => void;
     onCreate?: () => void;
     tabCounts?: Record<string, number>;
+    pageSwitcher?: { name: string; path: string }[];
+    activePath?: string;
 }
 
 const Header: React.FC<HeaderProps> = ({
@@ -32,7 +35,9 @@ const Header: React.FC<HeaderProps> = ({
     activeTab,
     setActiveTab,
     onCreate,
-    tabCounts
+    tabCounts,
+    pageSwitcher,
+    activePath
 }) => {
     const { isImpersonating, viewAsProfile, stopImpersonating } = useAuth();
     const [theme, setTheme] = useState<'dark' | 'light'>('dark');
@@ -58,11 +63,38 @@ const Header: React.FC<HeaderProps> = ({
                     <PanelLeft size={18} />
                 </button>
 
-                {/* Section Label Pill */}
-                <div className="flex items-center gap-2 px-3 py-1.5 bg-shark/40 border border-shark rounded-lg shrink-0">
-                    {labelIcon || <ListFilter size={16} className="text-santas-gray" />}
-                    <span className="text-xs font-bold text-iron">{label}</span>
-                </div>
+                {/* Section Label or Page Switcher */}
+                {pageSwitcher ? (
+                    <div className="flex items-center bg-black/40 border border-shark p-1 rounded-xl overflow-hidden shrink-0">
+                        {pageSwitcher.filter(page => {
+                            // 1. Super Admin/Admin (Global) bypasses all restrictions
+                            if (viewAsProfile?.role === 'super_admin' || viewAsProfile?.role === 'admin') return true;
+
+                            // 2. Specific section checks
+                            const sections = viewAsProfile?.accessible_sections || [];
+                            if (page.path === '/clients' && !sections.includes('clients')) return false;
+                            if (page.path === '/team' && !sections.includes('team')) return false;
+
+                            return true;
+                        }).map((page) => (
+                            <Link
+                                key={page.path}
+                                href={page.path}
+                                className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all whitespace-nowrap cursor-pointer ${activePath === page.path
+                                    ? 'bg-[#1E1E22] text-[#279da6] border border-[#279da6]/20 shadow-lg'
+                                    : 'text-santas-gray hover:text-iron hover:bg-white/5'
+                                    }`}
+                            >
+                                {page.name}
+                            </Link>
+                        ))}
+                    </div>
+                ) : (
+                    <div className="flex items-center gap-2 px-3 py-1.5 bg-shark/40 border border-shark rounded-lg shrink-0">
+                        {labelIcon || <ListFilter size={16} className="text-santas-gray" />}
+                        <span className="text-xs font-bold text-iron">{label}</span>
+                    </div>
+                )}
 
                 {/* Dynamic Sub-Navigation */}
                 {tabs && tabs.length > 0 && (

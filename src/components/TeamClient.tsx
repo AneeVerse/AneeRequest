@@ -21,8 +21,10 @@ import {
     Settings,
     Box,
     FileText,
-    UserCog
+    UserCog,
+    Camera
 } from 'lucide-react';
+import AvatarUpload from '@/components/AvatarUpload';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import { formatDate, formatTime } from '@/lib/dateUtils';
@@ -40,6 +42,7 @@ interface TeamMember {
     request_count?: number;
     task_count?: number;
     tasks?: string[];
+    accessible_sections?: string[];
 }
 
 interface TeamClientProps {
@@ -91,13 +94,15 @@ export default function TeamClient({ initialMembers, initialCounts }: TeamClient
         email: '',
         password: '',
         confirmPassword: '',
-        role: 'viewer'
+        role: 'viewer',
+        accessible_sections: [] as string[],
+        avatarUrl: ''
     });
 
     const memberCategories = ['All Members', 'Active', 'Inactive'];
 
     const resetForm = () => {
-        setFormData({ name: '', email: '', password: '', confirmPassword: '', role: 'viewer' });
+        setFormData({ name: '', email: '', password: '', confirmPassword: '', role: 'viewer', accessible_sections: [], avatarUrl: '' });
         setSelectedMember(null);
     };
 
@@ -119,7 +124,9 @@ export default function TeamClient({ initialMembers, initialCounts }: TeamClient
                     email: formData.email,
                     password: formData.password,
                     position: formData.role,
-                    role: formData.role
+                    role: formData.role,
+                    accessible_sections: formData.accessible_sections,
+                    avatarUrl: formData.avatarUrl
                 })
             });
 
@@ -131,6 +138,8 @@ export default function TeamClient({ initialMembers, initialCounts }: TeamClient
                 const enrichedNewMember = {
                     ...newMember.member,
                     role: formData.role,
+                    accessible_sections: formData.accessible_sections,
+                    avatar_url: formData.avatarUrl,
                     request_count: 0,
                     created_at: new Date().toISOString()
                 };
@@ -155,7 +164,9 @@ export default function TeamClient({ initialMembers, initialCounts }: TeamClient
             email: member.email,
             password: '',
             confirmPassword: '',
-            role: member.role || 'viewer'
+            role: member.role || 'viewer',
+            accessible_sections: member.accessible_sections || [],
+            avatarUrl: member.avatar_url || ''
         });
         setIsEditModalOpen(true);
         setActiveDropdown(null);
@@ -175,7 +186,7 @@ export default function TeamClient({ initialMembers, initialCounts }: TeamClient
         // Optimistic update
         const updatedMembers = members.map(m =>
             m.id === selectedMember.id
-                ? { ...m, name: formData.name, email: formData.email, role: formData.role as any }
+                ? { ...m, name: formData.name, email: formData.email, role: formData.role as any, accessible_sections: formData.accessible_sections, avatar_url: formData.avatarUrl }
                 : m
         );
         setMembers(updatedMembers);
@@ -190,7 +201,9 @@ export default function TeamClient({ initialMembers, initialCounts }: TeamClient
                     email: formData.email,
                     password: formData.password,
                     position: formData.role,
-                    oldEmail: selectedMember.email
+                    oldEmail: selectedMember.email,
+                    accessible_sections: formData.accessible_sections,
+                    avatarUrl: formData.avatarUrl
                 })
             });
 
@@ -318,6 +331,11 @@ export default function TeamClient({ initialMembers, initialCounts }: TeamClient
                         activeTab={activeTab}
                         setActiveTab={setActiveTab}
                         onCreate={() => setIsModalOpen(true)}
+                        pageSwitcher={[
+                            { name: 'Clients', path: '/clients' },
+                            { name: 'Team', path: '/team' }
+                        ]}
+                        activePath="/team"
                     />
 
                     <main className="flex-1 overflow-y-auto custom-scrollbar">
@@ -603,6 +621,17 @@ export default function TeamClient({ initialMembers, initialCounts }: TeamClient
                                             </button>
                                         </div>
 
+                                        <div className="flex flex-col items-center mb-6">
+                                            <AvatarUpload
+                                                currentAvatarUrl={formData.avatarUrl}
+                                                onUploadSuccess={(url) => setFormData(prev => ({ ...prev, avatarUrl: url }))}
+                                                onRemove={() => setFormData(prev => ({ ...prev, avatarUrl: '' }))}
+                                                name={formData.name}
+                                                email={formData.email}
+                                            />
+                                            <p className="text-[10px] font-bold text-storm-gray uppercase tracking-widest mt-2">Member Photo</p>
+                                        </div>
+
                                         <form onSubmit={handleSubmit} className="space-y-5">
                                             <div className="grid grid-cols-2 gap-x-4 gap-y-2">
                                                 <label className="block text-[10px] font-black uppercase tracking-widest text-storm-gray">Full Name *</label>
@@ -632,10 +661,46 @@ export default function TeamClient({ initialMembers, initialCounts }: TeamClient
                                                     onChange={(e) => setFormData({ ...formData, role: e.target.value })}
                                                     className="w-full bg-[#09090B] border border-shark rounded-lg px-4 py-2.5 text-sm text-iron focus:outline-none focus:border-[#279da6]/40 transition-all"
                                                 >
-                                                    <option value="viewer">Viewer — Can view assigned requests</option>
-                                                    <option value="editor">Editor — Can view & chat on requests</option>
-                                                    <option value="admin">Admin — Full access to assigned requests</option>
+                                                    <option value="viewer">Viewer – (view, chat)</option>
+                                                    <option value="editor">Editor – (view, add, edit, chat)</option>
+                                                    <option value="admin">Admin – (view, add, edit, delete, chat)</option>
                                                 </select>
+                                            </div>
+
+                                            <div>
+                                                <label className="block text-[10px] font-black uppercase tracking-widest text-storm-gray mb-3">Section Access Permissions</label>
+                                                <div className="grid grid-cols-3 gap-3">
+                                                    {[
+                                                        { id: 'files', label: 'Files', icon: Box },
+                                                        { id: 'clients', label: 'Clients', icon: Users },
+                                                        { id: 'team', label: 'Team', icon: UserCog }
+                                                    ].map((section) => (
+                                                        <label
+                                                            key={section.id}
+                                                            className={`flex items-center gap-3 p-3 rounded-xl border transition-all cursor-pointer ${formData.accessible_sections?.includes(section.id)
+                                                                ? 'bg-[#279da6]/5 border-[#279da6]/40 text-white'
+                                                                : 'bg-[#09090B] border-shark text-storm-gray hover:border-shark/60'
+                                                                }`}
+                                                        >
+                                                            <input
+                                                                type="checkbox"
+                                                                className="hidden"
+                                                                checked={formData.accessible_sections?.includes(section.id)}
+                                                                onChange={(e) => {
+                                                                    const current = formData.accessible_sections || [];
+                                                                    if (e.target.checked) {
+                                                                        setFormData({ ...formData, accessible_sections: [...current, section.id] });
+                                                                    } else {
+                                                                        setFormData({ ...formData, accessible_sections: current.filter(id => id !== section.id) });
+                                                                    }
+                                                                }}
+                                                            />
+                                                            <section.icon size={16} className={formData.accessible_sections?.includes(section.id) ? 'text-[#279da6]' : ''} />
+                                                            <span className="text-xs font-bold">{section.label}</span>
+                                                        </label>
+                                                    ))}
+                                                </div>
+                                                <p className="text-[10px] text-storm-gray mt-2 opacity-60">Requests and Tasks are accessible by default</p>
                                             </div>
 
                                             <div className="grid grid-cols-2 gap-x-4 gap-y-2">
@@ -712,6 +777,17 @@ export default function TeamClient({ initialMembers, initialCounts }: TeamClient
                                             </button>
                                         </div>
 
+                                        <div className="flex flex-col items-center mb-6">
+                                            <AvatarUpload
+                                                currentAvatarUrl={formData.avatarUrl}
+                                                onUploadSuccess={(url) => setFormData(prev => ({ ...prev, avatarUrl: url }))}
+                                                onRemove={() => setFormData(prev => ({ ...prev, avatarUrl: '' }))}
+                                                name={formData.name}
+                                                email={formData.email}
+                                            />
+                                            <p className="text-[10px] font-bold text-storm-gray uppercase tracking-widest mt-2">Member Photo</p>
+                                        </div>
+
                                         <form onSubmit={handleEditSubmit} className="space-y-5">
                                             <div className="grid grid-cols-2 gap-x-4 gap-y-2">
                                                 <label className="block text-[10px] font-black uppercase tracking-widest text-storm-gray">Full Name *</label>
@@ -739,10 +815,46 @@ export default function TeamClient({ initialMembers, initialCounts }: TeamClient
                                                     onChange={(e) => setFormData({ ...formData, role: e.target.value })}
                                                     className="w-full bg-[#09090B] border border-shark rounded-lg px-4 py-2.5 text-sm text-iron focus:outline-none focus:border-[#279da6]/40 transition-all"
                                                 >
-                                                    <option value="viewer">Viewer — Can view assigned requests</option>
-                                                    <option value="editor">Editor — Can view & chat on requests</option>
-                                                    <option value="admin">Admin — Full access to assigned requests</option>
+                                                    <option value="viewer">Viewer – (view, chat)</option>
+                                                    <option value="editor">Editor – (view, add, edit, chat)</option>
+                                                    <option value="admin">Admin – (view, add, edit, delete, chat)</option>
                                                 </select>
+                                            </div>
+
+                                            <div>
+                                                <label className="block text-[10px] font-black uppercase tracking-widest text-storm-gray mb-3">Section Access Permissions</label>
+                                                <div className="grid grid-cols-3 gap-3">
+                                                    {[
+                                                        { id: 'files', label: 'Files', icon: Box },
+                                                        { id: 'clients', label: 'Clients', icon: Users },
+                                                        { id: 'team', label: 'Team', icon: UserCog }
+                                                    ].map((section) => (
+                                                        <label
+                                                            key={section.id}
+                                                            className={`flex items-center gap-3 p-3 rounded-xl border transition-all cursor-pointer ${formData.accessible_sections?.includes(section.id)
+                                                                ? 'bg-[#279da6]/5 border-[#279da6]/40 text-white'
+                                                                : 'bg-[#09090B] border-shark text-storm-gray hover:border-shark/60'
+                                                                }`}
+                                                        >
+                                                            <input
+                                                                type="checkbox"
+                                                                className="hidden"
+                                                                checked={formData.accessible_sections?.includes(section.id)}
+                                                                onChange={(e) => {
+                                                                    const current = formData.accessible_sections || [];
+                                                                    if (e.target.checked) {
+                                                                        setFormData({ ...formData, accessible_sections: [...current, section.id] });
+                                                                    } else {
+                                                                        setFormData({ ...formData, accessible_sections: current.filter(id => id !== section.id) });
+                                                                    }
+                                                                }}
+                                                            />
+                                                            <section.icon size={16} className={formData.accessible_sections?.includes(section.id) ? 'text-[#279da6]' : ''} />
+                                                            <span className="text-xs font-bold">{section.label}</span>
+                                                        </label>
+                                                    ))}
+                                                </div>
+                                                <p className="text-[10px] text-storm-gray mt-2 opacity-60">Requests and Tasks are accessible by default</p>
                                             </div>
 
                                             <div className="grid grid-cols-2 gap-x-4 gap-y-2">
