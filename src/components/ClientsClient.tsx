@@ -291,6 +291,11 @@ export default function ClientsClient({ initialClients }: ClientsClientProps) {
                         activeTab={activeTab}
                         setActiveTab={setActiveTab}
                         onCreate={() => setIsModalOpen(true)}
+                        pageSwitcher={[
+                            { name: 'Clients', path: '/clients' },
+                            { name: 'Team', path: '/team' }
+                        ]}
+                        activePath="/clients"
                     />
 
                     <main className="flex-1 overflow-y-auto custom-scrollbar">

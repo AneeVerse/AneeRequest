@@ -317,6 +317,11 @@ export default function TeamClient({ initialMembers, initialCounts }: TeamClient
                         activeTab={activeTab}
                         setActiveTab={setActiveTab}
                         onCreate={() => setIsModalOpen(true)}
+                        pageSwitcher={[
+                            { name: 'Clients', path: '/clients' },
+                            { name: 'Team', path: '/team' }
+                        ]}
+                        activePath="/team"
                     />
 
                     <main className="flex-1 overflow-y-auto custom-scrollbar">
