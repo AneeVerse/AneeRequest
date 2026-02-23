@@ -200,12 +200,12 @@ export default function Sidebar({ isCollapsed }: SidebarProps) {
                                                 className="object-cover"
                                             />
                                         ) : (
-                                            displayProfile?.full_name?.split(' ').map((n: string) => n[0]).join('') || displayProfile?.email?.[0].toUpperCase() || 'U'
+                                            (displayProfile?.organization || displayProfile?.full_name || displayProfile?.email || 'U').split(' ').filter(Boolean).map((n: string) => n[0]).join('').slice(0, 2).toUpperCase()
                                         )}
                                     </div>
                                     <div className="flex flex-col min-w-0">
                                         <p className="text-sm font-black text-white truncate">
-                                            {displayProfile?.full_name || (displayProfile?.role === 'super_admin' ? 'Super Admin' : 'User Account')}
+                                            {displayProfile?.organization || displayProfile?.full_name || (displayProfile?.role === 'super_admin' ? 'Super Admin' : 'User Account')}
                                         </p>
                                         <p className="text-xs text-storm-gray font-bold truncate tracking-tight">{displayProfile?.email}</p>
                                     </div>
@@ -275,7 +275,7 @@ export default function Sidebar({ isCollapsed }: SidebarProps) {
                                     className="object-cover"
                                 />
                             ) : (
-                                displayProfile?.full_name?.split(' ').map((n: string) => n[0]).join('') || displayProfile?.email?.[0].toUpperCase() || 'U'
+                                (displayProfile?.organization || displayProfile?.full_name || displayProfile?.email || 'U').split(' ').filter(Boolean).map((n: string) => n[0]).join('').slice(0, 2).toUpperCase()
                             )}
                         </div>
                         {!isCollapsed && (
@@ -288,7 +288,7 @@ export default function Sidebar({ isCollapsed }: SidebarProps) {
                                 ) : (
                                     <>
                                         <p className="text-sm font-black text-white truncate leading-none mb-1.5">
-                                            {displayProfile?.full_name || (displayProfile?.role === 'super_admin' ? 'Super Admin' : 'User Account')}
+                                            {displayProfile?.organization || displayProfile?.full_name || (displayProfile?.role === 'super_admin' ? 'Super Admin' : 'User Account')}
                                         </p>
                                         <div className="flex items-center gap-1.5 overflow-hidden">
                                             <p className="text-[10px] text-[#279da6] font-black uppercase tracking-tighter shrink-0">

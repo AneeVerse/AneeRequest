@@ -11,6 +11,7 @@ interface Profile {
     full_name: string;
     avatar_url?: string;
     team_role?: string; // stores 'admin', 'editor', or 'viewer'
+    organization?: string;
 }
 
 interface AuthContextType {
@@ -100,7 +101,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
         let profile = profileData as Profile;
 
-        // 2. Critical Fix: Check team_members table regardless of profile role
+        // 2. If client, fetch organization from clients table
+        if (profile?.role === 'client' || (!profile && user?.email)) {
+            const { data: clientData } = await supabase
+                .from('clients')
+                .select('organization')
+                .eq('email', user?.email || profile?.email)
+                .maybeSingle();
+
+            if (clientData?.organization) {
+                if (profile) {
+                    profile.organization = clientData.organization;
+                } else {
+                    // If no profile yet, we'll wait for the fallback logic below
+                    // or we can attach it to the fallback
+                }
+            }
+        }
+
+        // 3. Critical Fix: Check team_members table regardless of profile role
         // This ensures if someone is in team_members but marked as 'client' in profiles (or profiles record is missing),
         // we correctly identify them as staff.
         const { data: teamData } = await supabase
@@ -133,6 +152,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
 
         if (profile) {
+            // Ensure organization is set if we found it earlier but profile was recreated
+            if (!profile.organization && user?.email) {
+                const { data: clientData } = await supabase
+                    .from('clients')
+                    .select('organization')
+                    .eq('email', user.email)
+                    .maybeSingle();
+                if (clientData?.organization) profile.organization = clientData.organization;
+            }
+
             setProfile(profile);
 
             // Auto-sync database if profiles role is incorrect

@@ -1,0 +1,15 @@
+CURRENT CLIENTS AND STATUSES:
+
+Name: ROCKET SINGH | Status: "Active"
+Name: NOVINO.IO | Status: "Active"
+Name: NISHA Roadways | Status: "Active"
+Name: SecureLifeFinCorp | Status: "Active"
+Name: URONiYX | Status: "Active"
+Name: HORECA1 | Status: "Active"
+Name: JM VISA | Status: "Active"
+Name: EAZYVISA | Status: "Active"
+
+UNIQUE STATUSES IN DB: ["Active"]
+
+TEST UPDATE TO "Closed": FAILED
+Error: {"code":"23514","details":"Failing row contains (5f248c12-d722-4073-b220-b73764988292, ROCKET SINGH, Amrit Pal Singh, info@urgentpasspoervisa.com, Closed, null, 2026-02-22 21:57:51.999906+00, null).","hint":null,"message":"new row for relation \"clients\" violates check constraint \"clients_status_check\""}

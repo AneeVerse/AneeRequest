@@ -1,0 +1,8 @@
+STATUS CONSTRAINT TEST:
+  "Active" => ALLOWED
+  "Inactive" => ALLOWED
+  "Archived" => BLOCKED
+  "Ongoing" => BLOCKED
+  "Leads" => BLOCKED
+  "Closed" => BLOCKED
+  "Archive" => BLOCKED

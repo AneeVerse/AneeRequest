@@ -41,6 +41,7 @@ interface ClientItem {
     lastLoginTime: string;
     lastLoginRaw: string | null;
     avatar?: string;
+    status: string;
 }
 
 interface ClientsClientProps {
@@ -53,7 +54,7 @@ export default function ClientsClient({ initialClients }: ClientsClientProps) {
     const router = useRouter();
     const { impersonate, isImpersonating } = useAuth();
     const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
-    const [activeTab, setActiveTab] = useState('All Clients');
+    const [activeTab, setActiveTab] = useState('Ongoing');
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
     const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
@@ -66,7 +67,8 @@ export default function ClientsClient({ initialClients }: ClientsClientProps) {
         email: '',
         organization: '',
         createdAt: '',
-        lastLoginDate: ''
+        lastLoginDate: '',
+        status: ''
     });
     const [sortConfig, setSortConfig] = useState<{ key: string; direction: 'asc' | 'desc' | null }>({
         key: 'createdAt',
@@ -90,13 +92,27 @@ export default function ClientsClient({ initialClients }: ClientsClientProps) {
         email: '',
         password: '',
         confirmPassword: '',
-        create_folder: true
+        create_folder: true,
+        status: 'Ongoing'
     });
 
-    const clientCategories = ['All Clients', 'Leads', 'Ongoing', 'Closed', 'Archived'];
+    const clientCategories = ['Ongoing', 'Leads', 'Closed', 'Archive', 'All'];
+
+    // Compute counts per status for notification badges
+    const tabCounts = React.useMemo(() => {
+        const counts: Record<string, number> = {};
+        clientCategories.forEach(cat => {
+            if (cat === 'All') {
+                counts[cat] = clients.length;
+            } else {
+                counts[cat] = clients.filter(c => (c.status || 'Ongoing') === cat).length;
+            }
+        });
+        return counts;
+    }, [clients]);
 
     const resetForm = () => {
-        setFormData({ name: '', organization: '', email: '', password: '', confirmPassword: '', create_folder: true });
+        setFormData({ name: '', organization: '', email: '', password: '', confirmPassword: '', create_folder: true, status: 'Ongoing' });
         setSelectedClient(null);
     };
 
@@ -140,7 +156,8 @@ export default function ClientsClient({ initialClients }: ClientsClientProps) {
             email: client.email,
             password: '',
             confirmPassword: '',
-            create_folder: true
+            create_folder: true,
+            status: client.status || 'Ongoing'
         });
         setIsEditModalOpen(true);
         setActiveDropdown(null);
@@ -169,7 +186,8 @@ export default function ClientsClient({ initialClients }: ClientsClientProps) {
                     id: selectedClient.id,
                     name: formData.name,
                     organization: formData.organization,
-                    email: formData.email
+                    email: formData.email,
+                    status: formData.status
                 })
             });
 
@@ -229,6 +247,33 @@ export default function ClientsClient({ initialClients }: ClientsClientProps) {
         }
     };
 
+    // Handle Status Update directly from table
+    const handleStatusUpdate = async (clientId: string, newStatus: string) => {
+        const originalClients = [...clients];
+
+        // Optimistic update
+        setClients(clients.map(c => c.id === clientId ? { ...c, status: newStatus } : c));
+
+        try {
+            const response = await fetch('/api/clients', {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ id: clientId, status: newStatus })
+            });
+
+            if (!response.ok) {
+                setClients(originalClients);
+                const err = await response.json();
+                alert(`Error: ${err.error}`);
+            } else {
+                router.refresh();
+            }
+        } catch (error) {
+            setClients(originalClients);
+            console.error('Status update failed:', error);
+        }
+    };
+
     const handleSort = (key: string) => {
         setSortConfig(prev => ({
             key,
@@ -248,8 +293,11 @@ export default function ClientsClient({ initialClients }: ClientsClientProps) {
         const matchesOrg = !filters.organization || client.organization.toLowerCase().includes(filters.organization.toLowerCase());
         const matchesDate = !filters.createdAt || client.createdAt.includes(filters.createdAt);
         const matchesLogin = !filters.lastLoginDate || client.lastLoginDate.includes(filters.lastLoginDate);
+        const matchesStatus = !filters.status || client.status.toLowerCase().includes(filters.status.toLowerCase());
 
-        return matchesSearch && matchesName && matchesEmail && matchesOrg && matchesDate && matchesLogin;
+        const matchesTab = activeTab === 'All' || (client.status || 'Ongoing') === activeTab;
+
+        return matchesSearch && matchesName && matchesEmail && matchesOrg && matchesDate && matchesLogin && matchesStatus && matchesTab;
     });
 
     const sortedClients = [...filteredClients].sort((a, b) => {
@@ -291,6 +339,7 @@ export default function ClientsClient({ initialClients }: ClientsClientProps) {
                         activeTab={activeTab}
                         setActiveTab={setActiveTab}
                         onCreate={() => setIsModalOpen(true)}
+                        tabCounts={tabCounts}
                     />
 
                     <main className="flex-1 overflow-y-auto custom-scrollbar">
@@ -318,7 +367,8 @@ export default function ClientsClient({ initialClients }: ClientsClientProps) {
                                                         email: '',
                                                         organization: '',
                                                         createdAt: '',
-                                                        lastLoginDate: ''
+                                                        lastLoginDate: '',
+                                                        status: ''
                                                     });
                                                     setSearchQuery('');
                                                     setSortConfig({ key: '', direction: null });
@@ -344,7 +394,8 @@ export default function ClientsClient({ initialClients }: ClientsClientProps) {
                                                         { label: 'Email', key: 'email', filter: 'email' },
                                                         { label: 'Organization', key: 'organization', filter: 'organization' },
                                                         { label: 'Created At', key: 'createdAt', filter: 'createdAt' },
-                                                        { label: 'Last Login', key: 'lastLoginDate', filter: 'lastLoginDate' }
+                                                        { label: 'Last Login', key: 'lastLoginDate', filter: 'lastLoginDate' },
+                                                        { label: 'Status', key: 'status', filter: 'status' }
                                                     ].map((header, idx) => (
                                                         <th key={header.label} className="px-6 py-5 border-r border-shark/60 group/header relative header-filter-container">
                                                             <div className="flex items-center justify-between gap-2">
@@ -438,6 +489,32 @@ export default function ClientsClient({ initialClients }: ClientsClientProps) {
                                                                         <span className="text-[10px] opacity-50">{client.lastLoginTime}</span>
                                                                     </div>
                                                                 ) : 'Never'}
+                                                            </td>
+                                                            <td className="px-6 py-4.5 text-iron border-r border-shark/60 font-medium">
+                                                                <div className="flex items-center gap-2">
+                                                                    <div className={`w-1.5 h-1.5 rounded-full shrink-0 ${client.status === 'Ongoing' ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.4)]' :
+                                                                        client.status === 'Leads' ? 'bg-[#279da6] shadow-[0_0_8px_rgba(39,157,166,0.4)]' :
+                                                                            client.status === 'Closed' ? 'bg-rose-500 shadow-[0_0_8px_rgba(244,63,94,0.4)]' :
+                                                                                client.status === 'Archive' ? 'bg-[#F28C28] shadow-[0_0_8px_rgba(242,140,40,0.4)]' :
+                                                                                    'bg-storm-gray shadow-[0_0_8px_rgba(148,163,184,0.4)]'
+                                                                        }`} />
+                                                                    <select
+                                                                        value={client.status || 'Ongoing'}
+                                                                        onChange={(e) => handleStatusUpdate(client.id, e.target.value)}
+                                                                        className={`bg-transparent text-[11px] font-black uppercase tracking-wider focus:outline-none cursor-pointer hover:underline appearance-none
+                                                                        ${client.status === 'Ongoing' ? 'text-emerald-400' :
+                                                                                client.status === 'Leads' ? 'text-[#279da6]' :
+                                                                                    client.status === 'Closed' ? 'text-rose-400' :
+                                                                                        client.status === 'Archive' ? 'text-[#F28C28]' :
+                                                                                            'text-storm-gray'
+                                                                            }`}
+                                                                    >
+                                                                        <option value="Ongoing" className="bg-[#121214]">Ongoing</option>
+                                                                        <option value="Leads" className="bg-[#121214]">Leads</option>
+                                                                        <option value="Closed" className="bg-[#121214]">Closed</option>
+                                                                        <option value="Archive" className="bg-[#121214]">Archive</option>
+                                                                    </select>
+                                                                </div>
                                                             </td>
                                                             <td className="px-6 py-4.5 relative group/actions">
                                                                 <button
@@ -590,6 +667,20 @@ export default function ClientsClient({ initialClients }: ClientsClientProps) {
                                             />
                                         </div>
 
+                                        <div className="space-y-1.5">
+                                            <label className="text-[11px] font-bold text-santas-gray uppercase tracking-wider">Status</label>
+                                            <select
+                                                value={formData.status}
+                                                onChange={(e) => setFormData({ ...formData, status: e.target.value })}
+                                                className="w-full bg-[#09090B] border border-shark/60 rounded-xl py-2.5 px-4 text-sm text-iron focus:outline-none focus:border-[#279da6]/60 appearance-none cursor-pointer"
+                                            >
+                                                <option value="Ongoing">Ongoing</option>
+                                                <option value="Leads">Leads</option>
+                                                <option value="Closed">Closed</option>
+                                                <option value="Archive">Archive</option>
+                                            </select>
+                                        </div>
+
                                         <div className="flex items-center gap-3 p-4 bg-[#279da6]/5 border border-[#279da6]/20 rounded-xl mt-2 group cursor-pointer" onClick={() => setFormData({ ...formData, create_folder: !formData.create_folder })}>
                                             <div className={`w-5 h-5 rounded flex items-center justify-center border transition-all ${formData.create_folder ? 'bg-[#279da6] border-[#279da6]' : 'border-shark bg-shark/50'}`}>
                                                 {formData.create_folder && <Check className="text-white" size={12} strokeWidth={4} />}
@@ -669,6 +760,20 @@ export default function ClientsClient({ initialClients }: ClientsClientProps) {
                                                 className="w-full bg-[#09090B] border border-shark/60 rounded-xl py-2.5 px-4 text-sm text-iron focus:outline-none focus:border-[#279da6]/60"
                                             />
                                         </div>
+                                        <div className="space-y-1.5">
+                                            <label className="text-[11px] font-bold text-santas-gray uppercase tracking-wider">Status</label>
+                                            <select
+                                                value={formData.status}
+                                                onChange={(e) => setFormData({ ...formData, status: e.target.value })}
+                                                className="w-full bg-[#09090B] border border-shark/60 rounded-xl py-2.5 px-4 text-sm text-iron focus:outline-none focus:border-[#279da6]/60 appearance-none cursor-pointer"
+                                            >
+                                                <option value="Ongoing">Ongoing</option>
+                                                <option value="Leads">Leads</option>
+                                                <option value="Closed">Closed</option>
+                                                <option value="Archive">Archive</option>
+                                            </select>
+                                        </div>
+
                                         <p className="text-[10px] text-storm-gray">Note: Password changes are handled via individual account settings.</p>
                                     </div>
 

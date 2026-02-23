@@ -31,7 +31,7 @@ export async function GET() {
 export async function POST(request: Request) {
     try {
         const body = await request.json();
-        const { name, organization, email, password } = body;
+        const { name, organization, email, password, status } = body;
 
         if (!email || !password || !name) {
             return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
@@ -60,7 +60,7 @@ export async function POST(request: Request) {
                     name,
                     organization,
                     email,
-                    status: 'Active', // Set to Active since account is now created
+                    status: status || 'Ongoing',
                     last_login: null
                 }
             ])
@@ -98,7 +98,7 @@ export async function POST(request: Request) {
 export async function PATCH(request: Request) {
     try {
         const body = await request.json();
-        const { id, name, organization, email, password, oldEmail, drive_folder_id } = body;
+        const { id, name, organization, email, password, oldEmail, drive_folder_id, status } = body;
 
         if (!id) {
             return NextResponse.json({ error: "Missing client ID" }, { status: 400 });
@@ -111,6 +111,7 @@ export async function PATCH(request: Request) {
         if (name) updateData.name = name;
         if (organization) updateData.organization = organization;
         if (email) updateData.email = email;
+        if (status) updateData.status = status;
         if (drive_folder_id !== undefined) updateData.drive_folder_id = drive_folder_id || null;
 
         let clientData;

@@ -8,6 +8,7 @@ export interface ClientItem {
     organization: string;
     created_at: string;
     last_login: string | null;
+    status: string;
 }
 
 /**

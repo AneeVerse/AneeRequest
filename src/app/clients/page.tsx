@@ -21,7 +21,8 @@ export default async function ClientsPage() {
             createdAt: formatDate(c.created_at),
             lastLoginDate: lastLoginInfo.date,
             lastLoginTime: lastLoginInfo.time,
-            lastLoginRaw: c.last_login
+            lastLoginRaw: c.last_login,
+            status: c.status || 'Ongoing'
         };
     });
 

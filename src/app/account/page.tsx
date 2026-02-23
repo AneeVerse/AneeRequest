@@ -21,7 +21,8 @@ import {
     FolderOpen,
     Link2,
     Check,
-    RefreshCw
+    RefreshCw,
+    Building
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import ImpersonationWarning from '@/components/ImpersonationWarning';
@@ -42,6 +43,7 @@ export default function AccountPage() {
     const [password, setPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
     const [avatarUrl, setAvatarUrl] = useState('');
+    const [organization, setOrganization] = useState('');
     const [showPassword, setShowPassword] = useState(false);
 
     // Google Drive Root Folder State (super_admin only)
@@ -57,6 +59,7 @@ export default function AccountPage() {
             setFullName(displayProfile.full_name || '');
             setEmail(displayProfile.email || '');
             setAvatarUrl(displayProfile.avatar_url || '');
+            setOrganization(displayProfile.organization || '');
         }
     }, [displayProfile]);
 
@@ -170,6 +173,7 @@ export default function AccountPage() {
                     email: email !== displayProfile.email ? email : undefined,
                     password: password || undefined,
                     avatarUrl: avatarUrl !== displayProfile.avatar_url ? avatarUrl : undefined,
+                    organization: organization !== displayProfile.organization ? organization : undefined,
                     oldEmail: displayProfile.email
                 })
             });
@@ -308,7 +312,7 @@ export default function AccountPage() {
                                                 className="object-cover"
                                             />
                                         ) : (
-                                            displayProfile?.full_name?.split(' ').map((n: string) => n[0]).join('') || displayProfile?.email?.[0].toUpperCase() || 'U'
+                                            (displayProfile?.organization || displayProfile?.full_name || displayProfile?.email || 'U').split(' ').filter(Boolean).map((n: string) => n[0]).join('').slice(0, 2).toUpperCase()
                                         )}
 
                                         {/* Hover Overlay */}
@@ -340,7 +344,7 @@ export default function AccountPage() {
                                         ) : (
                                             <>
                                                 <h2 className="text-3xl font-black text-white tracking-tighter uppercase leading-none">
-                                                    {displayProfile?.full_name || (displayProfile?.role === 'super_admin' ? 'Super Admin' : 'User Account')}
+                                                    {displayProfile?.organization || displayProfile?.full_name || (displayProfile?.role === 'super_admin' ? 'Super Admin' : 'User Account')}
                                                 </h2>
                                                 <div className="flex items-center gap-3">
                                                     <p className="text-[10px] font-black text-storm-gray uppercase tracking-[0.2em]">{displayProfile?.role?.replace('_', ' ') || 'Guest Account'}</p>
@@ -363,7 +367,9 @@ export default function AccountPage() {
 
                                     <div className="space-y-6">
                                         <div className="space-y-2">
-                                            <label className="text-[9px] font-black text-storm-gray uppercase tracking-[0.25em] ml-2">Full Name</label>
+                                            <label className="text-[9px] font-black text-storm-gray uppercase tracking-[0.25em] ml-2">
+                                                {displayProfile?.role === 'client' ? 'Contact Person' : 'Full Name'}
+                                            </label>
                                             <div className="relative">
                                                 <User className="absolute left-4 top-1/2 -translate-y-1/2 text-storm-gray" size={16} />
                                                 <input
@@ -371,10 +377,26 @@ export default function AccountPage() {
                                                     value={fullName}
                                                     onChange={(e) => setFullName(e.target.value)}
                                                     className="w-full bg-[#09090B] border border-shark/50 rounded-2xl py-4 pl-12 pr-4 text-sm text-iron focus:outline-none focus:border-[#279da6]/50 transition-all font-bold"
-                                                    placeholder={profile?.role === 'super_admin' ? "Super Admin" : "Enter your name"}
+                                                    placeholder={profile?.role === 'super_admin' ? "Super Admin" : "Enter name"}
                                                 />
                                             </div>
                                         </div>
+
+                                        {displayProfile?.role === 'client' && (
+                                            <div className="space-y-2">
+                                                <label className="text-[9px] font-black text-storm-gray uppercase tracking-[0.25em] ml-2">Company/Organization Name</label>
+                                                <div className="relative">
+                                                    <Building className="absolute left-4 top-1/2 -translate-y-1/2 text-storm-gray" size={16} />
+                                                    <input
+                                                        type="text"
+                                                        value={organization}
+                                                        onChange={(e) => setOrganization(e.target.value)}
+                                                        className="w-full bg-[#09090B] border border-shark/50 rounded-2xl py-4 pl-12 pr-4 text-sm text-iron focus:outline-none focus:border-[#279da6]/50 transition-all font-bold"
+                                                        placeholder="Enter company name"
+                                                    />
+                                                </div>
+                                            </div>
+                                        )}
 
                                         <div className="space-y-2">
                                             <label className="text-[9px] font-black text-storm-gray uppercase tracking-[0.25em] ml-2">Email Address</label>

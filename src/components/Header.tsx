@@ -21,6 +21,7 @@ interface HeaderProps {
     activeTab?: string;
     setActiveTab?: (tab: string) => void;
     onCreate?: () => void;
+    tabCounts?: Record<string, number>;
 }
 
 const Header: React.FC<HeaderProps> = ({
@@ -30,7 +31,8 @@ const Header: React.FC<HeaderProps> = ({
     tabs,
     activeTab,
     setActiveTab,
-    onCreate
+    onCreate,
+    tabCounts
 }) => {
     const { isImpersonating, viewAsProfile, stopImpersonating } = useAuth();
     const [theme, setTheme] = useState<'dark' | 'light'>('dark');
@@ -64,19 +66,27 @@ const Header: React.FC<HeaderProps> = ({
 
                 {/* Dynamic Sub-Navigation */}
                 {tabs && tabs.length > 0 && (
-                    <div className="flex items-center bg-black/40 border border-shark p-1 rounded-xl overflow-x-auto no-scrollbar ml-2">
-                        {tabs.map((tab) => (
-                            <button
-                                key={tab}
-                                onClick={() => setActiveTab?.(tab)}
-                                className={`px-4 py-1.5 rounded-lg text-[11px] font-bold transition-all whitespace-nowrap cursor-pointer ${activeTab === tab
-                                    ? 'bg-[#1E1E22] text-[#279da6] border border-[#279da6]/20 shadow-lg'
-                                    : 'text-santas-gray hover:text-iron hover:bg-white/5'
-                                    }`}
-                            >
-                                {tab}
-                            </button>
-                        ))}
+                    <div className="flex items-center bg-black/40 border border-shark p-1 rounded-xl overflow-visible no-scrollbar ml-2 pt-3 pr-2">
+                        {tabs.map((tab) => {
+                            const count = tabCounts?.[tab];
+                            return (
+                                <button
+                                    key={tab}
+                                    onClick={() => setActiveTab?.(tab)}
+                                    className={`relative px-4 py-1.5 rounded-lg text-[11px] font-bold transition-all whitespace-nowrap cursor-pointer ${activeTab === tab
+                                        ? 'bg-[#1E1E22] text-[#279da6] border border-[#279da6]/20 shadow-lg'
+                                        : 'text-santas-gray hover:text-iron hover:bg-white/5'
+                                        }`}
+                                >
+                                    {tab}
+                                    {count !== undefined && count > 0 && (
+                                        <span className="absolute -top-2 -right-1.5 min-w-[18px] h-[18px] flex items-center justify-center rounded-full text-[9px] font-black px-1 border-2 border-[#09090B] shadow-md bg-[#279da6] text-white">
+                                            {count > 99 ? '99+' : count}
+                                        </span>
+                                    )}
+                                </button>
+                            );
+                        })}
                     </div>
                 )}
 

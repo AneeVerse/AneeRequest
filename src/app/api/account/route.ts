@@ -4,7 +4,7 @@ import { supabase, createServiceClient } from '@/lib/supabase';
 export async function PATCH(request: Request) {
     try {
         const body = await request.json();
-        const { id, fullName, email, password, avatarUrl, oldEmail } = body;
+        const { id, fullName, email, password, avatarUrl, oldEmail, organization } = body;
 
         if (!id) {
             return NextResponse.json({ error: "Missing user ID" }, { status: 400 });
@@ -37,6 +37,7 @@ export async function PATCH(request: Request) {
             const clientUpdates: any = {};
             if (email) clientUpdates.email = email;
             if (fullName) clientUpdates.name = fullName;
+            if (organization) clientUpdates.organization = organization;
 
             updatePromises.push(
                 Promise.resolve(
