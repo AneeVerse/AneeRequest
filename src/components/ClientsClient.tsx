@@ -25,8 +25,10 @@ import {
     ExternalLink,
     Check,
     SortAsc,
-    SortDesc
+    SortDesc,
+    Camera
 } from 'lucide-react';
+import AvatarUpload from '@/components/AvatarUpload';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 
@@ -40,7 +42,7 @@ interface ClientItem {
     lastLoginDate: string;
     lastLoginTime: string;
     lastLoginRaw: string | null;
-    avatar?: string;
+    avatar_url?: string | null;
 }
 
 interface ClientsClientProps {
@@ -90,13 +92,14 @@ export default function ClientsClient({ initialClients }: ClientsClientProps) {
         email: '',
         password: '',
         confirmPassword: '',
-        create_folder: true
+        create_folder: true,
+        avatarUrl: ''
     });
 
     const clientCategories = ['All Clients', 'Leads', 'Ongoing', 'Closed', 'Archived'];
 
     const resetForm = () => {
-        setFormData({ name: '', organization: '', email: '', password: '', confirmPassword: '', create_folder: true });
+        setFormData({ name: '', organization: '', email: '', password: '', confirmPassword: '', create_folder: true, avatarUrl: '' });
         setSelectedClient(null);
     };
 
@@ -140,7 +143,8 @@ export default function ClientsClient({ initialClients }: ClientsClientProps) {
             email: client.email,
             password: '',
             confirmPassword: '',
-            create_folder: true
+            create_folder: true,
+            avatarUrl: client.avatar_url || ''
         });
         setIsEditModalOpen(true);
         setActiveDropdown(null);
@@ -169,7 +173,8 @@ export default function ClientsClient({ initialClients }: ClientsClientProps) {
                     id: selectedClient.id,
                     name: formData.name,
                     organization: formData.organization,
-                    email: formData.email
+                    email: formData.email,
+                    avatarUrl: formData.avatarUrl
                 })
             });
 
@@ -532,6 +537,17 @@ export default function ClientsClient({ initialClients }: ClientsClientProps) {
                                     </div>
 
                                     <div className="p-6 space-y-5">
+                                        <div className="flex flex-col items-center mb-2">
+                                            <AvatarUpload
+                                                currentAvatarUrl={formData.avatarUrl}
+                                                onUploadSuccess={(url) => setFormData(prev => ({ ...prev, avatarUrl: url }))}
+                                                onRemove={() => setFormData(prev => ({ ...prev, avatarUrl: '' }))}
+                                                name={formData.name}
+                                                email={formData.email}
+                                            />
+                                            <p className="text-[10px] font-bold text-storm-gray uppercase tracking-widest mt-1">Client Photo</p>
+                                        </div>
+
                                         <div className="space-y-1.5">
                                             <label className="text-[11px] font-bold text-santas-gray uppercase tracking-wider">Client Name *</label>
                                             <input
@@ -644,6 +660,17 @@ export default function ClientsClient({ initialClients }: ClientsClientProps) {
                                     </div>
 
                                     <div className="p-6 space-y-5">
+                                        <div className="flex flex-col items-center mb-2">
+                                            <AvatarUpload
+                                                currentAvatarUrl={formData.avatarUrl}
+                                                onUploadSuccess={(url) => setFormData(prev => ({ ...prev, avatarUrl: url }))}
+                                                onRemove={() => setFormData(prev => ({ ...prev, avatarUrl: '' }))}
+                                                name={formData.name}
+                                                email={formData.email}
+                                            />
+                                            <p className="text-[10px] font-bold text-storm-gray uppercase tracking-widest mt-1">Client Photo</p>
+                                        </div>
+
                                         <div className="space-y-1.5">
                                             <label className="text-[11px] font-bold text-santas-gray uppercase tracking-wider">Client Name *</label>
                                             <input

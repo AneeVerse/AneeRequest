@@ -21,8 +21,10 @@ import {
     Settings,
     Box,
     FileText,
-    UserCog
+    UserCog,
+    Camera
 } from 'lucide-react';
+import AvatarUpload from '@/components/AvatarUpload';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import { formatDate, formatTime } from '@/lib/dateUtils';
@@ -92,13 +94,14 @@ export default function TeamClient({ initialMembers, initialCounts }: TeamClient
         password: '',
         confirmPassword: '',
         role: 'viewer',
-        accessible_sections: [] as string[]
+        accessible_sections: [] as string[],
+        avatarUrl: ''
     });
 
     const memberCategories = ['All Members', 'Active', 'Inactive'];
 
     const resetForm = () => {
-        setFormData({ name: '', email: '', password: '', confirmPassword: '', role: 'viewer', accessible_sections: [] });
+        setFormData({ name: '', email: '', password: '', confirmPassword: '', role: 'viewer', accessible_sections: [], avatarUrl: '' });
         setSelectedMember(null);
     };
 
@@ -121,7 +124,8 @@ export default function TeamClient({ initialMembers, initialCounts }: TeamClient
                     password: formData.password,
                     position: formData.role,
                     role: formData.role,
-                    accessible_sections: formData.accessible_sections
+                    accessible_sections: formData.accessible_sections,
+                    avatarUrl: formData.avatarUrl
                 })
             });
 
@@ -134,6 +138,7 @@ export default function TeamClient({ initialMembers, initialCounts }: TeamClient
                     ...newMember.member,
                     role: formData.role,
                     accessible_sections: formData.accessible_sections,
+                    avatar_url: formData.avatarUrl,
                     request_count: 0,
                     created_at: new Date().toISOString()
                 };
@@ -159,7 +164,8 @@ export default function TeamClient({ initialMembers, initialCounts }: TeamClient
             password: '',
             confirmPassword: '',
             role: member.role || 'viewer',
-            accessible_sections: member.accessible_sections || []
+            accessible_sections: member.accessible_sections || [],
+            avatarUrl: member.avatar_url || ''
         });
         setIsEditModalOpen(true);
         setActiveDropdown(null);
@@ -179,7 +185,7 @@ export default function TeamClient({ initialMembers, initialCounts }: TeamClient
         // Optimistic update
         const updatedMembers = members.map(m =>
             m.id === selectedMember.id
-                ? { ...m, name: formData.name, email: formData.email, role: formData.role as any, accessible_sections: formData.accessible_sections }
+                ? { ...m, name: formData.name, email: formData.email, role: formData.role as any, accessible_sections: formData.accessible_sections, avatar_url: formData.avatarUrl }
                 : m
         );
         setMembers(updatedMembers);
@@ -195,7 +201,8 @@ export default function TeamClient({ initialMembers, initialCounts }: TeamClient
                     password: formData.password,
                     position: formData.role,
                     oldEmail: selectedMember.email,
-                    accessible_sections: formData.accessible_sections
+                    accessible_sections: formData.accessible_sections,
+                    avatarUrl: formData.avatarUrl
                 })
             });
 
@@ -594,6 +601,17 @@ export default function TeamClient({ initialMembers, initialCounts }: TeamClient
                                             </button>
                                         </div>
 
+                                        <div className="flex flex-col items-center mb-6">
+                                            <AvatarUpload
+                                                currentAvatarUrl={formData.avatarUrl}
+                                                onUploadSuccess={(url) => setFormData(prev => ({ ...prev, avatarUrl: url }))}
+                                                onRemove={() => setFormData(prev => ({ ...prev, avatarUrl: '' }))}
+                                                name={formData.name}
+                                                email={formData.email}
+                                            />
+                                            <p className="text-[10px] font-bold text-storm-gray uppercase tracking-widest mt-2">Member Photo</p>
+                                        </div>
+
                                         <form onSubmit={handleSubmit} className="space-y-5">
                                             <div className="grid grid-cols-2 gap-x-4 gap-y-2">
                                                 <label className="block text-[10px] font-black uppercase tracking-widest text-storm-gray">Full Name *</label>
@@ -737,6 +755,17 @@ export default function TeamClient({ initialMembers, initialCounts }: TeamClient
                                             <button onClick={() => { setIsEditModalOpen(false); resetForm(); }} className="text-storm-gray hover:text-white transition-colors">
                                                 <X size={20} />
                                             </button>
+                                        </div>
+
+                                        <div className="flex flex-col items-center mb-6">
+                                            <AvatarUpload
+                                                currentAvatarUrl={formData.avatarUrl}
+                                                onUploadSuccess={(url) => setFormData(prev => ({ ...prev, avatarUrl: url }))}
+                                                onRemove={() => setFormData(prev => ({ ...prev, avatarUrl: '' }))}
+                                                name={formData.name}
+                                                email={formData.email}
+                                            />
+                                            <p className="text-[10px] font-bold text-storm-gray uppercase tracking-widest mt-2">Member Photo</p>
                                         </div>
 
                                         <form onSubmit={handleEditSubmit} className="space-y-5">

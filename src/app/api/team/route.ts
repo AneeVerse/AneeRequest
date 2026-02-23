@@ -15,7 +15,7 @@ export async function GET() {
 export async function POST(request: Request) {
     try {
         const body = await request.json();
-        const { name, email, department, position, password, role, accessible_sections } = body;
+        const { name, email, department, position, password, role, accessible_sections, avatarUrl } = body;
 
         if (!email || !name) {
             return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
@@ -30,7 +30,10 @@ export async function POST(request: Request) {
                 email,
                 password,
                 email_confirm: true,
-                user_metadata: { full_name: name }
+                user_metadata: {
+                    full_name: name,
+                    avatar_url: avatarUrl
+                }
             });
 
             if (authError) throw authError;
@@ -39,7 +42,10 @@ export async function POST(request: Request) {
             // 2. Update profile role to team_member
             await serviceClient
                 .from('profiles')
-                .update({ role: 'team_member' })
+                .update({
+                    role: 'team_member',
+                    avatar_url: avatarUrl || undefined
+                })
                 .eq('id', authUserId);
         }
 
@@ -81,7 +87,7 @@ export async function POST(request: Request) {
 export async function PATCH(request: Request) {
     try {
         const body = await request.json();
-        const { id, name, email, department, position, password, oldEmail, accessible_sections } = body;
+        const { id, name, email, department, position, password, oldEmail, accessible_sections, avatarUrl } = body;
 
         if (!id) {
             return NextResponse.json({ error: "Missing team member ID" }, { status: 400 });
@@ -133,7 +139,12 @@ export async function PATCH(request: Request) {
             const authUpdateData: any = {};
             if (email) authUpdateData.email = email;
             if (password) authUpdateData.password = password;
-            if (name) authUpdateData.user_metadata = { full_name: name };
+            if (name || avatarUrl) {
+                authUpdateData.user_metadata = {
+                    ...(name && { full_name: name }),
+                    ...(avatarUrl && { avatar_url: avatarUrl })
+                };
+            }
 
             const { error: updateAuthError } = await serviceClient.auth.admin.updateUserById(authUser.id, authUpdateData);
             if (updateAuthError) throw updateAuthError;
@@ -142,6 +153,7 @@ export async function PATCH(request: Request) {
             const profileUpdateData: any = {};
             if (email) profileUpdateData.email = email;
             if (name) profileUpdateData.full_name = name;
+            if (avatarUrl !== undefined) profileUpdateData.avatar_url = avatarUrl;
 
             if (Object.keys(profileUpdateData).length > 0) {
                 await serviceClient

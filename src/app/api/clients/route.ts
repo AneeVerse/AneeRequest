@@ -7,7 +7,7 @@ export async function GET() {
         // Fetch from both tables to bridge the gap
         const [clientsRes, profilesRes] = await Promise.all([
             supabase.from('clients').select('*').order('created_at', { ascending: false }),
-            supabase.from('profiles').select('id, email, full_name, role').eq('role', 'client')
+            supabase.from('profiles').select('id, email, full_name, role, avatar_url').eq('role', 'client')
         ]);
 
         if (clientsRes.error) throw clientsRes.error;
@@ -18,7 +18,8 @@ export async function GET() {
             const profile = profilesRes.data.find(p => p.email.toLowerCase() === client.email.toLowerCase());
             return {
                 ...client,
-                profile_id: profile?.id || null
+                profile_id: profile?.id || null,
+                avatar_url: profile?.avatar_url || null
             };
         });
 
@@ -31,7 +32,7 @@ export async function GET() {
 export async function POST(request: Request) {
     try {
         const body = await request.json();
-        const { name, organization, email, password } = body;
+        const { name, organization, email, password, avatarUrl } = body;
 
         if (!email || !password || !name) {
             return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
@@ -45,12 +46,21 @@ export async function POST(request: Request) {
             email,
             password,
             email_confirm: true, // Automatically confirm email
-            user_metadata: { full_name: name }
+            user_metadata: {
+                full_name: name,
+                avatar_url: avatarUrl
+            }
         });
 
         if (authError) throw authError;
 
         // 2. The SQL Trigger (on_auth_user_created) will automatically create the row in 'profiles'
+        if (avatarUrl && authData.user) {
+            await serviceClient
+                .from('profiles')
+                .update({ avatar_url: avatarUrl })
+                .eq('id', authData.user.id);
+        }
 
         // 3. Add to the legacy 'clients' table for dashboard compatibility
         const { data, error: tableError } = await serviceClient
@@ -98,7 +108,7 @@ export async function POST(request: Request) {
 export async function PATCH(request: Request) {
     try {
         const body = await request.json();
-        const { id, name, organization, email, password, oldEmail, drive_folder_id } = body;
+        const { id, name, organization, email, password, oldEmail, drive_folder_id, avatarUrl } = body;
 
         if (!id) {
             return NextResponse.json({ error: "Missing client ID" }, { status: 400 });
@@ -150,7 +160,12 @@ export async function PATCH(request: Request) {
             const authUpdateData: any = {};
             if (email) authUpdateData.email = email;
             if (password) authUpdateData.password = password;
-            if (name) authUpdateData.user_metadata = { full_name: name };
+            if (name || avatarUrl) {
+                authUpdateData.user_metadata = {
+                    ...(name && { full_name: name }),
+                    ...(avatarUrl && { avatar_url: avatarUrl })
+                };
+            }
 
             const { error: updateAuthError } = await serviceClient.auth.admin.updateUserById(authUser.id, authUpdateData);
             if (updateAuthError) throw updateAuthError;
@@ -159,6 +174,7 @@ export async function PATCH(request: Request) {
             const profileUpdateData: any = {};
             if (email) profileUpdateData.email = email;
             if (name) profileUpdateData.full_name = name;
+            if (avatarUrl !== undefined) profileUpdateData.avatar_url = avatarUrl;
 
             if (Object.keys(profileUpdateData).length > 0) {
                 await serviceClient
