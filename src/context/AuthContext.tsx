@@ -37,7 +37,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const [isLoading, setIsLoading] = useState(true);
 
     useEffect(() => {
-        // Load impersonation state from session storage if exists
+        // 1. Load impersonation state
         const stored = sessionStorage.getItem('impersonated_profile');
         if (stored) {
             try {
@@ -47,141 +47,122 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             }
         }
 
-        // Check active sessions
-        const getSession = async () => {
+        // 2. Initial Session & State Listener
+        const initAuth = async () => {
+            // Get initial session
             const { data: { session } } = await supabase.auth.getSession();
-
             if (session) {
                 setUser(session.user);
                 await fetchProfile(session.user.id);
             }
             setIsLoading(false);
-        };
 
-        getSession();
-
-        // Listen for changes
-        const { data: { subscription } } = supabase.auth.onAuthStateChange(
-            async (event, session) => {
-                if (event === 'SIGNED_OUT') {
-                    // Only clear everything on explicit sign out
-                    setProfile(null);
-                    setImpersonatedProfile(null);
-                    sessionStorage.removeItem('impersonated_profile');
-                    setUser(null);
-                } else if (session) {
-                    // For token refreshes or other events, just update user and profile
-                    // without killing the existing impersonation state
-                    const prevUserId = user?.id;
-                    setUser(session.user);
-
-                    if (prevUserId && prevUserId !== session.user.id) {
-                        // If the actual user changed (rare without logout), clear impersonation
+            // Start listening for changes
+            const { data: { subscription } } = supabase.auth.onAuthStateChange(
+                async (event, session) => {
+                    if (event === 'SIGNED_OUT') {
+                        setProfile(null);
                         setImpersonatedProfile(null);
                         sessionStorage.removeItem('impersonated_profile');
+                        setUser(null);
+                    } else if (session && event !== 'INITIAL_SESSION') {
+                        // Avoid redundant fetch if INITIAL_SESSION (already handled above)
+                        setUser(session.user);
+                        await fetchProfile(session.user.id);
                     }
-
-                    await fetchProfile(session.user.id);
+                    setIsLoading(false);
                 }
-                setIsLoading(false);
-            }
-        );
+            );
+
+            return subscription;
+        };
+
+        const authSub = initAuth();
 
         return () => {
-            subscription.unsubscribe();
+            authSub.then(sub => sub.unsubscribe());
         };
     }, []);
 
     const fetchProfile = async (userId: string) => {
-        // 1. Fetch basic profile
-        const { data: profileData, error } = await supabase
-            .from('profiles')
-            .select('*')
-            .eq('id', userId)
-            .maybeSingle();
+        try {
+            // Parallelize database lookups for speed
+            const [profileResult, clientResult, teamResult] = await Promise.all([
+                supabase.from('profiles').select('*').eq('id', userId).maybeSingle(),
+                user?.email ? supabase.from('clients').select('organization').eq('email', user.email).maybeSingle() : Promise.resolve({ data: null }),
+                supabase.from('team_members').select('position, accessible_sections').eq('profile_id', userId).maybeSingle()
+            ]);
 
-        let profile = profileData as Profile;
+            const profileData = profileResult.data;
+            const clientData = clientResult.data;
+            const teamData = teamResult.data;
 
-        // 2. If client, fetch organization from clients table
-        if (profile?.role === 'client' || (!profile && user?.email)) {
-            const { data: clientData } = await supabase
-                .from('clients')
-                .select('organization')
-                .eq('email', user?.email || profile?.email)
-                .maybeSingle();
+            let updatedProfile: Profile | null = profileData ? { ...profileData } : null;
 
-            if (clientData?.organization) {
-                if (profile) {
-                    profile.organization = clientData.organization;
+            // 1. Critical Fix: Identify staff even if profile record is missing
+            if (teamData) {
+                if (!updatedProfile) {
+                    updatedProfile = {
+                        id: userId,
+                        email: user?.email || '',
+                        full_name: user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'User',
+                        role: 'team_member',
+                        team_role: teamData.position || 'viewer'
+                    };
                 } else {
-                    // If no profile yet, we'll wait for the fallback logic below
-                    // or we can attach it to the fallback
+                    // Update existing profile with team data
+                    if (updatedProfile.role !== 'super_admin' && updatedProfile.role !== 'admin') {
+                        updatedProfile.role = 'team_member';
+                    }
+                    updatedProfile.team_role = teamData.position || 'viewer';
+                }
+                updatedProfile.accessible_sections = teamData.accessible_sections || [];
+            }
+
+            // 2. Handle client specific data
+            if (updatedProfile) {
+                if (clientData?.organization) {
+                    updatedProfile.organization = clientData.organization;
+                }
+
+                // Fallback for sub-role if missing
+                if (updatedProfile.role === 'team_member' && !updatedProfile.team_role) {
+                    updatedProfile.team_role = 'viewer';
+                }
+
+                setProfile(updatedProfile);
+
+                // Auto-sync database if profiles role is incorrect
+                if (profileData && profileData.role !== updatedProfile.role) {
+                    supabase.from('profiles').update({ role: updatedProfile.role }).eq('id', userId).then();
                 }
             }
-        }
-
-        // 3. Critical Fix: Check team_members table regardless of profile role
-        // This ensures if someone is in team_members but marked as 'client' in profiles (or profiles record is missing),
-        // we correctly identify them as staff.
-        const { data: teamData } = await supabase
-            .from('team_members')
-            .select('position, accessible_sections')
-            .eq('profile_id', userId)
-            .maybeSingle();
-
-        if (teamData) {
-            if (!profile) {
-                // Fallback for missing profile record
-                profile = {
-                    id: userId,
-                    email: user?.email || '',
-                    full_name: user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'User',
-                    role: 'team_member',
-                    team_role: teamData.position || 'viewer'
-                };
-            } else if (profile.role !== 'super_admin' && profile.role !== 'admin') {
-                // Upgrade to team_member if they are in the team table
-                profile.role = 'team_member';
-                profile.team_role = teamData.position || 'viewer';
-            } else {
-                // For admins/super_admins who are also in team table, just ensure team_role is set
-                profile.team_role = teamData.position || 'viewer';
-            }
-            // Always set accessible_sections if teamData exists
-            profile.accessible_sections = teamData.accessible_sections || [];
-        } else if (profile && profile.role === 'team_member') {
-            // Default sub-role if missing from team_members table but marked as team_member
-            profile.team_role = profile.team_role || 'viewer';
-        }
-
-        if (profile) {
-            // Ensure organization is set if we found it earlier but profile was recreated
-            if (!profile.organization && user?.email) {
-                const { data: clientData } = await supabase
-                    .from('clients')
-                    .select('organization')
-                    .eq('email', user.email)
-                    .maybeSingle();
-                if (clientData?.organization) profile.organization = clientData.organization;
-            }
-
-            setProfile(profile);
-
-            // Auto-sync database if profiles role is incorrect
-            if (profileData && profileData.role !== profile.role && !isLoading) {
-                supabase.from('profiles').update({ role: profile.role }).eq('id', userId).then();
-            }
+        } catch (error) {
+            console.error('Error in fetchProfile:', error);
         }
     };
 
     const signOut = async () => {
-        // Clear state immediately to prevent flicker on potential slow redirect
-        setProfile(null);
-        setImpersonatedProfile(null);
-        setUser(null);
-        sessionStorage.removeItem('impersonated_profile');
+        const clearAll = () => {
+            setProfile(null);
+            setImpersonatedProfile(null);
+            setUser(null);
+            sessionStorage.removeItem('impersonated_profile');
+            localStorage.removeItem('supabase.auth.token'); // Safety clear
+            sessionStorage.clear();
+        };
 
-        await supabase.auth.signOut();
+        try {
+            // Don't wait forever for Supabase to respond
+            await Promise.race([
+                supabase.auth.signOut(),
+                new Promise((_, reject) => setTimeout(() => reject(new Error('Sign out timeout')), 2000))
+            ]);
+        } catch (error) {
+            console.warn('Supabase signout issue, clearing local state anyway');
+        } finally {
+            clearAll();
+        }
     };
 
     const refreshProfile = async () => {

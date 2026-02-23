@@ -78,7 +78,7 @@ export default function CustomDropdown({
         setIsOpen(false);
     };
 
-    const dropdownMenu = isOpen && mounted ? createPortal(
+    const dropdownMenu = isOpen && mounted && coords.width > 0 ? createPortal(
         <div
             ref={menuRef}
             style={{

@@ -333,11 +333,11 @@ export default function ClientsClient({ initialClients }: ClientsClientProps) {
     }, [activeFilterHeader]);
 
     return (
-        <div className={`flex h-screen bg-[#09090B] text-iron font-sans overflow-hidden transition-all duration-500 ${isImpersonating ? 'p-1.5' : ''}`} style={isImpersonating ? { backgroundColor: '#0f2b1a' } : undefined}>
+        <div className={`flex h-screen bg-[#09090B] text-iron font-sans overflow-hidden transition-[padding,background-color] duration-500 ${isImpersonating ? 'p-1.5' : ''}`} style={isImpersonating ? { backgroundColor: '#0f2b1a' } : undefined}>
             <Sidebar isCollapsed={isSidebarCollapsed} />
 
             <div className="flex-1 flex flex-col min-w-0 bg-[#09090B] relative">
-                <div className={`flex-1 flex flex-col min-w-0 bg-[#121214] rounded-t-2xl overflow-hidden border-t border-l border-r mt-6 mr-6 transition-all duration-500 ${isImpersonating ? 'border-[#22c55e]/60 shadow-[0_0_15px_rgba(34,197,94,0.15),0_0_40px_rgba(34,197,94,0.08),inset_0_0_20px_rgba(34,197,94,0.03)]' : 'border-shark'}`}>
+                <div className={`flex-1 flex flex-col min-w-0 bg-[#121214] rounded-t-2xl overflow-hidden border-t border-l border-r mt-6 mr-6 transition-[border-color,box-shadow] duration-500 ${isImpersonating ? 'border-[#22c55e]/60 shadow-[0_0_15px_rgba(34,197,94,0.15),0_0_40px_rgba(34,197,94,0.08),inset_0_0_20px_rgba(34,197,94,0.03)]' : 'border-shark'}`}>
                     <Header
                         onToggleSidebar={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
                         label="Clients"
@@ -535,7 +535,7 @@ export default function ClientsClient({ initialClients }: ClientsClientProps) {
                                                                 {/* Dropdown Menu */}
                                                                 {activeDropdown === client.id && (
                                                                     <div
-                                                                        className="absolute right-0 top-full mt-2 z-[100] w-48 bg-[#18181B] border border-shark rounded-xl shadow-2xl overflow-hidden py-1 animate-scale-in origin-top-right"
+                                                                        className="absolute right-0 top-full mt-2 z-[9999] bg-[#18181B] border border-shark rounded-xl shadow-[0_20px_50px_rgba(0,0,0,0.6)] overflow-hidden py-1 animate-in fade-in zoom-in-95 duration-200 origin-top-right"
                                                                         onMouseLeave={() => setActiveDropdown(null)}
                                                                     >
                                                                         <button
