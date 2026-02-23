@@ -26,7 +26,9 @@ import {
     Check,
     SortAsc,
     SortDesc,
-    Camera
+    Camera,
+    FileText,
+    Box
 } from 'lucide-react';
 import AvatarUpload from '@/components/AvatarUpload';
 import { useRouter } from 'next/navigation';
@@ -46,6 +48,19 @@ interface ClientItem {
     lastLoginRaw: string | null;
     avatar_url?: string | null;
     status: string;
+    request_count?: number;
+    task_count?: number;
+}
+
+interface FilterState {
+    name: string;
+    email: string;
+    organization: string;
+    createdAt: string;
+    lastLoginDate: string;
+    status: string;
+    request_count: string;
+    task_count: string;
 }
 
 interface ClientsClientProps {
@@ -66,13 +81,15 @@ export default function ClientsClient({ initialClients }: ClientsClientProps) {
     const [showPassword, setShowPassword] = useState(false);
     const [activeDropdown, setActiveDropdown] = useState<string | null>(null);
     const [searchQuery, setSearchQuery] = useState('');
-    const [filters, setFilters] = useState({
+    const [filters, setFilters] = useState<FilterState>({
         name: '',
         email: '',
         organization: '',
         createdAt: '',
         lastLoginDate: '',
-        status: ''
+        status: '',
+        request_count: '',
+        task_count: ''
     });
     const [sortConfig, setSortConfig] = useState<{ key: string; direction: 'asc' | 'desc' | null }>({
         key: 'createdAt',
@@ -380,10 +397,13 @@ export default function ClientsClient({ initialClients }: ClientsClientProps) {
                                                         organization: '',
                                                         createdAt: '',
                                                         lastLoginDate: '',
-                                                        status: ''
+                                                        status: '',
+                                                        request_count: '',
+                                                        task_count: ''
                                                     });
                                                     setSearchQuery('');
-                                                    setSortConfig({ key: '', direction: null });
+                                                    setSortConfig({ key: 'createdAt', direction: 'desc' });
+
                                                 }}
                                                 className={`relative flex items-center gap-2 px-3 py-1.5 rounded-lg border transition-all text-[11px] font-bold z-10 ${Object.values(filters).some(v => v !== '') || searchQuery !== '' || (sortConfig.key !== '' && !(sortConfig.key === 'createdAt' && sortConfig.direction === 'desc')) ? 'bg-[#279da6]/20 border-[#279da6]/60 text-[#279da6] active:scale-95' : 'border-shark bg-shark/20 text-santas-gray hover:text-white hover:bg-shark/40'}`}
                                             >
@@ -402,11 +422,11 @@ export default function ClientsClient({ initialClients }: ClientsClientProps) {
                                                 <tr className="border-b border-shark text-storm-gray text-xs uppercase font-black tracking-widest bg-shark/20">
                                                     <th className="px-5 py-5 w-12 border-r border-shark/60 text-center">#</th>
                                                     {[
-                                                        { label: 'Organization', key: 'name', filter: 'name' },
+                                                        { label: 'Organization', key: 'organization', filter: 'organization' },
+                                                        { label: 'User', key: 'name', filter: 'name' },
                                                         { label: 'Email', key: 'email', filter: 'email' },
-                                                        { label: 'User', key: 'organization', filter: 'organization' },
-                                                        { label: 'Created At', key: 'createdAt', filter: 'createdAt' },
-                                                        { label: 'Last Login', key: 'lastLoginDate', filter: 'lastLoginDate' },
+                                                        { label: 'Requests', key: 'request_count', filter: 'request_count' },
+                                                        { label: 'Tasks', key: 'task_count', filter: 'task_count' },
                                                         { label: 'Status', key: 'status', filter: 'status' }
                                                     ].map((header, idx) => (
                                                         <th key={header.label} className="px-6 py-5 border-r border-shark/60 group/header relative header-filter-container">
@@ -485,27 +505,33 @@ export default function ClientsClient({ initialClients }: ClientsClientProps) {
                                                                 <div className="flex items-center gap-3">
                                                                     <div className="w-9 h-9 rounded-full bg-shark/80 border border-white/5 overflow-hidden flex items-center justify-center text-[11px] text-white font-black bg-gradient-to-br from-[#279da6]/20 to-transparent group-hover/cell:scale-110 transition-transform">
                                                                         {client.avatar_url ? (
-                                                                            <img src={client.avatar_url} alt={client.name} className="w-full h-full object-cover" />
+                                                                            <img src={client.avatar_url} alt={client.organization} className="w-full h-full object-cover" />
                                                                         ) : (
-                                                                            (client.name || client.organization).split(' ').map((n: string) => n[0]).join('').slice(0, 2)
+                                                                            client.organization.split(' ').map((n: string) => n[0]).join('').slice(0, 2)
                                                                         )}
                                                                     </div>
-                                                                    <span className="text-iron font-black group-hover/cell:text-[#279da6] transition-colors uppercase tracking-tight">{client.name}</span>
+                                                                    <span className="text-iron font-black group-hover/cell:text-[#279da6] transition-colors uppercase tracking-tight">{client.organization}</span>
                                                                 </div>
                                                             </td>
+                                                            <td className="px-6 py-4.5 border-r border-shark/60 text-iron font-black tracking-tight">{client.name}</td>
                                                             <td className="px-6 py-4.5 text-santas-gray border-r border-shark/60 font-black">
                                                                 {client.email}
                                                             </td>
-                                                            <td className="px-6 py-4.5 text-santas-gray border-r border-shark/60 font-black">{client.organization}</td>
-                                                            <td className="px-6 py-4.5 text-storm-gray border-r border-shark/60 font-black whitespace-nowrap">{client.createdAt}</td>
-                                                            <td className="px-6 py-4.5 text-storm-gray border-r border-shark/60 font-black whitespace-nowrap">
-                                                                {client.lastLoginRaw ? (
-                                                                    <div className="flex flex-col">
-                                                                        <span className="text-iron">{client.lastLoginDate}</span>
-                                                                        <span className="text-[10px] opacity-50">{client.lastLoginTime}</span>
-                                                                    </div>
-                                                                ) : 'Never'}
+                                                            <td className="px-4 py-4.5 border-r border-shark/60">
+                                                                <div className="flex items-center gap-2">
+                                                                    <FileText size={14} className="text-[#279da6]" />
+                                                                    <span className="text-iron font-black">{client.request_count || 0}</span>
+                                                                    <span className="text-storm-gray text-[11px] font-bold">reqs</span>
+                                                                </div>
                                                             </td>
+                                                            <td className="px-4 py-4.5 border-r border-shark/60">
+                                                                <div className="flex items-center gap-2">
+                                                                    <Box size={14} className="text-amber-400" />
+                                                                    <span className="text-iron font-black">{client.task_count || 0}</span>
+                                                                    <span className="text-storm-gray text-[11px] font-bold">tasks</span>
+                                                                </div>
+                                                            </td>
+
                                                             <td className="px-6 py-4.5 text-iron border-r border-shark/60 font-medium">
                                                                 <div className="flex items-center gap-2">
                                                                     <CustomDropdown

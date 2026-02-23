@@ -17,9 +17,10 @@ export interface ClientItem {
 export async function getClients(): Promise<ClientItem[]> {
     const supabase = createServiceClient();
 
-    const [clientsRes, authRes] = await Promise.all([
+    const [clientsRes, authRes, profilesRes] = await Promise.all([
         supabase.from('clients').select('*').order('created_at', { ascending: false }),
-        supabase.auth.admin.listUsers()
+        supabase.auth.admin.listUsers(),
+        supabase.from('profiles').select('id, email, full_name, role, avatar_url').eq('role', 'client')
     ]);
 
     if (clientsRes.error) {
@@ -28,12 +29,72 @@ export async function getClients(): Promise<ClientItem[]> {
     }
 
     const authUsers = authRes.data?.users || [];
+    const profiles = profilesRes.data || [];
 
     return (clientsRes.data || []).map(client => {
         const authUser = authUsers.find(u => u.email?.toLowerCase() === client.email.toLowerCase());
+        const profile = profiles.find(p => p.email.toLowerCase() === client.email.toLowerCase());
         return {
             ...client,
+            profile_id: profile?.id || null,
+            avatar_url: profile?.avatar_url || null,
             last_login: authUser?.last_sign_in_at || client.last_login || null
         };
     });
 }
+
+/**
+ * Fetches request and task counts for all clients
+ */
+export async function getClientCounts() {
+    const supabase = createServiceClient();
+
+    // Fetch all requests and tasks to count by client_id
+    const [requestsRes, tasksRes] = await Promise.all([
+        supabase.from('requests').select('client_id'),
+        supabase.from('tasks').select('id, task_request_links(request:request_id(client_id))')
+    ]);
+
+    const requestCounts: Record<string, number> = {};
+    const taskCounts: Record<string, number> = {};
+
+    requestsRes.data?.forEach(req => {
+        if (req.client_id) {
+            requestCounts[req.client_id] = (requestCounts[req.client_id] || 0) + 1;
+        }
+    });
+
+    tasksRes.data?.forEach((task: any) => {
+        // A task can be linked to multiple requests, but usually one client.
+        // We'll count unique clients per task to avoid double counting if linked to multiple requests of same client. Or just pick first.
+        const clientIds = new Set<string>();
+        task.task_request_links?.forEach((link: any) => {
+            if (link.request?.client_id) {
+                clientIds.add(link.request.client_id);
+            }
+        });
+
+        clientIds.forEach(clientId => {
+            taskCounts[clientId] = (taskCounts[clientId] || 0) + 1;
+        });
+    });
+
+    return { requestCounts, taskCounts };
+}
+
+/**
+ * Returns clients enriched with counts
+ */
+export async function getEnrichedClients() {
+    const [clients, counts] = await Promise.all([
+        getClients(),
+        getClientCounts()
+    ]);
+
+    return clients.map(client => ({
+        ...client,
+        request_count: (client.profile_id && counts.requestCounts[client.profile_id]) || 0,
+        task_count: (client.profile_id && counts.taskCounts[client.profile_id]) || 0
+    }));
+}
+

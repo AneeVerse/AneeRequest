@@ -62,7 +62,7 @@ export default function ClientDetailPage() {
     const displayProfile = viewAsProfile || profile;
     const isSuperAdmin = displayProfile?.role === 'super_admin';
 
-    const tabs = ['Overview', 'Requests', 'Invoices', 'Folder', 'Settings'].filter(tab => {
+    const tabs = ['Overview', 'Requests', 'Tasks', 'Folder', 'Settings'].filter(tab => {
         if (tab === 'Folder' && !isSuperAdmin) return false;
         return true;
     });
@@ -70,7 +70,7 @@ export default function ClientDetailPage() {
     const { id } = useParams();
     const router = useRouter();
     const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
-    const [activeTab, setActiveTab] = useState('Overview');
+    const [activeTab, setActiveTab] = useState('Requests');
     const [client, setClient] = useState<Client | null>(null);
     const [isLoading, setIsLoading] = useState(true);
 
@@ -531,12 +531,8 @@ export default function ClientDetailPage() {
                                 <SettingsIcon size={16} className="group-hover:text-white" />
                                 <span>edit</span>
                             </button>
-                            <div className="h-4 w-[1px] bg-shark" />
-                            <button className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-[#279da6] text-white text-xs font-bold hover:bg-[#279da6]/90 transition-all shadow-lg hover:shadow-[#279da6]/20">
-                                <CreditCard size={14} />
-                                <span>Invoice</span>
-                            </button>
                         </div>
+
                     </div>
 
                     <main className="flex-1 overflow-y-auto custom-scrollbar relative">
@@ -630,10 +626,8 @@ export default function ClientDetailPage() {
                                                 <button className="w-full flex items-center justify-between px-4 py-3 rounded-xl bg-shark/20 border border-shark hover:bg-shark text-iron font-bold text-xs transition-all group">
                                                     Message Client <MessageSquare size={14} className="text-storm-gray group-hover:text-[#279da6] transition-colors" />
                                                 </button>
-                                                <button className="w-full flex items-center justify-between px-4 py-3 rounded-xl bg-[#279da6]/5 border border-[#279da6]/20 hover:bg-[#279da6]/10 text-[#279da6] font-bold text-xs transition-all">
-                                                    Create Invoice <CreditCard size={14} />
-                                                </button>
                                             </div>
+
                                         </div>
                                     </div>
                                 </div>
@@ -663,9 +657,26 @@ export default function ClientDetailPage() {
                                 </div>
                             )}
 
-                            {activeTab === 'Invoices' && (
-                                <div className="bg-[#18181B] border border-shark rounded-3xl overflow-hidden min-h-[400px] flex items-center justify-center text-storm-gray uppercase text-[10px] font-black tracking-widest opacity-40 animate-fade-in">
-                                    Invoices module coming soon.
+                            {activeTab === 'Tasks' && (
+                                <div className="space-y-6 animate-fade-in">
+                                    <div className="flex items-center justify-between mb-4">
+                                        <h2 className="text-lg font-black text-iron tracking-tight uppercase">Project Tasks</h2>
+                                        <div className="flex items-center gap-2">
+                                            <div className="relative w-64">
+                                                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-storm-gray" size={14} />
+                                                <input
+                                                    type="text"
+                                                    placeholder="Search tasks..."
+                                                    className="w-full bg-[#09090B] border border-shark/50 rounded-lg py-1.5 pl-9 pr-4 text-[11px] text-iron focus:outline-none focus:border-[#279da6]/40 transition-all font-bold"
+                                                />
+                                            </div>
+                                            <button className="p-2 bg-shark/20 border border-shark rounded-lg text-storm-gray hover:text-white transition-all"><Filter size={14} /></button>
+                                        </div>
+                                    </div>
+
+                                    <div className="bg-[#18181B] border border-shark rounded-3xl overflow-hidden min-h-[400px] flex items-center justify-center text-storm-gray uppercase text-[10px] font-black tracking-widest opacity-40">
+                                        No tasks found for this client.
+                                    </div>
                                 </div>
                             )}
 
