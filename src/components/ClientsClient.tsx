@@ -350,9 +350,9 @@ export default function ClientsClient({ initialClients }: ClientsClientProps) {
                                                 <tr className="border-b border-shark text-storm-gray text-xs uppercase font-black tracking-widest bg-shark/20">
                                                     <th className="px-5 py-5 w-12 border-r border-shark/60"><input type="checkbox" /></th>
                                                     {[
-                                                        { label: 'User', key: 'name', filter: 'name' },
+                                                        { label: 'Organization', key: 'name', filter: 'name' },
                                                         { label: 'Email', key: 'email', filter: 'email' },
-                                                        { label: 'Organization', key: 'organization', filter: 'organization' },
+                                                        { label: 'User', key: 'organization', filter: 'organization' },
                                                         { label: 'Created At', key: 'createdAt', filter: 'createdAt' },
                                                         { label: 'Last Login', key: 'lastLoginDate', filter: 'lastLoginDate' }
                                                     ].map((header, idx) => (
@@ -429,9 +429,13 @@ export default function ClientsClient({ initialClients }: ClientsClientProps) {
                                                             >
                                                                 <div className="flex items-center gap-3">
                                                                     <div className="w-9 h-9 rounded-full bg-shark/80 border border-white/5 overflow-hidden flex items-center justify-center text-[11px] text-white font-black bg-gradient-to-br from-[#279da6]/20 to-transparent group-hover/cell:scale-110 transition-transform">
-                                                                        {client.name.split(' ').map((n: string) => n[0]).join('')}
+                                                                        {client.avatar_url ? (
+                                                                            <img src={client.avatar_url} alt={client.name} className="w-full h-full object-cover" />
+                                                                        ) : (
+                                                                            (client.name || client.organization).split(' ').map((n: string) => n[0]).join('').slice(0, 2)
+                                                                        )}
                                                                     </div>
-                                                                    <span className="text-iron font-black group-hover/cell:text-[#279da6] transition-colors">{client.name}</span>
+                                                                    <span className="text-iron font-black group-hover/cell:text-[#279da6] transition-colors uppercase tracking-tight">{client.name}</span>
                                                                 </div>
                                                             </td>
                                                             <td
@@ -440,7 +444,7 @@ export default function ClientsClient({ initialClients }: ClientsClientProps) {
                                                             >
                                                                 {client.email}
                                                             </td>
-                                                            <td className="px-6 py-4.5 text-santas-gray border-r border-shark/60 font-black uppercase tracking-tight">{client.organization}</td>
+                                                            <td className="px-6 py-4.5 text-santas-gray border-r border-shark/60 font-black">{client.organization}</td>
                                                             <td className="px-6 py-4.5 text-storm-gray border-r border-shark/60 font-black whitespace-nowrap">{client.createdAt}</td>
                                                             <td className="px-6 py-4.5 text-storm-gray border-r border-shark/60 font-black whitespace-nowrap">
                                                                 {client.lastLoginRaw ? (
@@ -542,10 +546,21 @@ export default function ClientsClient({ initialClients }: ClientsClientProps) {
                                                 currentAvatarUrl={formData.avatarUrl}
                                                 onUploadSuccess={(url) => setFormData(prev => ({ ...prev, avatarUrl: url }))}
                                                 onRemove={() => setFormData(prev => ({ ...prev, avatarUrl: '' }))}
-                                                name={formData.name}
+                                                name={formData.name || formData.organization}
                                                 email={formData.email}
                                             />
                                             <p className="text-[10px] font-bold text-storm-gray uppercase tracking-widest mt-1">Client Photo</p>
+                                        </div>
+
+                                        <div className="space-y-1.5">
+                                            <label className="text-[11px] font-bold text-santas-gray uppercase tracking-wider">Company/Organization Name</label>
+                                            <input
+                                                type="text"
+                                                placeholder="Organization name"
+                                                value={formData.name}
+                                                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                                                className="w-full bg-[#09090B] border border-shark/60 rounded-xl py-2.5 px-4 text-sm text-iron focus:outline-none focus:border-[#279da6]/60"
+                                            />
                                         </div>
 
                                         <div className="space-y-1.5">
@@ -554,17 +569,6 @@ export default function ClientsClient({ initialClients }: ClientsClientProps) {
                                                 required
                                                 type="text"
                                                 placeholder="Enter client name"
-                                                value={formData.name}
-                                                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                                                className="w-full bg-[#09090B] border border-shark/60 rounded-xl py-2.5 px-4 text-sm text-iron focus:outline-none focus:border-[#279da6]/60"
-                                            />
-                                        </div>
-
-                                        <div className="space-y-1.5">
-                                            <label className="text-[11px] font-bold text-santas-gray uppercase tracking-wider">Company/Organization Name</label>
-                                            <input
-                                                type="text"
-                                                placeholder="Organization name"
                                                 value={formData.organization}
                                                 onChange={(e) => setFormData({ ...formData, organization: e.target.value })}
                                                 className="w-full bg-[#09090B] border border-shark/60 rounded-xl py-2.5 px-4 text-sm text-iron focus:outline-none focus:border-[#279da6]/60"
@@ -665,16 +669,15 @@ export default function ClientsClient({ initialClients }: ClientsClientProps) {
                                                 currentAvatarUrl={formData.avatarUrl}
                                                 onUploadSuccess={(url) => setFormData(prev => ({ ...prev, avatarUrl: url }))}
                                                 onRemove={() => setFormData(prev => ({ ...prev, avatarUrl: '' }))}
-                                                name={formData.name}
+                                                name={formData.name || formData.organization}
                                                 email={formData.email}
                                             />
                                             <p className="text-[10px] font-bold text-storm-gray uppercase tracking-widest mt-1">Client Photo</p>
                                         </div>
 
                                         <div className="space-y-1.5">
-                                            <label className="text-[11px] font-bold text-santas-gray uppercase tracking-wider">Client Name *</label>
+                                            <label className="text-[11px] font-bold text-santas-gray uppercase tracking-wider">Company/Organization Name</label>
                                             <input
-                                                required
                                                 type="text"
                                                 value={formData.name}
                                                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
@@ -683,8 +686,9 @@ export default function ClientsClient({ initialClients }: ClientsClientProps) {
                                         </div>
 
                                         <div className="space-y-1.5">
-                                            <label className="text-[11px] font-bold text-santas-gray uppercase tracking-wider">Company/Organization Name</label>
+                                            <label className="text-[11px] font-bold text-santas-gray uppercase tracking-wider">Client Name *</label>
                                             <input
+                                                required
                                                 type="text"
                                                 value={formData.organization}
                                                 onChange={(e) => setFormData({ ...formData, organization: e.target.value })}
