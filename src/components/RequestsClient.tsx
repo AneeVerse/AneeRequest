@@ -119,6 +119,22 @@ export default function RequestsClient({
         return matchesTab;
     });
 
+    // Compute counts per tab for notification badges
+    const tabCounts = React.useMemo(() => {
+        const counts: Record<string, number> = {};
+        subTabs.forEach(tab => {
+            counts[tab] = visibleRequests.filter(req => {
+                if (tab === 'All') return true;
+                if (tab === 'Assigned') return !!req.assigned_to;
+                if (tab === 'Unassigned') return !req.assigned_to;
+                if (tab === 'Open') return req.status !== 'Done';
+                if (tab === 'Completed') return req.status === 'Done';
+                return true;
+            }).length;
+        });
+        return counts;
+    }, [visibleRequests, subTabs]);
+
     return (
         <div className={`flex h-screen bg-[#09090B] text-iron font-sans overflow-hidden transition-all duration-500 ${isImpersonating ? 'p-1.5' : ''}`} style={isImpersonating ? { backgroundColor: '#0f2b1a' } : undefined}>
             <Sidebar isCollapsed={isSidebarCollapsed} />
@@ -132,6 +148,7 @@ export default function RequestsClient({
                         tabs={subTabs}
                         activeTab={activeTab}
                         setActiveTab={setActiveTab}
+                        tabCounts={tabCounts}
                         onCreate={() => setIsCreateModalOpen(true)}
                     />
 

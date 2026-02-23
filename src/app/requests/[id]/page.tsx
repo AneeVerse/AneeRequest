@@ -758,7 +758,7 @@ export default function RequestDetailsPage() {
                                         <div className="inline-flex items-center p-0.5 bg-[#09090B]/40 border border-shark/50 rounded-xl">
                                             <button
                                                 onClick={() => setActiveTab('chat')}
-                                                className={`flex items-center gap-1.5 px-3 py-1.5 text-[9px] font-black uppercase tracking-wider transition-all rounded-[10px] ${activeTab === 'chat'
+                                                className={`relative flex items-center gap-1.5 px-3 py-1.5 text-[9px] font-black uppercase tracking-wider transition-all rounded-[10px] ${activeTab === 'chat'
                                                     ? 'bg-shark/80 text-[#279da6] border border-[#279da6]/20 shadow-sm'
                                                     : 'text-storm-gray hover:text-iron hover:bg-white/5'
                                                     }`}
@@ -768,7 +768,7 @@ export default function RequestDetailsPage() {
                                             </button>
                                             <button
                                                 onClick={() => setActiveTab('tasks')}
-                                                className={`flex items-center gap-1.5 px-3 py-1.5 text-[9px] font-black uppercase tracking-wider transition-all rounded-[10px] ${activeTab === 'tasks'
+                                                className={`relative flex items-center gap-1.5 px-3 py-1.5 text-[9px] font-black uppercase tracking-wider transition-all rounded-[10px] ${activeTab === 'tasks'
                                                     ? 'bg-shark/80 text-[#279da6] border border-[#279da6]/20 shadow-sm'
                                                     : 'text-storm-gray hover:text-iron hover:bg-white/5'
                                                     }`}
@@ -776,15 +776,15 @@ export default function RequestDetailsPage() {
                                                 <CheckSquare size={12} />
                                                 Tasks
                                                 {linkedTasks.length > 0 && (
-                                                    <span className={`ml-1.5 px-1 py-0.5 rounded-full text-[8px] font-black ${activeTab === 'tasks' ? 'bg-[#279da6]/10 text-[#279da6]' : 'bg-shark text-storm-gray'}`}>
-                                                        {linkedTasks.length}
+                                                    <span className="absolute -top-2.5 -right-1 min-w-[17px] h-[17px] flex items-center justify-center rounded-full text-[9px] font-black px-1 border border-[#09090B] shadow-md bg-[#279da6] text-white z-[20]">
+                                                        {linkedTasks.length > 99 ? '99+' : linkedTasks.length}
                                                     </span>
                                                 )}
                                             </button>
                                             {(isSuperAdmin || isTeamAdmin) && (
                                                 <button
                                                     onClick={() => setActiveTab('files')}
-                                                    className={`flex items-center gap-1.5 px-3 py-1.5 text-[9px] font-black uppercase tracking-wider transition-all rounded-[10px] ${activeTab === 'files'
+                                                    className={`relative flex items-center gap-1.5 px-3 py-1.5 text-[9px] font-black uppercase tracking-wider transition-all rounded-[10px] ${activeTab === 'files'
                                                         ? 'bg-shark/80 text-[#279da6] border border-[#279da6]/20 shadow-sm'
                                                         : 'text-storm-gray hover:text-iron hover:bg-white/5'
                                                         }`}
@@ -792,8 +792,8 @@ export default function RequestDetailsPage() {
                                                     <FolderOpen size={12} />
                                                     Files
                                                     {requestFiles.length > 0 && (
-                                                        <span className={`ml-1.5 px-1 py-0.5 rounded-full text-[8px] font-black ${activeTab === 'files' ? 'bg-[#279da6]/10 text-[#279da6]' : 'bg-shark text-storm-gray'}`}>
-                                                            {requestFiles.length}
+                                                        <span className="absolute -top-2.5 -right-1 min-w-[17px] h-[17px] flex items-center justify-center rounded-full text-[9px] font-black px-1 border border-[#09090B] shadow-md bg-[#279da6] text-white z-[20]">
+                                                            {requestFiles.length > 99 ? '99+' : requestFiles.length}
                                                         </span>
                                                     )}
                                                 </button>

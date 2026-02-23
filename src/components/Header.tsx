@@ -98,7 +98,7 @@ const Header: React.FC<HeaderProps> = ({
 
                 {/* Dynamic Sub-Navigation */}
                 {tabs && tabs.length > 0 && (
-                    <div className="flex items-center bg-black/60 border border-shark/50 p-1 pt-2 rounded-xl overflow-visible ml-2 shrink-0">
+                    <div className="flex items-center bg-black/60 border border-shark/50 p-1 rounded-xl overflow-visible ml-2 shrink-0">
                         {tabs.map((tab) => {
                             const count = tabCounts?.[tab];
                             return (
@@ -112,7 +112,7 @@ const Header: React.FC<HeaderProps> = ({
                                 >
                                     {tab}
                                     {count !== undefined && count > 0 && (
-                                        <span className="absolute -top-1.5 right-1 min-w-[17px] h-[17px] flex items-center justify-center rounded-full text-[9px] font-black px-1 border border-[#09090B] shadow-md bg-[#279da6] text-white z-[20]">
+                                        <span className="absolute -top-2.5 right-1 min-w-[17px] h-[17px] flex items-center justify-center rounded-full text-[9px] font-black px-1 border border-[#09090B] shadow-md bg-[#279da6] text-white z-[20]">
                                             {count > 99 ? '99+' : count}
                                         </span>
                                     )}

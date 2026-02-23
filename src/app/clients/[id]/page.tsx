@@ -559,18 +559,26 @@ export default function ClientDetailPage() {
 
                             {/* Sub-Navigation Tabs */}
                             <div className="flex items-center bg-black/40 border border-shark p-1 rounded-xl shrink-0 ml-2">
-                                {tabs.map((tab) => (
-                                    <button
-                                        key={tab}
-                                        onClick={() => setActiveTab(tab)}
-                                        className={`px-4 py-1.5 rounded-lg text-[11px] font-bold transition-all whitespace-nowrap ${activeTab === tab
-                                            ? 'bg-[#1E1E22] text-[#279da6] border border-[#279da6]/20 shadow-lg'
-                                            : 'text-santas-gray hover:text-iron hover:bg-white/5'
-                                            }`}
-                                    >
-                                        {tab}
-                                    </button>
-                                ))}
+                                {tabs.map((tab) => {
+                                    const count = tab === 'Requests' ? requests.length : tab === 'Tasks' ? tasks.length : 0;
+                                    return (
+                                        <button
+                                            key={tab}
+                                            onClick={() => setActiveTab(tab)}
+                                            className={`relative px-4 py-1.5 rounded-lg text-[11px] font-bold transition-all whitespace-nowrap ${activeTab === tab
+                                                ? 'bg-[#1E1E22] text-[#279da6] border border-[#279da6]/20 shadow-lg'
+                                                : 'text-santas-gray hover:text-iron hover:bg-white/5'
+                                                }`}
+                                        >
+                                            {tab}
+                                            {count > 0 && (
+                                                <span className="absolute -top-2.5 -right-1 min-w-[17px] h-[17px] flex items-center justify-center rounded-full text-[9px] font-black px-1 border border-[#09090B] shadow-md bg-[#279da6] text-white z-[20]">
+                                                    {count > 99 ? '99+' : count}
+                                                </span>
+                                            )}
+                                        </button>
+                                    );
+                                })}
                             </div>
                             <div className="ml-4">
                                 <ImpersonationWarning />

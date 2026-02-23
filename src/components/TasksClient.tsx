@@ -180,6 +180,21 @@ export default function TasksClient({ initialTasks, profiles, teamMembers, reque
         return () => document.removeEventListener('mousedown', handleClickOutside);
     }, [activeFilterHeader]);
 
+    // Compute counts per tab for notification badges
+    const tabCounts = React.useMemo(() => {
+        const counts: Record<string, number> = {};
+        taskTabs.forEach(tab => {
+            counts[tab] = visibleTasks.filter(task => {
+                if (tab === 'All Tasks') return true;
+                if (tab === 'My Tasks') return task.assigned_to === user?.id;
+                if (tab === 'In Progress') return task.status === 'In Progress';
+                if (tab === 'Done') return task.status === 'Done';
+                return true;
+            }).length;
+        });
+        return counts;
+    }, [visibleTasks, taskTabs, user?.id]);
+
     return (
         <div className={`flex h-screen bg-[#09090B] text-iron font-sans overflow-hidden transition-all duration-500 ${isImpersonating ? 'p-1.5' : ''}`} style={isImpersonating ? { backgroundColor: '#0f2b1a' } : undefined}>
             <Sidebar isCollapsed={isSidebarCollapsed} />
@@ -193,6 +208,7 @@ export default function TasksClient({ initialTasks, profiles, teamMembers, reque
                         tabs={taskTabs}
                         activeTab={activeTab}
                         setActiveTab={setActiveTab}
+                        tabCounts={tabCounts}
                         onCreate={displayProfile?.role === 'super_admin' ? () => setShowCreateModal(true) : undefined}
                     />
 
