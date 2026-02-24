@@ -40,7 +40,10 @@ import {
     Plus,
     MoreHorizontal,
     File as FileIcon,
-    FolderPlus
+    FolderPlus,
+    Moon,
+    Sun,
+    Bell
 } from 'lucide-react';
 
 import { useAuth } from '@/context/AuthContext';
@@ -470,6 +473,18 @@ export default function ClientDetailPage() {
         return `${(bytes / 1048576).toFixed(1)} MB`;
     };
 
+    const [theme, setTheme] = useState<'dark' | 'light'>('dark');
+
+    // Theme toggle effect
+    useEffect(() => {
+        const root = window.document.documentElement;
+        if (theme === 'light') {
+            root.classList.add('light');
+        } else {
+            root.classList.remove('light');
+        }
+    }, [theme]);
+
     const handleSettingsSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!client) return;
@@ -586,8 +601,30 @@ export default function ClientDetailPage() {
                             </div>
                         </div>
 
-                        <div className="flex items-center gap-4">
-                            <button className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-santas-gray hover:text-white transition-colors group">
+                        <div className="flex items-center gap-3">
+                            <button
+                                onClick={() => { /* Implementation for creating new item if needed */ }}
+                                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-santas-gray hover:text-white transition-colors group cursor-pointer"
+                            >
+                                <Plus size={16} className="group-hover:text-white" />
+                                <span>new</span>
+                            </button>
+                            <div className="h-4 w-[1px] bg-shark" />
+                            <button
+                                onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+                                className="p-2 text-santas-gray hover:text-white rounded-lg hover:bg-shark/40 transition-all cursor-pointer"
+                            >
+                                {theme === 'dark' ? <Moon size={18} /> : <Sun size={18} />}
+                            </button>
+                            <button className="p-2 text-santas-gray hover:text-white rounded-lg hover:bg-shark/40 transition-all relative cursor-pointer">
+                                <Bell size={18} />
+                                <div className="absolute top-2 right-2.5 w-1.5 h-1.5 bg-red-500 rounded-full border border-black" />
+                            </button>
+                            <div className="h-4 w-[1px] bg-shark ml-1" />
+                            <button
+                                onClick={() => setActiveTab('Settings')}
+                                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-santas-gray hover:text-white transition-colors group cursor-pointer"
+                            >
                                 <SettingsIcon size={16} className="group-hover:text-white" />
                                 <span>edit</span>
                             </button>

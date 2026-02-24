@@ -144,7 +144,7 @@ export default function RequestsClient({
                     <Header
                         onToggleSidebar={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
                         label="Requests"
-                        labelIcon={<LayoutList size={16} className="text-santas-gray" />}
+                        labelIcon={<LayoutList size={16} className="text-[#279da6]" />}
                         tabs={subTabs}
                         activeTab={activeTab}
                         setActiveTab={setActiveTab}

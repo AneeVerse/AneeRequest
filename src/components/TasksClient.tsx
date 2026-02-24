@@ -204,7 +204,7 @@ export default function TasksClient({ initialTasks, profiles, teamMembers, reque
                     <Header
                         onToggleSidebar={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
                         label="Team Tasks"
-                        labelIcon={<Box size={16} className="text-santas-gray" />}
+                        labelIcon={<Box size={16} className="text-[#279da6]" />}
                         tabs={taskTabs}
                         activeTab={activeTab}
                         setActiveTab={setActiveTab}

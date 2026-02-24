@@ -358,8 +358,8 @@ export default function ClientsClient({ initialClients }: ClientsClientProps) {
                 <div className={`flex-1 flex flex-col min-w-0 bg-[#121214] rounded-t-2xl overflow-visible border-t border-l border-r mt-6 mr-6 transition-[border-color,box-shadow] duration-500 ${isImpersonating ? 'border-[#22c55e]/60 shadow-[0_0_15px_rgba(34,197,94,0.15),0_0_40px_rgba(34,197,94,0.08),inset_0_0_20px_rgba(34,197,94,0.03)]' : 'border-shark'}`}>
                     <Header
                         onToggleSidebar={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
-                        label="Clients"
-                        labelIcon={<Users size={16} className="text-santas-gray" />}
+                        label="Users"
+                        labelIcon={<Users size={16} className="text-[#279da6]" />}
                         tabs={clientCategories}
                         activeTab={activeTab}
                         setActiveTab={setActiveTab}

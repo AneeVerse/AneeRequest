@@ -63,9 +63,15 @@ const Header: React.FC<HeaderProps> = ({
                     <PanelLeft size={18} />
                 </button>
 
-                {/* Section Label or Page Switcher */}
-                {pageSwitcher ? (
-                    <div className="flex items-center bg-black/60 border border-shark/50 p-1 rounded-xl overflow-hidden shrink-0">
+                {/* Section Label / User Card */}
+                <div className="flex items-center gap-2 px-3 py-1.5 bg-shark/40 border border-shark rounded-lg shrink-0">
+                    {labelIcon || <ListFilter size={16} className="text-[#279da6]" />}
+                    <span className="text-xs font-bold text-iron">{label}</span>
+                </div>
+
+                {/* Page Switcher */}
+                {pageSwitcher && (
+                    <div className="flex items-center bg-black/60 border border-shark/50 p-1 rounded-xl overflow-hidden shrink-0 ml-2">
                         {pageSwitcher.filter(page => {
                             // 1. Super Admin/Admin (Global) bypasses all restrictions
                             if (viewAsProfile?.role === 'super_admin' || viewAsProfile?.role === 'admin') return true;
@@ -88,11 +94,6 @@ const Header: React.FC<HeaderProps> = ({
                                 {page.name}
                             </Link>
                         ))}
-                    </div>
-                ) : (
-                    <div className="flex items-center gap-2 px-3 py-1.5 bg-shark/40 border border-shark rounded-lg shrink-0">
-                        {labelIcon || <ListFilter size={16} className="text-santas-gray" />}
-                        <span className="text-xs font-bold text-iron">{label}</span>
                     </div>
                 )}
 
