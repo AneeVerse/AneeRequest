@@ -289,7 +289,7 @@ export default function RequestsTable({
                                         </td>
                                         <td
                                             className="px-6 py-4.5 font-black text-iron border-r border-shark/60 group-hover:text-[#279da6] cursor-pointer transition-colors"
-                                            onClick={() => router.push(`/requests/${item.id}`)}
+                                            onClick={() => router.push(`/requests/${item.slug || item.id}`)}
                                         >
                                             <div className="flex flex-col">
                                                 <span className="line-clamp-1">{item.title}</span>

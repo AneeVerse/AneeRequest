@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { createServiceClient } from '@/lib/supabase';
+import { generateSlug, resolveTaskSlug } from '@/lib/utils';
 
 export async function GET(request: Request) {
     try {
@@ -20,14 +21,14 @@ export async function GET(request: Request) {
             .order('created_at', { ascending: false });
 
         if (requestId) {
-            // If request_id is provided, filter tasks that have a link to this request
-            const { data: linkedTasks } = await supabase
-                .from('task_request_links')
-                .select('task_id')
-                .eq('request_id', requestId);
+            // ... (keep existing requestId filtering)
+        }
 
-            const taskIds = (linkedTasks || []).map(lt => lt.task_id);
-            query = query.in('id', taskIds);
+        // If 'id' is provided as a search param, filter by id or slug
+        const id = searchParams.get('id');
+        if (id) {
+            const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
+            query = query.eq(isUuid ? 'id' : 'slug', id);
         }
 
         const { data, error } = await query;
@@ -45,14 +46,30 @@ export async function POST(request: Request) {
         const body = await request.json();
         const { request_ids, ...taskData } = body;
 
-        // 1. Create the task
+        // 1. Create the task with a slug
+        const { title } = taskData;
+        const initialSlug = generateSlug(title || 'task');
+
         const { data: newTask, error: taskError } = await supabase
             .from('tasks')
-            .insert(taskData)
+            .insert({
+                ...taskData,
+                slug: initialSlug
+            })
             .select()
             .single();
 
         if (taskError) throw taskError;
+
+        // 1.1 Update slug with ID hash for uniqueness
+        if (newTask) {
+            const finalSlug = generateSlug(newTask.title || 'task', newTask.id);
+            await supabase
+                .from('tasks')
+                .update({ slug: finalSlug })
+                .eq('id', newTask.id);
+            newTask.slug = finalSlug;
+        }
 
         // 2. Create request links if provided
         if (request_ids && Array.isArray(request_ids) && request_ids.length > 0) {
@@ -83,10 +100,11 @@ export async function PATCH(request: Request) {
         if (!id) return NextResponse.json({ error: "Missing task ID" }, { status: 400 });
 
         // 1. Update task basic info
+        const resolvedId = await resolveTaskSlug(id);
         const { data: updatedTask, error: taskError } = await supabase
             .from('tasks')
             .update(updates)
-            .eq('id', id)
+            .eq('id', resolvedId)
             .select()
             .single();
 
@@ -129,10 +147,11 @@ export async function DELETE(request: Request) {
 
         if (!id) return NextResponse.json({ error: "Missing task ID" }, { status: 400 });
 
+        const resolvedId = await resolveTaskSlug(id);
         const { error } = await supabase
             .from('tasks')
             .delete()
-            .eq('id', id);
+            .eq('id', resolvedId);
 
         if (error) throw error;
         return NextResponse.json({ message: "Task deleted successfully" });

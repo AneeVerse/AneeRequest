@@ -243,17 +243,21 @@ export default function RequestDetailsPage() {
             };
 
             initPage();
+        }
+    }, [id]);
 
-            // Subscribe to real-time messages
+    useEffect(() => {
+        if (request?.id) {
+            // Subscribe to real-time messages using the actual UUID
             const channel = supabase
-                .channel(`request_messages:${id}`)
+                .channel(`request_messages:${request.id}`)
                 .on(
                     'postgres_changes',
                     {
                         event: 'INSERT',
                         schema: 'public',
                         table: 'request_messages',
-                        filter: `request_id=eq.${id}`,
+                        filter: `request_id=eq.${request.id}`,
                     },
                     (payload) => {
                         const newMsg = payload.new as Message;
@@ -262,8 +266,6 @@ export default function RequestDetailsPage() {
                             if (prev.some(m => m.id === newMsg.id)) return prev;
 
                             // If it's from another user, we need to fetch details or wait for re-fetch
-                            // To keep it clean and truly real-time, we'll trigger a re-fetch of sender info
-                            // if it's not the current user's message.
                             if (newMsg.sender_id !== profile?.id) {
                                 fetchMessages();
                             }
@@ -277,7 +279,7 @@ export default function RequestDetailsPage() {
                 supabase.removeChannel(channel);
             };
         }
-    }, [id]);
+    }, [request?.id, profile?.id]);
 
     useEffect(() => {
         scrollToBottom();
@@ -288,7 +290,7 @@ export default function RequestDetailsPage() {
             const response = await fetch(`/api/requests?id=${id}`);
             const data = await response.json();
             if (response.ok) {
-                const found = Array.isArray(data) ? data.find((r: any) => r.id === id) : data;
+                const found = Array.isArray(data) ? data.find((r: any) => r.id === id || r.slug === id) : data;
 
                 // ACCESS CONTROL for Team Members
                 const isTeamMember = displayProfile?.role === 'team_member';

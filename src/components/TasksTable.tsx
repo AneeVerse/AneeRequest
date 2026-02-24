@@ -247,7 +247,7 @@ export default function TasksTable({
                                     </td>
                                     <td
                                         className="px-6 py-4.5 font-black text-iron border-r border-shark/60 group-hover:text-[#279da6] whitespace-nowrap cursor-pointer transition-colors"
-                                        onClick={() => router.push(`/tasks/${item.id}`)}
+                                        onClick={() => router.push(`/tasks/${item.slug || item.id}`)}
                                     >
                                         {item.title}
                                     </td>

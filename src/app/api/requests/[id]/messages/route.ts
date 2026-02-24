@@ -1,12 +1,14 @@
 import { NextResponse } from 'next/server';
 import { createServiceClient } from '@/lib/supabase';
+import { resolveRequestSlug } from '@/lib/utils';
 
 export async function GET(
     request: Request,
     { params }: { params: Promise<{ id: string }> }
 ) {
     try {
-        const { id } = await params;
+        const { id: idOrSlug } = await params;
+        const id = await resolveRequestSlug(idOrSlug);
         const supabase = createServiceClient();
 
         const { data, error } = await supabase
@@ -31,7 +33,8 @@ export async function POST(
     { params }: { params: Promise<{ id: string }> }
 ) {
     try {
-        const { id } = await params;
+        const { id: idOrSlug } = await params;
+        const id = await resolveRequestSlug(idOrSlug);
         const body = await request.json();
         console.log('API POST MESSAGES BODY:', JSON.stringify(body, null, 2));
         const { message, sender_id, attachments } = body;

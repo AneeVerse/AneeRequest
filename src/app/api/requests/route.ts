@@ -3,6 +3,7 @@ import { cookies } from 'next/headers';
 import { createServerClient } from '@supabase/ssr';
 import { createServiceClient } from '@/lib/supabase';
 import { ensureFolderPath } from '@/lib/googleDrive';
+import { generateSlug, resolveRequestSlug } from '@/lib/utils';
 
 export async function GET(request: Request) {
     try {
@@ -80,8 +81,25 @@ export async function GET(request: Request) {
         // super_admin and admin see everything
 
         if (id) {
-            const { data, error } = await query.eq('id', id).single();
+            // Determine if the param is a UUID or a slug
+            const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
+
+            const singleQuery = supabase
+                .from('requests')
+                .select(`
+                    *,
+                    client:client_id (id, full_name, email),
+                    assignee:assigned_to (id, full_name)
+                `)
+                .eq(isUuid ? 'id' : 'slug', id)
+                .maybeSingle();
+
+            const { data, error } = await singleQuery;
             if (error) throw error;
+
+            if (!data) {
+                return NextResponse.json({ error: "Request not found" }, { status: 404 });
+            }
 
             // Fetch organization from clients table
             if (data.client?.email) {
@@ -161,12 +179,14 @@ export async function POST(request: Request) {
         const prefix = nextNum.toString().padStart(2, '0');
         const numberedTitle = `${prefix}-${title}`;
 
-        // 2. Insert the request with the numbered title
+        // 2. Insert the request with the numbered title and slug
+        const initialSlug = generateSlug(title);
         const { data, error } = await supabase
             .from('requests')
             .insert([
                 {
                     title: numberedTitle,
+                    slug: initialSlug, // We'll update it with ID part after we have the ID or just use it as is if unique
                     description,
                     client_id,
                     priority: priority || 'Medium',
@@ -178,6 +198,15 @@ export async function POST(request: Request) {
             .single();
 
         if (error) throw error;
+
+        // 2.1 Update slug with ID hash for uniqueness
+        const finalSlug = generateSlug(title, data.id);
+        await supabase
+            .from('requests')
+            .update({ slug: finalSlug })
+            .eq('id', data.id);
+
+        data.slug = finalSlug;
 
         // Auto-create Google Drive folder for this request (only if requested)
         if (body.create_folder !== false) {
@@ -222,10 +251,11 @@ export async function PATCH(request: Request) {
         }
 
         const supabase = createServiceClient();
+        const resolvedId = await resolveRequestSlug(id);
         const { data, error } = await supabase
             .from('requests')
             .update(body)
-            .eq('id', id)
+            .eq('id', resolvedId)
             .select()
             .single();
 
@@ -283,10 +313,11 @@ export async function DELETE(request: Request) {
         }
 
         // 3. Delete the request
+        const resolvedId = await resolveRequestSlug(id);
         const { error } = await supabase
             .from('requests')
             .delete()
-            .eq('id', id);
+            .eq('id', resolvedId);
 
         if (error) throw error;
 

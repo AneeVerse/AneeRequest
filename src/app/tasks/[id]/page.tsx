@@ -150,17 +150,21 @@ export default function TaskDetailsPage() {
             };
 
             initPage();
+        }
+    }, [id]);
 
+    useEffect(() => {
+        if (task?.id) {
             // Subscribe to real-time messages
             const channel = supabase
-                .channel(`task_messages:${id}`)
+                .channel(`task_messages:${task.id}`)
                 .on(
                     'postgres_changes',
                     {
                         event: 'INSERT',
                         schema: 'public',
                         table: 'task_messages',
-                        filter: `task_id=eq.${id}`,
+                        filter: `task_id=eq.${task.id}`,
                     },
                     async (payload) => {
                         const { data, error } = await supabase
@@ -183,7 +187,7 @@ export default function TaskDetailsPage() {
                 supabase.removeChannel(channel);
             };
         }
-    }, [id]);
+    }, [task?.id]);
 
     useEffect(() => {
         scrollToBottom();
@@ -191,10 +195,12 @@ export default function TaskDetailsPage() {
 
     const fetchTaskDetails = async () => {
         try {
-            const response = await fetch(`/api/tasks`);
+            const response = await fetch(`/api/tasks?id=${id}`);
             const data = await response.json();
             if (response.ok) {
-                const found = Array.isArray(data) ? data.find((t: any) => t.id === id) : data;
+                // The API now returns a single item if 'id' param is provided, 
+                // but let's handle both array and object for safety
+                const found = Array.isArray(data) ? (data.find((t: any) => t.id === id || t.slug === id)) : data;
                 setTask(found);
             }
         } catch (error) {

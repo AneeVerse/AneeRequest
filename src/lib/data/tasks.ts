@@ -2,6 +2,7 @@ import { createServiceClient } from '@/lib/supabase';
 
 export interface TaskItem {
     id: string;
+    slug: string | null;
     title: string;
     description: string | null;
     status: 'Todo' | 'In Progress' | 'Review' | 'Done';

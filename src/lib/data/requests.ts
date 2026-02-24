@@ -2,6 +2,7 @@ import { createServiceClient } from '@/lib/supabase';
 
 export interface RequestItem {
     id: string;
+    slug: string | null;
     title: string;
     description: string;
     client: { id: string; full_name: string; email: string; organization?: string } | null;

@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { createServiceClient } from '@/lib/supabase';
+import { resolveRequestSlug } from '@/lib/utils';
 import {
     getRootFolderId,
     findFolder,
@@ -12,7 +13,8 @@ export async function GET(
     { params }: { params: Promise<{ id: string }> }
 ) {
     try {
-        const { id } = await params;
+        const { id: idOrSlug } = await params;
+        const id = await resolveRequestSlug(idOrSlug);
         const supabase = createServiceClient();
 
         // 1. Get request details (title + client_id)

@@ -1,12 +1,14 @@
 import { NextResponse } from 'next/server';
 import { createServiceClient } from '@/lib/supabase';
+import { resolveRequestSlug } from '@/lib/utils';
 
 export async function GET(
     request: Request,
     { params }: { params: Promise<{ id: string }> }
 ) {
     try {
-        const { id } = await params;
+        const { id: idOrSlug } = await params;
+        const id = await resolveRequestSlug(idOrSlug);
         const supabase = createServiceClient();
 
         const { data, error } = await supabase
@@ -48,7 +50,8 @@ export async function POST(
     { params }: { params: Promise<{ id: string }> }
 ) {
     try {
-        const { id } = await params;
+        const { id: idOrSlug } = await params;
+        const id = await resolveRequestSlug(idOrSlug);
         const body = await request.json();
         const { team_member_id, role, assigned_by } = body;
 
@@ -121,7 +124,8 @@ export async function PATCH(
     { params }: { params: Promise<{ id: string }> }
 ) {
     try {
-        const { id } = await params;
+        const { id: idOrSlug } = await params;
+        const id = await resolveRequestSlug(idOrSlug);
         const body = await request.json();
         const { assignment_id, role } = body;
 
@@ -177,7 +181,8 @@ export async function DELETE(
     { params }: { params: Promise<{ id: string }> }
 ) {
     try {
-        const { id } = await params;
+        const { id: idOrSlug } = await params;
+        const id = await resolveRequestSlug(idOrSlug);
         const { searchParams } = new URL(request.url);
         const assignment_id = searchParams.get('assignment_id');
 
