@@ -114,7 +114,7 @@ export default function ClientsClient({ initialClients }: ClientsClientProps) {
         email: '',
         password: '',
         confirmPassword: '',
-        create_folder: true,
+        create_folder: false,
         status: 'Ongoing',
         avatarUrl: ''
     });
@@ -135,7 +135,7 @@ export default function ClientsClient({ initialClients }: ClientsClientProps) {
     }, [clients]);
 
     const resetForm = () => {
-        setFormData({ name: '', organization: '', email: '', password: '', confirmPassword: '', create_folder: true, status: 'Ongoing', avatarUrl: '' });
+        setFormData({ name: '', organization: '', email: '', password: '', confirmPassword: '', create_folder: false, status: 'Ongoing', avatarUrl: '' });
         setSelectedClient(null);
     };
 

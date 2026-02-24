@@ -47,7 +47,7 @@ export default function CreateRequestModal({ isOpen, onClose, onSuccess }: Creat
     const [title, setTitle] = useState('');
     const [description, setDescription] = useState('');
     const [priority, setPriority] = useState('Medium');
-    const [createFolder, setCreateFolder] = useState(true);
+    const [createFolder, setCreateFolder] = useState(false);
 
     useEffect(() => {
         if (isOpen && step === 1) {
@@ -112,7 +112,7 @@ export default function CreateRequestModal({ isOpen, onClose, onSuccess }: Creat
                 setTitle('');
                 setDescription('');
                 setPriority('Medium');
-                setCreateFolder(true);
+                setCreateFolder(false);
             } else {
                 const err = await response.json();
                 alert(`Error: ${err.error}`);
