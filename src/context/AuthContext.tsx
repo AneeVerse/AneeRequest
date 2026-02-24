@@ -24,7 +24,7 @@ interface AuthContextType {
     isLoading: boolean;
     signOut: () => Promise<void>;
     refreshProfile: () => Promise<void>;
-    impersonate: (targetProfile: Profile) => void;
+    impersonate: (targetProfile: Profile, returnTo?: string) => void;
     stopImpersonating: () => void;
 }
 
@@ -171,16 +171,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
     };
 
-    const impersonate = (targetProfile: Profile) => {
+    const impersonate = (targetProfile: Profile, returnTo?: string) => {
         if (profile?.role === 'super_admin' || profile?.role === 'admin') {
             setImpersonatedProfile(targetProfile);
             sessionStorage.setItem('impersonated_profile', JSON.stringify(targetProfile));
+            if (returnTo) {
+                sessionStorage.setItem('impersonate_return_to', returnTo);
+            }
         }
     };
 
     const stopImpersonating = () => {
         setImpersonatedProfile(null);
         sessionStorage.removeItem('impersonated_profile');
+        const returnTo = sessionStorage.getItem('impersonate_return_to');
+        sessionStorage.removeItem('impersonate_return_to');
+        if (returnTo) {
+            window.location.href = returnTo;
+        }
     };
 
     const isImpersonating = !!impersonatedProfile;

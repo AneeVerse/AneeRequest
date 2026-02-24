@@ -112,7 +112,7 @@ const Header: React.FC<HeaderProps> = ({
                                 >
                                     {tab}
                                     {count !== undefined && count > 0 && (
-                                        <span className="absolute -top-2.5 right-1 min-w-[17px] h-[17px] flex items-center justify-center rounded-full text-[9px] font-black px-1 border border-[#09090B] shadow-md bg-[#279da6] text-white z-[20]">
+                                        <span className="absolute -top-3 -right-0.5 min-w-[17px] h-[17px] flex items-center justify-center rounded-full text-[9px] font-black px-1 border border-[#09090B] shadow-md bg-[#279da6] text-white z-[20]">
                                             {count > 99 ? '99+' : count}
                                         </span>
                                     )}

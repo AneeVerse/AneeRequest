@@ -16,7 +16,7 @@ const ImpersonationWarning: React.FC = () => {
             </div>
             <button
                 onClick={stopImpersonating}
-                className="px-3 py-1.5 bg-[#22c55e] text-[#09090B] text-[10px] font-black uppercase tracking-widest rounded-lg hover:bg-[#22c55e]/90 transition-all flex items-center gap-1.5 shadow-lg shadow-[#22c55e]/20"
+                className="px-3 py-1.5 bg-[#22c55e] text-[#09090B] text-[10px] font-black uppercase tracking-widest rounded-lg hover:bg-[#22c55e]/90 transition-all flex items-center gap-1.5 shadow-lg shadow-[#22c55e]/20 cursor-pointer"
             >
                 Stop Impersonating
             </button>

@@ -30,6 +30,7 @@ import {
     FileText,
     Box
 } from 'lucide-react';
+import { Settings } from 'lucide-react';
 import AvatarUpload from '@/components/AvatarUpload';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
@@ -354,7 +355,7 @@ export default function ClientsClient({ initialClients }: ClientsClientProps) {
             <Sidebar isCollapsed={isSidebarCollapsed} />
 
             <div className="flex-1 flex flex-col min-w-0 bg-[#09090B] relative">
-                <div className={`flex-1 flex flex-col min-w-0 bg-[#121214] rounded-t-2xl overflow-hidden border-t border-l border-r mt-6 mr-6 transition-[border-color,box-shadow] duration-500 ${isImpersonating ? 'border-[#22c55e]/60 shadow-[0_0_15px_rgba(34,197,94,0.15),0_0_40px_rgba(34,197,94,0.08),inset_0_0_20px_rgba(34,197,94,0.03)]' : 'border-shark'}`}>
+                <div className={`flex-1 flex flex-col min-w-0 bg-[#121214] rounded-t-2xl overflow-visible border-t border-l border-r mt-6 mr-6 transition-[border-color,box-shadow] duration-500 ${isImpersonating ? 'border-[#22c55e]/60 shadow-[0_0_15px_rgba(34,197,94,0.15),0_0_40px_rgba(34,197,94,0.08),inset_0_0_20px_rgba(34,197,94,0.03)]' : 'border-shark'}`}>
                     <Header
                         onToggleSidebar={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
                         label="Clients"
@@ -427,7 +428,9 @@ export default function ClientsClient({ initialClients }: ClientsClientProps) {
                                                         { label: 'Email', key: 'email', filter: 'email' },
                                                         { label: 'Requests', key: 'request_count', filter: 'request_count' },
                                                         { label: 'Tasks', key: 'task_count', filter: 'task_count' },
-                                                        { label: 'Status', key: 'status', filter: 'status' }
+                                                        { label: 'Status', key: 'status', filter: 'status' },
+                                                        { label: 'Last Login', key: 'lastLoginDate', filter: 'lastLoginDate' },
+                                                        { label: 'Created At', key: 'createdAt', filter: 'createdAt' }
                                                     ].map((header, idx) => (
                                                         <th key={header.label} className={`px-4 py-5 border-r border-shark/60 group/header relative header-filter-container`}>
                                                             <div className="flex items-center justify-between gap-2">
@@ -482,13 +485,13 @@ export default function ClientsClient({ initialClients }: ClientsClientProps) {
                                                             )}
                                                         </th>
                                                     ))}
-                                                    <th className="px-6 py-5 w-24">Actions</th>
+                                                    <th className="px-6 py-5 w-20 text-center"></th>
                                                 </tr>
                                             </thead>
                                             <tbody className="divide-y divide-shark/60">
                                                 {sortedClients.length === 0 ? (
                                                     <tr>
-                                                        <td colSpan={7} className="px-6 py-12 text-center text-storm-gray font-medium uppercase tracking-widest opacity-40">
+                                                        <td colSpan={10} className="px-6 py-12 text-center text-storm-gray font-medium uppercase tracking-widest opacity-40">
                                                             No clients found matching your criteria.
                                                         </td>
                                                     </tr>
@@ -517,18 +520,24 @@ export default function ClientsClient({ initialClients }: ClientsClientProps) {
                                                             <td className="px-6 py-4.5 text-santas-gray border-r border-shark/60 font-black">
                                                                 {client.email}
                                                             </td>
-                                                            <td className="px-4 py-4.5 border-r border-shark/60">
+                                                            <td
+                                                                className="px-4 py-4.5 border-r border-shark/60 cursor-pointer hover:bg-white/5 transition-colors"
+                                                                onClick={() => router.push(`/clients/${client.id}`)}
+                                                                title="View all requests"
+                                                            >
                                                                 <div className="flex items-center gap-2">
                                                                     <FileText size={14} className="text-[#279da6]" />
                                                                     <span className="text-iron font-black">{client.request_count || 0}</span>
-                                                                    <span className="text-storm-gray text-[11px] font-bold">reqs</span>
                                                                 </div>
                                                             </td>
-                                                            <td className="px-4 py-4.5 border-r border-shark/60">
+                                                            <td
+                                                                className="px-4 py-4.5 border-r border-shark/60 cursor-pointer hover:bg-white/5 transition-colors"
+                                                                onClick={() => router.push(`/clients/${client.id}?tab=Tasks`)}
+                                                                title="View all tasks"
+                                                            >
                                                                 <div className="flex items-center gap-2">
                                                                     <Box size={14} className="text-amber-400" />
                                                                     <span className="text-iron font-black">{client.task_count || 0}</span>
-                                                                    <span className="text-storm-gray text-[11px] font-bold">tasks</span>
                                                                 </div>
                                                             </td>
 
@@ -547,15 +556,28 @@ export default function ClientsClient({ initialClients }: ClientsClientProps) {
                                                                     />
                                                                 </div>
                                                             </td>
-                                                            <td className="px-6 py-4.5 relative group/actions">
+                                                            <td className="px-6 py-4.5 border-r border-shark/60 text-storm-gray font-black whitespace-nowrap text-xs">
+                                                                {client.lastLoginDate ? (
+                                                                    <div>
+                                                                        <div>{client.lastLoginDate}</div>
+                                                                        <div className="text-[10px] text-storm-gray">{client.lastLoginTime}</div>
+                                                                    </div>
+                                                                ) : (
+                                                                    <span className="text-storm-gray/50">Never</span>
+                                                                )}
+                                                            </td>
+                                                            <td className="px-6 py-4.5 border-r border-shark/60 text-storm-gray font-black whitespace-nowrap text-xs">
+                                                                {client.createdAt}
+                                                            </td>
+                                                            <td className="px-6 py-4.5 relative text-center">
                                                                 <button
                                                                     onClick={(e) => {
                                                                         e.stopPropagation();
                                                                         setActiveDropdown(activeDropdown === client.id ? null : client.id);
                                                                     }}
-                                                                    className={`w-8 h-8 flex items-center justify-center rounded-lg transition-all hover:bg-shark ${activeDropdown === client.id ? 'bg-shark text-[#279da6]' : 'text-storm-gray'}`}
+                                                                    className={`p-1.5 rounded-md transition-all cursor-pointer ${activeDropdown === client.id ? 'bg-[#279da6] text-white' : 'text-storm-gray hover:bg-shark hover:text-white'}`}
                                                                 >
-                                                                    <MoreHorizontal size={14} />
+                                                                    <Settings size={16} />
                                                                 </button>
 
                                                                 {/* Dropdown Menu */}
@@ -585,7 +607,7 @@ export default function ClientsClient({ initialClients }: ClientsClientProps) {
                                                                                     email: client.email,
                                                                                     full_name: client.name,
                                                                                     role: 'client'
-                                                                                });
+                                                                                }, '/clients');
                                                                                 setActiveDropdown(null);
                                                                             }}
                                                                             className="w-full flex items-center gap-3 px-4 py-2 text-[11px] font-bold text-santas-gray hover:text-white hover:bg-[#279da6]/10 transition-all"

@@ -101,7 +101,7 @@ export default function TeamClient({ initialMembers, initialCounts }: TeamClient
         avatarUrl: ''
     });
 
-    const memberCategories = ['All Members', 'Active', 'Inactive'];
+
 
     const resetForm = () => {
         setFormData({ name: '', email: '', password: '', confirmPassword: '', role: 'viewer', accessible_sections: [], avatarUrl: '' });
@@ -264,6 +264,30 @@ export default function TeamClient({ initialMembers, initialCounts }: TeamClient
         }
     };
 
+    // Handle Role Update directly from table
+    const handleRoleUpdate = async (member: TeamMember, newRole: string) => {
+        const originalMembers = [...members];
+        // Optimistic update
+        setMembers(members.map(m => m.id === member.id ? { ...m, role: newRole as any } : m));
+        try {
+            const response = await fetch('/api/team', {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ id: member.id, position: newRole })
+            });
+            if (!response.ok) {
+                setMembers(originalMembers);
+                const err = await response.json();
+                alert(`Error: ${err.error}`);
+            } else {
+                router.refresh();
+            }
+        } catch (error) {
+            setMembers(originalMembers);
+            console.error('Role update failed:', error);
+        }
+    };
+
     const handleSort = (key: string) => {
         setSortConfig(prev => ({
             key,
@@ -272,8 +296,6 @@ export default function TeamClient({ initialMembers, initialCounts }: TeamClient
     };
 
     const filteredMembers = members.filter((member: TeamMember) => {
-        // Tab Filter
-        const matchesTab = activeTab === 'All Members' || (activeTab === 'Active' ? member.status === 'Active' : member.status === 'Inactive');
 
         // Search Filter
         const searchLower = searchQuery.toLowerCase();
@@ -291,7 +313,7 @@ export default function TeamClient({ initialMembers, initialCounts }: TeamClient
         const matchesLastLogin = !filters.last_login || (member.last_login && formatDate(member.last_login).includes(filters.last_login));
         const matchesCreatedAt = !filters.created_at || formatDate(member.created_at).includes(filters.created_at);
 
-        return matchesTab && matchesSearch && matchesName && matchesEmail && matchesRole && matchesRequests && matchesTasks && matchesLastLogin && matchesCreatedAt;
+        return matchesSearch && matchesName && matchesEmail && matchesRole && matchesRequests && matchesTasks && matchesLastLogin && matchesCreatedAt;
     });
 
     const sortedMembers = [...filteredMembers].sort((a, b) => {
@@ -324,14 +346,11 @@ export default function TeamClient({ initialMembers, initialCounts }: TeamClient
             <Sidebar isCollapsed={isSidebarCollapsed} />
 
             <div className="flex-1 flex flex-col min-w-0 bg-[#09090B] relative">
-                <div className={`flex-1 flex flex-col min-w-0 bg-[#121214] rounded-t-2xl overflow-hidden border-t border-l border-r mt-6 mr-6 transition-all duration-500 ${isImpersonating ? 'border-[#22c55e]/60 shadow-[0_0_15px_rgba(34,197,94,0.15),0_0_40px_rgba(34,197,94,0.08),inset_0_0_20px_rgba(34,197,94,0.03)]' : 'border-shark'}`}>
+                <div className={`flex-1 flex flex-col min-w-0 bg-[#121214] rounded-t-2xl overflow-visible border-t border-l border-r mt-6 mr-6 transition-all duration-500 ${isImpersonating ? 'border-[#22c55e]/60 shadow-[0_0_15px_rgba(34,197,94,0.15),0_0_40px_rgba(34,197,94,0.08),inset_0_0_20px_rgba(34,197,94,0.03)]' : 'border-shark'}`}>
                     <Header
                         onToggleSidebar={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
                         label="Team"
                         labelIcon={<Users size={16} className="text-santas-gray" />}
-                        tabs={memberCategories}
-                        activeTab={activeTab}
-                        setActiveTab={setActiveTab}
                         onCreate={() => setIsModalOpen(true)}
                         pageSwitcher={[
                             { name: 'Clients', path: '/clients' },
@@ -460,7 +479,7 @@ export default function TeamClient({ initialMembers, initialCounts }: TeamClient
                                                             )}
                                                         </th>
                                                     ))}
-                                                    <th className="px-6 py-5 w-20 text-center">Actions</th>
+                                                    <th className="px-6 py-5 w-20 text-center"></th>
                                                 </tr>
                                             </thead>
                                             <tbody className="divide-y divide-shark/60">
@@ -487,7 +506,7 @@ export default function TeamClient({ initialMembers, initialCounts }: TeamClient
                                                                                 full_name: member.name,
                                                                                 role: 'team_member',
                                                                                 team_role: member.role
-                                                                            });
+                                                                            }, '/team');
                                                                         }
                                                                     }}
                                                                 >
@@ -505,43 +524,58 @@ export default function TeamClient({ initialMembers, initialCounts }: TeamClient
                                                                 </div>
                                                             </td>
                                                             <td className="px-6 py-4.5 border-r border-shark/60 text-storm-gray font-black">{member.email}</td>
-                                                            <td className="px-6 py-4.5 border-r border-shark/60 text-center">
-                                                                <span className={`px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider ${member.role === 'admin' ? 'bg-purple-500/10 text-purple-400 border border-purple-500/20' :
-                                                                    member.role === 'editor' ? 'bg-blue-500/10 text-blue-400 border border-blue-500/20' :
-                                                                        'bg-amber-500/10 text-amber-400 border border-amber-500/20'
-                                                                    }`}>
-                                                                    {member.role}
-                                                                </span>
+                                                            <td className="px-4 py-4.5 border-r border-shark/60">
+                                                                <CustomDropdown
+                                                                    value={member.role}
+                                                                    onChange={(val) => handleRoleUpdate(member, val)}
+                                                                    options={[
+                                                                        { label: 'Viewer', value: 'viewer', icon: <Eye size={12} className="text-amber-400" />, color: 'text-amber-400' },
+                                                                        { label: 'Editor', value: 'editor', icon: <Edit2 size={12} className="text-blue-400" />, color: 'text-blue-400' },
+                                                                        { label: 'Admin', value: 'admin', icon: <Shield size={12} className="text-purple-400" />, color: 'text-purple-400' },
+                                                                    ]}
+                                                                    className="w-28"
+                                                                />
                                                             </td>
                                                             <td className="px-4 py-4.5 border-r border-shark/60">
-                                                                <div className="flex items-center gap-2">
+                                                                <div
+                                                                    className="flex items-center gap-2 cursor-pointer hover:opacity-80 transition-opacity"
+                                                                    onClick={() => {
+                                                                        if (member.profile_id) {
+                                                                            impersonate({
+                                                                                id: member.profile_id,
+                                                                                email: member.email,
+                                                                                full_name: member.name,
+                                                                                role: 'team_member',
+                                                                                team_role: member.role
+                                                                            }, '/team');
+                                                                            router.push('/requests');
+                                                                        }
+                                                                    }}
+                                                                    title="View requests as this member"
+                                                                >
                                                                     <FileText size={14} className="text-[#279da6]" />
                                                                     <span className="text-iron font-black">{member.request_count || 0}</span>
-                                                                    <span className="text-storm-gray text-[11px] font-bold">reqs</span>
                                                                 </div>
                                                             </td>
                                                             <td className="px-4 py-4.5 border-r border-shark/60">
-                                                                <div className="flex flex-col gap-1">
-                                                                    <div className="flex items-center gap-2">
-                                                                        <Box size={14} className="text-amber-400" />
-                                                                        <span className="text-iron font-black">{member.task_count || 0}</span>
-                                                                        <span className="text-storm-gray text-[11px] font-bold">tasks</span>
-                                                                    </div>
-                                                                    {member.tasks && member.tasks.length > 0 && (
-                                                                        <div className="flex flex-col gap-0.5 mt-1">
-                                                                            {member.tasks.slice(0, 2).map((title, i) => (
-                                                                                <div key={i} className="text-[10px] font-black text-[#279da6] truncate max-w-[140px] flex items-center gap-1" title={title}>
-                                                                                    <div className="w-1 h-1 rounded-full bg-[#279da6]/60" />
-                                                                                    {title}
-                                                                                </div>
-                                                                            ))}
-                                                                            {member.tasks.length > 2 && (
-                                                                                <span className="text-[9px] text-storm-gray font-black pl-2">
-                                                                                    + {member.tasks.length - 2} more tasks
-                                                                                </span>
-                                                                            )}
-                                                                        </div>
-                                                                    )}
+                                                                <div
+                                                                    className="flex items-center gap-2 cursor-pointer hover:opacity-80 transition-opacity"
+                                                                    onClick={() => {
+                                                                        if (member.profile_id) {
+                                                                            impersonate({
+                                                                                id: member.profile_id,
+                                                                                email: member.email,
+                                                                                full_name: member.name,
+                                                                                role: 'team_member',
+                                                                                team_role: member.role
+                                                                            }, '/team');
+                                                                            router.push('/tasks');
+                                                                        }
+                                                                    }}
+                                                                    title="View tasks as this member"
+                                                                >
+                                                                    <Box size={14} className="text-amber-400" />
+                                                                    <span className="text-iron font-black">{member.task_count || 0}</span>
                                                                 </div>
                                                             </td>
                                                             <td className="px-6 py-4.5 border-r border-shark/60 text-storm-gray font-black whitespace-nowrap text-xs">
@@ -563,7 +597,7 @@ export default function TeamClient({ initialMembers, initialCounts }: TeamClient
                                                                     onClick={() => setActiveDropdown(activeDropdown === member.id ? null : member.id)}
                                                                     className={`p-1.5 rounded-md transition-all cursor-pointer ${activeDropdown === member.id ? 'bg-[#279da6] text-white' : 'text-storm-gray hover:bg-shark hover:text-white'}`}
                                                                 >
-                                                                    <Eye size={16} />
+                                                                    <Settings size={16} />
                                                                 </button>
 
                                                                 {activeDropdown === member.id && (
@@ -579,7 +613,7 @@ export default function TeamClient({ initialMembers, initialCounts }: TeamClient
                                                                                             full_name: member.name,
                                                                                             role: 'team_member',
                                                                                             team_role: member.role
-                                                                                        });
+                                                                                        }, '/team');
                                                                                         setActiveDropdown(null);
                                                                                     } else {
                                                                                         alert('This team member does not have an account yet.');

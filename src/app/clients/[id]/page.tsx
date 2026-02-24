@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { useParams, useRouter } from 'next/navigation';
+import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import Sidebar from '@/components/Sidebar';
 import Header from '@/components/Header';
 import {
@@ -74,8 +74,9 @@ export default function ClientDetailPage() {
 
     const { id } = useParams();
     const router = useRouter();
+    const searchParams = useSearchParams();
     const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
-    const [activeTab, setActiveTab] = useState('Requests');
+    const [activeTab, setActiveTab] = useState(searchParams.get('tab') || 'Requests');
     const [client, setClient] = useState<Client | null>(null);
     const [requests, setRequests] = useState<RequestItem[]>([]);
     const [tasks, setTasks] = useState<TaskItem[]>([]);
@@ -540,7 +541,7 @@ export default function ClientDetailPage() {
                 <div className={`flex-1 flex flex-col min-w-0 bg-[#121214] rounded-t-2xl overflow-hidden border-t border-l border-r mt-6 mr-6 transition-all duration-500 ${isImpersonating ? 'border-[#22c55e]/60 shadow-[0_0_15px_rgba(34,197,94,0.15),0_0_40px_rgba(34,197,94,0.08),inset_0_0_20px_rgba(34,197,94,0.03)]' : 'border-shark'}`}>
                     {/* Custom Breadcrumb Header (Replacing standard Header for detail view) */}
                     <div className="h-16 flex items-center justify-between px-6 shrink-0 z-30">
-                        <div className="flex items-center gap-4 flex-1 overflow-hidden">
+                        <div className="flex items-center gap-4 flex-1 overflow-visible">
                             <button
                                 onClick={(e) => { e.stopPropagation(); setIsSidebarCollapsed(!isSidebarCollapsed); }}
                                 className="p-1 text-santas-gray hover:text-white transition-colors"
@@ -558,7 +559,7 @@ export default function ClientDetailPage() {
                             </div>
 
                             {/* Sub-Navigation Tabs */}
-                            <div className="flex items-center bg-black/40 border border-shark p-1 rounded-xl shrink-0 ml-2">
+                            <div className="flex items-center bg-black/40 border border-shark p-1 rounded-xl shrink-0 ml-2 overflow-visible">
                                 {tabs.map((tab) => {
                                     const count = tab === 'Requests' ? requests.length : tab === 'Tasks' ? tasks.length : 0;
                                     return (
@@ -572,7 +573,7 @@ export default function ClientDetailPage() {
                                         >
                                             {tab}
                                             {count > 0 && (
-                                                <span className="absolute -top-2.5 -right-1 min-w-[17px] h-[17px] flex items-center justify-center rounded-full text-[9px] font-black px-1 border border-[#09090B] shadow-md bg-[#279da6] text-white z-[20]">
+                                                <span className="absolute -top-3 -right-1 min-w-[17px] h-[17px] flex items-center justify-center rounded-full text-[9px] font-black px-1 border border-[#09090B] shadow-md bg-[#279da6] text-white z-[20]">
                                                     {count > 99 ? '99+' : count}
                                                 </span>
                                             )}
