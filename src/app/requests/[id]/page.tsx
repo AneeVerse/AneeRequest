@@ -734,7 +734,7 @@ export default function RequestDetailsPage() {
                         <div className="h-16 border-b border-shark flex items-center justify-between px-6 bg-shark/5">
                             <div className="flex items-center gap-4">
                                 <button
-                                    onClick={() => router.push('/requests')}
+                                    onClick={() => router.back()}
                                     className="p-2 hover:bg-shark rounded-lg text-santas-gray hover:text-white transition-all"
                                 >
                                     <ChevronLeft size={20} />

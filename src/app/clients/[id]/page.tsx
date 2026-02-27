@@ -17,6 +17,7 @@ import {
     LayoutGrid,
     Loader2,
     ChevronRight,
+    ChevronLeft,
     Search,
     Filter,
     Download,
@@ -80,6 +81,14 @@ export default function ClientDetailPage() {
     const searchParams = useSearchParams();
     const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
     const [activeTab, setActiveTab] = useState(searchParams.get('tab') || 'Requests');
+
+    // Sync activeTab with URL params for persistence and back navigation
+    useEffect(() => {
+        const tab = searchParams.get('tab');
+        if (tab && tab !== activeTab && tabs.includes(tab)) {
+            setActiveTab(tab);
+        }
+    }, [searchParams, tabs, activeTab]);
     const [client, setClient] = useState<Client | null>(null);
     const [requests, setRequests] = useState<RequestItem[]>([]);
     const [tasks, setTasks] = useState<TaskItem[]>([]);
@@ -558,6 +567,14 @@ export default function ClientDetailPage() {
                     <div className="h-16 flex items-center justify-between px-6 shrink-0 z-30">
                         <div className="flex items-center gap-4 flex-1 overflow-visible">
                             <button
+                                onClick={() => router.back()}
+                                className="p-1 text-santas-gray hover:text-white transition-colors cursor-pointer"
+                                title="Back"
+                            >
+                                <ChevronLeft size={20} />
+                            </button>
+
+                            <button
                                 onClick={(e) => { e.stopPropagation(); setIsSidebarCollapsed(!isSidebarCollapsed); }}
                                 className="p-1 text-santas-gray hover:text-white transition-colors"
                             >
@@ -580,7 +597,12 @@ export default function ClientDetailPage() {
                                     return (
                                         <button
                                             key={tab}
-                                            onClick={() => setActiveTab(tab)}
+                                            onClick={() => {
+                                                setActiveTab(tab);
+                                                const params = new URLSearchParams(searchParams.toString());
+                                                params.set('tab', tab);
+                                                router.replace(`/clients/${id}?${params.toString()}`);
+                                            }}
                                             className={`relative px-4 py-1.5 rounded-lg text-[11px] font-bold transition-all whitespace-nowrap ${activeTab === tab
                                                 ? 'bg-[#1E1E22] text-[#279da6] border border-[#279da6]/20 shadow-lg'
                                                 : 'text-santas-gray hover:text-iron hover:bg-white/5'
