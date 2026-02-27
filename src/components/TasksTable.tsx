@@ -133,7 +133,6 @@ export default function TasksTable({
                             {[
                                 { label: 'Title', key: 'title', filter: 'title' },
                                 ...(showRequestColumn ? [{ label: 'Request', key: 'request', filter: 'request' }] : []),
-                                { label: 'Creator', key: 'creator', filter: 'creator' },
                                 { label: 'Status', key: 'status', filter: 'status' },
                                 { label: 'Assigned', key: 'assignee', filter: 'assigned_to' },
                                 { label: 'Priority', key: 'priority', filter: 'priority' },
@@ -235,7 +234,7 @@ export default function TasksTable({
                     <tbody className="divide-y divide-shark/60">
                         {sortedTasks.length === 0 ? (
                             <tr>
-                                <td colSpan={showRequestColumn ? 10 : 9} className="px-6 py-20 text-center text-storm-gray uppercase text-[10px] font-black tracking-widest opacity-40">
+                                <td colSpan={showRequestColumn ? 9 : 8} className="px-6 py-20 text-center text-storm-gray uppercase text-[10px] font-black tracking-widest opacity-40">
                                     No tasks found for your criteria.
                                 </td>
                             </tr>
@@ -276,9 +275,7 @@ export default function TasksTable({
                                             )}
                                         </td>
                                     )}
-                                    <td className="px-6 py-4.5 text-santas-gray border-r border-shark/60 whitespace-nowrap font-bold text-xs">
-                                        {item.creator?.full_name || 'System'}
-                                    </td>
+
                                     <td className="px-6 py-4.5 border-r border-shark/60">
                                         <CustomDropdown
                                             value={item.status}

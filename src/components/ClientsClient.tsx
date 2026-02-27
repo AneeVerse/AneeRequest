@@ -1,6 +1,7 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import Sidebar from '@/components/Sidebar';
 import Header from '@/components/Header';
 import {
@@ -99,6 +100,24 @@ export default function ClientsClient({ initialClients }: ClientsClientProps) {
     const [activeFilterHeader, setActiveFilterHeader] = useState<string | null>(null);
 
     const [clients, setClients] = useState<ClientItem[]>(initialClients);
+    const [dropdownCoords, setDropdownCoords] = useState({ top: 0, left: 0, origin: 'top right' });
+    const dropdownRef = useRef<HTMLDivElement>(null);
+
+    // Close dropdown on scroll or click outside
+    useEffect(() => {
+        const handleScroll = () => setActiveDropdown(null);
+        const handleClickOutside = (event: MouseEvent) => {
+            if (activeDropdown && dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+                setActiveDropdown(null);
+            }
+        };
+        window.addEventListener('scroll', handleScroll, true);
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => {
+            window.removeEventListener('scroll', handleScroll, true);
+            document.removeEventListener('mousedown', handleClickOutside);
+        };
+    }, [activeDropdown]);
 
     // Update state when initialClients changes (from SSR refresh)
     React.useEffect(() => {
@@ -185,6 +204,34 @@ export default function ClientsClient({ initialClients }: ClientsClientProps) {
         });
         setIsEditModalOpen(true);
         setActiveDropdown(null);
+    };
+
+    const handleDropdownTrigger = (e: React.MouseEvent, client: ClientItem) => {
+        e.stopPropagation();
+        if (activeDropdown === client.id) {
+            setActiveDropdown(null);
+            return;
+        }
+
+        const rect = e.currentTarget.getBoundingClientRect();
+        const spaceBelow = window.innerHeight - rect.bottom;
+        const dropdownHeight = 220; // Estimated height for the 5 items + dividers
+
+        let top = rect.bottom + window.scrollY + 8;
+        let origin = 'top right';
+
+        if (spaceBelow < dropdownHeight) {
+            top = rect.top + window.scrollY - 220; // Open upwards
+            origin = 'bottom right';
+        }
+
+        setDropdownCoords({
+            top,
+            left: rect.right + window.scrollX,
+            origin
+        });
+        setSelectedClient(client);
+        setActiveDropdown(client.id);
     };
 
     // Handle Edit Submit
@@ -375,7 +422,7 @@ export default function ClientsClient({ initialClients }: ClientsClientProps) {
                     </div>
 
                     <main className="flex-1 overflow-y-auto custom-scrollbar bg-[#18181B]">
-                        <div className="p-6">
+                        <div className="p-8">
 
                             {/* Toolbar */}
                             <div className="flex items-center justify-between mb-6">
@@ -572,64 +619,13 @@ export default function ClientsClient({ initialClients }: ClientsClientProps) {
                                                         </td>
                                                         <td className="px-6 py-4.5 relative text-center">
                                                             <button
-                                                                onClick={(e) => {
-                                                                    e.stopPropagation();
-                                                                    setActiveDropdown(activeDropdown === client.id ? null : client.id);
-                                                                }}
+                                                                onClick={(e) => handleDropdownTrigger(e, client)}
                                                                 className={`p-1.5 rounded-md transition-all cursor-pointer ${activeDropdown === client.id ? 'bg-[#279da6] text-white' : 'text-storm-gray hover:bg-shark hover:text-white'}`}
                                                             >
                                                                 <Settings size={16} />
                                                             </button>
 
-                                                            {/* Dropdown Menu */}
-                                                            {activeDropdown === client.id && (
-                                                                <div
-                                                                    className="absolute right-0 top-full mt-2 z-[9999] bg-[#18181B] border border-shark rounded-xl shadow-[0_20px_50px_rgba(0,0,0,0.6)] overflow-hidden py-1 animate-in fade-in zoom-in-95 duration-200 origin-top-right"
-                                                                    onMouseLeave={() => setActiveDropdown(null)}
-                                                                >
-                                                                    <button
-                                                                        onClick={() => router.push(`/clients/${client.id}`)}
-                                                                        className="w-full flex items-center gap-3 px-4 py-2 text-[11px] font-bold text-santas-gray hover:text-white hover:bg-[#279da6]/10 transition-all"
-                                                                    >
-                                                                        <Eye size={14} className="text-[#279da6]" />
-                                                                        <span>View Details</span>
-                                                                    </button>
-                                                                    <button
-                                                                        onClick={() => handleEditClick(client)}
-                                                                        className="w-full flex items-center gap-3 px-4 py-2 text-[11px] font-bold text-santas-gray hover:text-white hover:bg-[#279da6]/10 transition-all"
-                                                                    >
-                                                                        <Edit2 size={14} className="text-[#279da6]" />
-                                                                        <span>Edit Account</span>
-                                                                    </button>
-                                                                    <button
-                                                                        onClick={() => {
-                                                                            impersonate({
-                                                                                id: client.profile_id || client.id,
-                                                                                email: client.email,
-                                                                                full_name: client.name,
-                                                                                role: 'client'
-                                                                            }, '/clients');
-                                                                            setActiveDropdown(null);
-                                                                        }}
-                                                                        className="w-full flex items-center gap-3 px-4 py-2 text-[11px] font-bold text-santas-gray hover:text-white hover:bg-[#279da6]/10 transition-all"
-                                                                    >
-                                                                        <UserCog size={14} className="text-[#279da6]" />
-                                                                        <span>Impersonate</span>
-                                                                    </button>
-                                                                    <button className="w-full flex items-center gap-3 px-4 py-2 text-[11px] font-bold text-santas-gray hover:text-white hover:bg-[#279da6]/10 transition-all">
-                                                                        <Building size={14} className="text-[#279da6]" />
-                                                                        <span>Change Organization</span>
-                                                                    </button>
-                                                                    <div className="h-px bg-shark my-1" />
-                                                                    <button
-                                                                        onClick={() => handleDeleteClick(client)}
-                                                                        className="w-full flex items-center gap-3 px-4 py-2 text-[11px] font-bold text-rose-500 hover:text-rose-400 hover:bg-rose-500/10 transition-all"
-                                                                    >
-                                                                        <Trash2 size={14} />
-                                                                        <span>Delete Client</span>
-                                                                    </button>
-                                                                </div>
-                                                            )}
+
                                                         </td>
                                                     </tr>
                                                 ))
@@ -641,6 +637,64 @@ export default function ClientsClient({ initialClients }: ClientsClientProps) {
                         </div>
                     </main>
                 </div>
+
+                {/* --- Portal for Settings Dropdown --- */}
+                {activeDropdown && selectedClient && createPortal(
+                    <div
+                        ref={dropdownRef}
+                        style={{
+                            position: 'absolute',
+                            top: `${dropdownCoords.top}px`,
+                            left: `${dropdownCoords.left - 176}px`, // 176px is w-44
+                            width: '176px',
+                            transformOrigin: dropdownCoords.origin
+                        }}
+                        className="z-[9999] bg-[#18181B] border border-shark rounded-xl shadow-[0_20px_50px_rgba(0,0,0,0.6)] overflow-hidden py-1 animate-in fade-in zoom-in-95 duration-200"
+                    >
+                        <button
+                            onClick={() => router.push(`/clients/${selectedClient.id}`)}
+                            className="w-full flex items-center gap-3 px-4 py-2 text-[11px] font-bold text-santas-gray hover:text-white hover:bg-[#279da6]/10 transition-all text-left"
+                        >
+                            <Eye size={14} className="text-[#279da6]" />
+                            <span>View Details</span>
+                        </button>
+                        <button
+                            onClick={() => handleEditClick(selectedClient)}
+                            className="w-full flex items-center gap-3 px-4 py-2 text-[11px] font-bold text-santas-gray hover:text-white hover:bg-[#279da6]/10 transition-all text-left"
+                        >
+                            <Edit2 size={14} className="text-[#279da6]" />
+                            <span>Edit Account</span>
+                        </button>
+                        <button
+                            onClick={() => {
+                                impersonate({
+                                    id: selectedClient.profile_id || selectedClient.id,
+                                    email: selectedClient.email,
+                                    full_name: selectedClient.name,
+                                    role: 'client'
+                                }, '/clients');
+                                setActiveDropdown(null);
+                            }}
+                            className="w-full flex items-center gap-3 px-4 py-2 text-[11px] font-bold text-santas-gray hover:text-white hover:bg-[#279da6]/10 transition-all text-left"
+                        >
+                            <UserCog size={14} className="text-[#279da6]" />
+                            <span>Impersonate</span>
+                        </button>
+                        <button className="w-full flex items-center gap-3 px-4 py-2 text-[11px] font-bold text-santas-gray hover:text-white hover:bg-[#279da6]/10 transition-all text-left">
+                            <Building size={14} className="text-[#279da6]" />
+                            <span>Change Organization</span>
+                        </button>
+                        <div className="h-px bg-shark my-1" />
+                        <button
+                            onClick={() => handleDeleteClick(selectedClient)}
+                            className="w-full flex items-center gap-3 px-4 py-2 text-[11px] font-bold text-rose-500 hover:text-rose-400 hover:bg-rose-500/10 transition-all text-left"
+                        >
+                            <Trash2 size={14} />
+                            <span>Delete Client</span>
+                        </button>
+                    </div>,
+                    document.body
+                )}
 
                 {/* --- Create Client Modal --- */}
                 {isModalOpen && (

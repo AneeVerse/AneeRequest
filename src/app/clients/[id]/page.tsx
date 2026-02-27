@@ -605,7 +605,7 @@ export default function ClientDetailPage() {
             <div className="flex-1 flex flex-col min-w-0 bg-[#09090B] relative">
                 <div className={`flex-1 flex flex-col min-w-0 bg-[#121214] rounded-t-2xl overflow-hidden border-t border-l border-r mt-6 mr-6 transition-all duration-500 ${isImpersonating ? 'border-[#22c55e]/60 shadow-[0_0_15px_rgba(34,197,94,0.15),0_0_40px_rgba(34,197,94,0.08),inset_0_0_20px_rgba(34,197,94,0.03)]' : 'border-shark'}`}>
                     {/* Custom Breadcrumb Header (Replacing standard Header for detail view) */}
-                    <div className="h-16 flex items-center justify-between px-6 shrink-0 z-30">
+                    <div className="h-16 flex items-center justify-between px-6 shrink-0 z-30 border-b border-shark/20">
                         <div className="flex items-center gap-4 flex-1 overflow-visible">
                             <button
                                 onClick={() => router.back()}
@@ -623,16 +623,16 @@ export default function ClientDetailPage() {
                             </button>
 
                             <div className="flex items-center gap-3 shrink-0">
-                                <div className="flex items-center gap-2.5 px-3 py-1.5 bg-shark/40 border border-shark rounded-lg shrink-0">
-                                    <Users size={16} className="text-[#279da6]" />
-                                    <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-tight">
-                                        <span className="text-iron">{client.name}</span>
+                                <div className="flex items-center gap-2.5 px-3 h-9 bg-shark/40 border border-shark rounded-lg shrink-0">
+                                    <Users size={16} className="text-[#279da6] shrink-0" />
+                                    <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-tight min-w-0">
+                                        <span className="text-iron truncate max-w-[120px]">{client.name}</span>
                                     </div>
                                 </div>
                             </div>
 
                             {/* Sub-Navigation Tabs */}
-                            <div className="flex items-center bg-black/40 border border-shark p-1 rounded-xl shrink-0 ml-2 overflow-visible">
+                            <div className="flex items-center bg-black/40 border border-shark p-1 h-9 rounded-xl shrink-0 ml-2 overflow-visible">
                                 {tabs.map((tab) => {
                                     const count = tab === 'Requests' ? requests.length : tab === 'Tasks' ? tasks.length : 0;
                                     return (
@@ -659,12 +659,12 @@ export default function ClientDetailPage() {
                                     );
                                 })}
                             </div>
-                            <div className="ml-4">
+                            <div className="ml-4 shrink-0">
                                 <ImpersonationWarning />
                             </div>
                         </div>
 
-                        <div className="flex items-center gap-3">
+                        <div className="flex items-center gap-3 shrink-0 ml-4">
                             {(activeTab === 'Requests' || activeTab === 'Tasks') && (
                                 <button
                                     onClick={handleCreateNew}
@@ -713,7 +713,7 @@ export default function ClientDetailPage() {
                                 </div>
                             </div>
                         )}
-                        <div className="px-8 pb-8 pt-0">
+                        <div className="px-8 pb-8 pt-8">
                             {activeTab === 'Overview' && (
                                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 animate-fade-in">
                                     {/* Info Cards */}

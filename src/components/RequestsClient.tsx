@@ -155,7 +155,7 @@ export default function RequestsClient({
                     </div>
 
                     <main className="flex-1 overflow-y-auto custom-scrollbar bg-[#18181B]">
-                        <div className="p-6">
+                        <div className="p-8">
                             <RequestsTable
                                 requests={tabFilteredRequests}
                                 profiles={profiles}

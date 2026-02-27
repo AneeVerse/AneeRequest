@@ -215,7 +215,7 @@ export default function TasksClient({ initialTasks, profiles, teamMembers, reque
                     </div>
 
                     <main className="flex-1 overflow-y-auto custom-scrollbar bg-[#18181B]">
-                        <div className="p-6">
+                        <div className="p-8">
 
                             {/* Toolbar */}
                             <div className="flex items-center justify-between mb-6">

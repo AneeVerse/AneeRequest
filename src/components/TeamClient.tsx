@@ -1,6 +1,7 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import Sidebar from '@/components/Sidebar';
 import Header from '@/components/Header';
 import {
@@ -82,6 +83,24 @@ export default function TeamClient({ initialMembers, initialCounts }: TeamClient
     const [activeFilterHeader, setActiveFilterHeader] = useState<string | null>(null);
 
     const [members, setMembers] = useState<TeamMember[]>(initialMembers);
+    const [dropdownCoords, setDropdownCoords] = useState({ top: 0, left: 0, origin: 'top right' });
+    const dropdownRef = useRef<HTMLDivElement>(null);
+
+    // Close dropdown on scroll or click outside
+    useEffect(() => {
+        const handleScroll = () => setActiveDropdown(null);
+        const handleClickOutside = (event: MouseEvent) => {
+            if (activeDropdown && dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+                setActiveDropdown(null);
+            }
+        };
+        window.addEventListener('scroll', handleScroll, true);
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => {
+            window.removeEventListener('scroll', handleScroll, true);
+            document.removeEventListener('mousedown', handleClickOutside);
+        };
+    }, [activeDropdown]);
 
     // Update state when initialMembers changes (from SSR refresh)
     React.useEffect(() => {
@@ -232,6 +251,34 @@ export default function TeamClient({ initialMembers, initialCounts }: TeamClient
         setActiveDropdown(null);
     };
 
+    const handleDropdownTrigger = (e: React.MouseEvent, member: TeamMember) => {
+        e.stopPropagation();
+        if (activeDropdown === member.id) {
+            setActiveDropdown(null);
+            return;
+        }
+
+        const rect = e.currentTarget.getBoundingClientRect();
+        const spaceBelow = window.innerHeight - rect.bottom;
+        const dropdownHeight = 150; // Adjusted for 3 items + divider
+
+        let top = rect.bottom + window.scrollY + 8;
+        let origin = 'top right';
+
+        if (spaceBelow < dropdownHeight) {
+            top = rect.top + window.scrollY - 150; // Open upwards
+            origin = 'bottom right';
+        }
+
+        setDropdownCoords({
+            top,
+            left: rect.right + window.scrollX,
+            origin
+        });
+        setSelectedMember(member);
+        setActiveDropdown(member.id);
+    };
+
     // Handle Delete Confirm
     const handleDeleteConfirm = async () => {
         if (!selectedMember) return;
@@ -362,7 +409,7 @@ export default function TeamClient({ initialMembers, initialCounts }: TeamClient
                     </div>
 
                     <main className="flex-1 overflow-y-auto custom-scrollbar bg-[#18181B]">
-                        <div className="p-6">
+                        <div className="p-8">
 
                             {/* Toolbar */}
                             <div className="flex items-center justify-between mb-6">
@@ -595,46 +642,13 @@ export default function TeamClient({ initialMembers, initialCounts }: TeamClient
                                                         </td>
                                                         <td className="px-6 py-4.5 text-center relative">
                                                             <button
-                                                                onClick={() => setActiveDropdown(activeDropdown === member.id ? null : member.id)}
+                                                                onClick={(e) => handleDropdownTrigger(e, member)}
                                                                 className={`p-1.5 rounded-md transition-all cursor-pointer ${activeDropdown === member.id ? 'bg-[#279da6] text-white' : 'text-storm-gray hover:bg-shark hover:text-white'}`}
                                                             >
                                                                 <Settings size={16} />
                                                             </button>
 
-                                                            {activeDropdown === member.id && (
-                                                                <>
-                                                                    <div className="fixed inset-0 z-10" onClick={() => setActiveDropdown(null)} />
-                                                                    <div className="absolute right-0 top-full mt-1 z-20 bg-[#18181B] border border-shark rounded-lg shadow-2xl py-1.5 w-48 animate-slide-up">
-                                                                        <button
-                                                                            onClick={() => {
-                                                                                if (member.profile_id) {
-                                                                                    impersonate({
-                                                                                        id: member.profile_id,
-                                                                                        email: member.email,
-                                                                                        full_name: member.name,
-                                                                                        role: 'team_member',
-                                                                                        team_role: member.role
-                                                                                    }, '/team');
-                                                                                    setActiveDropdown(null);
-                                                                                } else {
-                                                                                    alert('This team member does not have an account yet.');
-                                                                                }
-                                                                            }}
-                                                                            className="w-full px-4 py-2 text-left text-xs font-bold text-iron hover:bg-shark/40 transition-colors flex items-center gap-2 cursor-pointer"
-                                                                        >
-                                                                            <UserCog size={14} className="text-[#279da6]" />
-                                                                            Impersonate
-                                                                        </button>
-                                                                        <button
-                                                                            onClick={() => handleEditClick(member)}
-                                                                            className="w-full px-4 py-2 text-left text-xs font-bold text-iron hover:bg-shark/40 transition-colors flex items-center gap-2 cursor-pointer"
-                                                                        >
-                                                                            <Edit2 size={14} className="text-blue-400" />
-                                                                            Edit
-                                                                        </button>
-                                                                    </div>
-                                                                </>
-                                                            )}
+
                                                         </td>
                                                     </tr>
                                                 ))
@@ -645,6 +659,58 @@ export default function TeamClient({ initialMembers, initialCounts }: TeamClient
                             </div>
                         </div>
                     </main>
+
+                    {/* --- Portal for Settings Dropdown --- */}
+                    {activeDropdown && selectedMember && createPortal(
+                        <div
+                            ref={dropdownRef}
+                            style={{
+                                position: 'absolute',
+                                top: `${dropdownCoords.top}px`,
+                                left: `${dropdownCoords.left - 192}px`, // 192px is w-48
+                                width: '192px',
+                                transformOrigin: dropdownCoords.origin
+                            }}
+                            className="z-[9999] bg-[#18181B] border border-shark rounded-lg shadow-2xl overflow-hidden py-1.5 animate-in fade-in zoom-in-95 duration-200"
+                        >
+                            <button
+                                onClick={() => {
+                                    if (selectedMember.profile_id) {
+                                        impersonate({
+                                            id: selectedMember.profile_id,
+                                            email: selectedMember.email,
+                                            full_name: selectedMember.name,
+                                            role: 'team_member',
+                                            team_role: selectedMember.role
+                                        }, '/team');
+                                        setActiveDropdown(null);
+                                    } else {
+                                        alert('This team member does not have an account yet.');
+                                    }
+                                }}
+                                className="w-full flex items-center gap-3 px-4 py-2 text-[11px] font-bold text-santas-gray hover:text-white hover:bg-[#279da6]/10 transition-all text-left"
+                            >
+                                <UserCog size={14} className="text-[#279da6]" />
+                                <span>Impersonate</span>
+                            </button>
+                            <button
+                                onClick={() => handleEditClick(selectedMember)}
+                                className="w-full flex items-center gap-3 px-4 py-2 text-[11px] font-bold text-santas-gray hover:text-white hover:bg-[#279da6]/10 transition-all text-left"
+                            >
+                                <Edit2 size={14} className="text-[#279da6]" />
+                                <span>Edit Member</span>
+                            </button>
+                            <div className="h-px bg-shark my-1" />
+                            <button
+                                onClick={() => handleDeleteClick(selectedMember)}
+                                className="w-full flex items-center gap-3 px-4 py-2 text-[11px] font-bold text-rose-500 hover:text-rose-400 hover:bg-rose-500/10 transition-all text-left"
+                            >
+                                <Trash2 size={14} />
+                                <span>Delete Member</span>
+                            </button>
+                        </div>,
+                        document.body
+                    )}
 
                     {/* Create Modal */}
                     {
