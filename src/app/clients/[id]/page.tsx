@@ -27,7 +27,8 @@ import {
     EyeOff,
     CheckCircle2,
     AlertCircle,
-    X as CloseIcon,
+    X,
+    Check,
     FolderOpen,
     HardDrive,
     Link2,
@@ -56,6 +57,7 @@ import { RequestItem } from '@/lib/data/requests';
 import { TaskItem } from '@/lib/data/tasks';
 import CreateRequestModal from '@/components/CreateRequestModal';
 import CreateTaskModal from '@/components/CreateTaskModal';
+import CustomDropdown from '@/components/CustomDropdown';
 
 interface Client {
     id: string;
@@ -173,11 +175,118 @@ export default function ClientDetailPage() {
     const [isCreateRequestModalOpen, setIsCreateRequestModalOpen] = useState(false);
     const [isCreateTaskModalOpen, setIsCreateTaskModalOpen] = useState(false);
 
+    // Inline Creation State
+    const [isCreatingRequest, setIsCreatingRequest] = useState(false);
+    const [isCreatingTask, setIsCreatingTask] = useState(false);
+    const inlineRequestInputRef = React.useRef<HTMLInputElement>(null);
+    const inlineTaskInputRef = React.useRef<HTMLInputElement>(null);
+
+    const [requestFormData, setRequestFormData] = useState({
+        title: '',
+        priority: 'Medium',
+        description: '',
+        due_date: '',
+        create_folder: false
+    });
+
+    const [taskFormData, setTaskFormData] = useState({
+        title: '',
+        priority: 'Medium',
+        description: '',
+        assigned_to: '',
+        due_date: '',
+        request_ids: [] as string[]
+    });
+
+    const [isSubmittingInline, setIsSubmittingInline] = useState(false);
+
+    useEffect(() => {
+        if (isCreatingRequest) {
+            setTimeout(() => inlineRequestInputRef.current?.focus(), 100);
+        }
+    }, [isCreatingRequest]);
+
+    useEffect(() => {
+        if (isCreatingTask) {
+            setTimeout(() => inlineTaskInputRef.current?.focus(), 100);
+        }
+    }, [isCreatingTask]);
+
     const handleCreateNew = () => {
         if (activeTab === 'Requests') {
-            setIsCreateRequestModalOpen(true);
+            setIsCreatingRequest(!isCreatingRequest);
+            setIsCreatingTask(false);
         } else if (activeTab === 'Tasks') {
-            setIsCreateTaskModalOpen(true);
+            setIsCreatingTask(!isCreatingTask);
+            setIsCreatingRequest(false);
+        }
+    };
+
+    const handleInlineCreateRequest = async () => {
+        if (!requestFormData.title.trim() || !client?.profile_id) return;
+
+        setIsSubmittingInline(true);
+        try {
+            const response = await fetch('/api/requests', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    title: requestFormData.title,
+                    description: requestFormData.description || `New request for ${client.name}`,
+                    client_id: client.profile_id,
+                    priority: requestFormData.priority,
+                    due_date: requestFormData.due_date,
+                    status: 'Todo',
+                    create_folder: requestFormData.create_folder
+                })
+            });
+
+            if (response.ok) {
+                setIsCreatingRequest(false);
+                setRequestFormData({ title: '', priority: 'Medium', description: '', due_date: '', create_folder: false });
+                handleDataRefresh();
+            } else {
+                const err = await response.json();
+                alert(`Error: ${err.error}`);
+            }
+        } catch (error) {
+            console.error('Failed to create request:', error);
+        } finally {
+            setIsSubmittingInline(false);
+        }
+    };
+
+    const handleInlineCreateTask = async () => {
+        if (!taskFormData.title.trim()) return;
+
+        setIsSubmittingInline(true);
+        try {
+            const response = await fetch('/api/tasks', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    title: taskFormData.title,
+                    description: taskFormData.description,
+                    priority: taskFormData.priority,
+                    assigned_to: taskFormData.assigned_to,
+                    due_date: taskFormData.due_date,
+                    request_ids: taskFormData.request_ids,
+                    status: 'Todo'
+                })
+            });
+
+            if (response.ok) {
+                setIsCreatingTask(false);
+                setTaskFormData({ title: '', priority: 'Medium', description: '', assigned_to: '', due_date: '', request_ids: [] });
+                handleDataRefresh();
+            } else {
+                const err = await response.json();
+                alert(`Error: ${err.error}`);
+            }
+        } catch (error) {
+            console.error('Failed to create task:', error);
+        } finally {
+            setIsSubmittingInline(false);
         }
     };
 
@@ -605,99 +714,237 @@ export default function ClientDetailPage() {
             <div className="flex-1 flex flex-col min-w-0 bg-[#09090B] relative">
                 <div className={`flex-1 flex flex-col min-w-0 bg-[#121214] rounded-t-2xl overflow-hidden border-t border-l border-r mt-6 mr-6 transition-all duration-500 ${isImpersonating ? 'border-[#22c55e]/60 shadow-[0_0_15px_rgba(34,197,94,0.15),0_0_40px_rgba(34,197,94,0.08),inset_0_0_20px_rgba(34,197,94,0.03)]' : 'border-shark'}`}>
                     {/* Custom Breadcrumb Header (Replacing standard Header for detail view) */}
-                    <div className="h-16 flex items-center justify-between px-6 shrink-0 z-30 border-b border-shark/20">
-                        <div className="flex items-center gap-4 flex-1 overflow-visible">
-                            <button
-                                onClick={() => router.back()}
-                                className="p-1 text-santas-gray hover:text-white transition-colors cursor-pointer"
-                                title="Back"
-                            >
-                                <ChevronLeft size={20} />
-                            </button>
+                    <div className="border-b border-shark">
+                        <Header
+                            onToggleSidebar={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
+                            label={client.name}
+                            labelIcon={<Users size={16} className="text-[#279da6]" />}
+                            tabs={tabs}
+                            activeTab={activeTab}
+                            setActiveTab={(tab) => {
+                                setActiveTab(tab);
+                                const params = new URLSearchParams(searchParams.toString());
+                                params.set('tab', tab);
+                                router.replace(`/clients/${id}?${params.toString()}`);
+                            }}
+                            onCreate={(activeTab === 'Requests' || activeTab === 'Tasks') ? handleCreateNew : undefined}
+                            isCreating={isCreatingRequest || isCreatingTask}
+                            onConfirm={isCreatingRequest ? handleInlineCreateRequest : handleInlineCreateTask}
+                            onCancel={() => {
+                                setIsCreatingRequest(false);
+                                setIsCreatingTask(false);
+                                setRequestFormData({ title: '', priority: 'Medium', description: '', due_date: '', create_folder: false });
+                                setTaskFormData({ title: '', priority: 'Medium', description: '', assigned_to: '', due_date: '', request_ids: [] });
+                            }}
+                            isSubmitting={isSubmittingInline}
+                            tabCounts={{
+                                Requests: requests.length,
+                                Tasks: tasks.length
+                            }}
+                            onEdit={() => setActiveTab('Settings')}
+                        />
+                    </div>
 
-                            <button
-                                onClick={(e) => { e.stopPropagation(); setIsSidebarCollapsed(!isSidebarCollapsed); }}
-                                className="p-1 text-santas-gray hover:text-white transition-colors"
+                    <main className="flex-1 overflow-y-auto custom-scrollbar relative">
+                        <div className="px-8 pt-8">
+                            {/* Inline Request Creation */}
+                            <div
+                                className={`overflow-hidden transition-all duration-700 ease-[cubic-bezier(0.16,1,0.3,1)] ${isCreatingRequest && activeTab === 'Requests'
+                                    ? 'max-h-[600px] opacity-100 mb-8 translate-y-0 scale-100 blur-0'
+                                    : 'max-h-0 opacity-0 mb-0 -translate-y-4 scale-95 blur-md pointer-events-none'
+                                    }`}
                             >
-                                <PanelLeft size={18} />
-                            </button>
+                                <div className="p-1 bg-[#121214]/90 backdrop-blur-2xl border border-[#279da6]/30 rounded-[2rem] shadow-[0_25px_60px_rgba(0,0,0,0.4),0_0_40px_rgba(39,157,166,0.08)] ring-1 ring-white/5 relative overflow-hidden">
+                                    <div className="p-6 space-y-6">
+                                        <div className="flex items-start gap-6">
+                                            <div className="flex flex-col items-center gap-3 shrink-0">
+                                                <div className="w-14 h-14 rounded-2xl bg-[#279da6]/10 flex items-center justify-center text-[#279da6] shadow-inner ring-1 ring-[#279da6]/20">
+                                                    <FileText size={28} />
+                                                </div>
+                                                <p className="text-[10px] font-black text-storm-gray uppercase tracking-widest">Request</p>
+                                            </div>
 
-                            <div className="flex items-center gap-3 shrink-0">
-                                <div className="flex items-center gap-2.5 px-3 h-9 bg-shark/40 border border-shark rounded-lg shrink-0">
-                                    <Users size={16} className="text-[#279da6] shrink-0" />
-                                    <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-tight min-w-0">
-                                        <span className="text-iron truncate max-w-[120px]">{client.name}</span>
+                                            <div className="flex-1 space-y-6">
+                                                {/* Top Row: Title & Priority */}
+                                                <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+                                                    <div className="space-y-1.5 md:col-span-2">
+                                                        <label className="text-[10px] font-black text-storm-gray uppercase tracking-widest ml-1">Request Title</label>
+                                                        <div className="relative group">
+                                                            <Pencil size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-storm-gray group-focus-within:text-[#279da6] transition-colors" />
+                                                            <input
+                                                                ref={inlineRequestInputRef}
+                                                                type="text"
+                                                                value={requestFormData.title}
+                                                                onChange={(e) => setRequestFormData({ ...requestFormData, title: e.target.value })}
+                                                                placeholder="What do you need?"
+                                                                className="w-full bg-black/40 border border-shark/50 rounded-xl py-2.5 pl-10 pr-4 text-xs text-iron placeholder:text-storm-gray focus:outline-none focus:border-[#279da6]/40 transition-all font-bold"
+                                                            />
+                                                        </div>
+                                                    </div>
+                                                    <div className="space-y-1.5">
+                                                        <label className="text-[10px] font-black text-storm-gray uppercase tracking-widest ml-1">Priority</label>
+                                                        <CustomDropdown
+                                                            value={requestFormData.priority}
+                                                            onChange={(val: any) => setRequestFormData({ ...requestFormData, priority: val })}
+                                                            options={[
+                                                                { label: 'Low', value: 'Low', icon: <CheckCircle2 size={14} className="text-storm-gray" /> },
+                                                                { label: 'Medium', value: 'Medium', icon: <CheckCircle2 size={14} className="text-malibu" /> },
+                                                                { label: 'High', value: 'High', icon: <CheckCircle2 size={14} className="text-[#279da6]" /> },
+                                                                { label: 'Critical', value: 'Critical', icon: <CheckCircle2 size={14} className="text-rose-500" /> }
+                                                            ]}
+                                                        />
+                                                    </div>
+                                                </div>
+
+                                                {/* Middle Row: Description & Due Date */}
+                                                <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+                                                    <div className="space-y-1.5 md:col-span-2">
+                                                        <label className="text-[10px] font-black text-storm-gray uppercase tracking-widest ml-1">Description</label>
+                                                        <textarea
+                                                            value={requestFormData.description}
+                                                            onChange={(e) => setRequestFormData({ ...requestFormData, description: e.target.value })}
+                                                            placeholder="Add more details about this request..."
+                                                            className="w-full bg-black/40 border border-shark/50 rounded-xl py-2.5 px-4 text-xs text-iron placeholder:text-storm-gray focus:outline-none focus:border-[#279da6]/40 transition-all font-bold min-h-[80px] resize-none"
+                                                        />
+                                                    </div>
+                                                    <div className="space-y-1.5">
+                                                        <label className="text-[10px] font-black text-storm-gray uppercase tracking-widest ml-1">Due Date</label>
+                                                        <div className="relative group">
+                                                            <Calendar size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-storm-gray group-focus-within:text-[#279da6] transition-colors" />
+                                                            <input
+                                                                type="date"
+                                                                value={requestFormData.due_date}
+                                                                onChange={(e) => setRequestFormData({ ...requestFormData, due_date: e.target.value })}
+                                                                className="w-full bg-black/40 border border-shark/50 rounded-xl py-2.5 pl-10 pr-4 text-xs text-iron focus:outline-none focus:border-[#279da6]/40 transition-all font-bold [color-scheme:dark]"
+                                                            />
+                                                        </div>
+
+                                                        {/* Create Folder Toggle */}
+                                                        <div className="pt-4">
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => setRequestFormData({ ...requestFormData, create_folder: !requestFormData.create_folder })}
+                                                                className={`w-full flex items-center justify-between p-3 rounded-xl border transition-all ${requestFormData.create_folder
+                                                                    ? 'bg-[#279da6]/10 border-[#279da6]/40 text-[#279da6]'
+                                                                    : 'bg-black/40 border-shark/50 text-storm-gray hover:border-shark/80'}`}
+                                                            >
+                                                                <div className="flex items-center gap-2">
+                                                                    <FolderPlus size={14} />
+                                                                    <span className="text-[10px] font-black uppercase tracking-widest">Create Drive Folder</span>
+                                                                </div>
+                                                                <div className={`w-8 h-4 rounded-full relative transition-colors ${requestFormData.create_folder ? 'bg-[#279da6]' : 'bg-shark'}`}>
+                                                                    <div className={`absolute top-0.5 w-3 h-3 rounded-full bg-white transition-all ${requestFormData.create_folder ? 'left-4.5' : 'left-0.5'}`} />
+                                                                </div>
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+
                                     </div>
                                 </div>
                             </div>
 
-                            {/* Sub-Navigation Tabs */}
-                            <div className="flex items-center bg-black/40 border border-shark p-1 h-9 rounded-xl shrink-0 ml-2 overflow-visible">
-                                {tabs.map((tab) => {
-                                    const count = tab === 'Requests' ? requests.length : tab === 'Tasks' ? tasks.length : 0;
-                                    return (
-                                        <button
-                                            key={tab}
-                                            onClick={() => {
-                                                setActiveTab(tab);
-                                                const params = new URLSearchParams(searchParams.toString());
-                                                params.set('tab', tab);
-                                                router.replace(`/clients/${id}?${params.toString()}`);
-                                            }}
-                                            className={`relative px-4 py-1.5 rounded-lg text-[11px] font-bold transition-all whitespace-nowrap ${activeTab === tab
-                                                ? 'bg-[#1E1E22] text-[#279da6] border border-[#279da6]/20 shadow-lg'
-                                                : 'text-santas-gray hover:text-iron hover:bg-white/5'
-                                                }`}
-                                        >
-                                            {tab}
-                                            {count > 0 && (
-                                                <span className="absolute -top-3 -right-1 min-w-[17px] h-[17px] flex items-center justify-center rounded-full text-[9px] font-black px-1 border border-[#09090B] shadow-md bg-[#279da6] text-white z-[20]">
-                                                    {count > 99 ? '99+' : count}
-                                                </span>
-                                            )}
-                                        </button>
-                                    );
-                                })}
+
+                            {/* Inline Task Creation */}
+                            <div
+                                className={`overflow-hidden transition-all duration-700 ease-[cubic-bezier(0.16,1,0.3,1)] ${isCreatingTask && activeTab === 'Tasks'
+                                    ? 'max-h-[600px] opacity-100 mb-8 translate-y-0 scale-100 blur-0'
+                                    : 'max-h-0 opacity-0 mb-0 -translate-y-4 scale-95 blur-md pointer-events-none'
+                                    }`}
+                            >
+                                <div className="p-1 bg-[#121214]/90 backdrop-blur-2xl border border-[#279da6]/30 rounded-[2rem] shadow-[0_25px_60px_rgba(0,0,0,0.4),0_0_40px_rgba(39,157,166,0.08)] ring-1 ring-white/5 relative overflow-hidden">
+                                    <div className="p-6 space-y-6">
+                                        <div className="flex items-start gap-6">
+                                            <div className="flex flex-col items-center gap-3 shrink-0">
+                                                <div className="w-14 h-14 rounded-2xl bg-[#279da6]/10 flex items-center justify-center text-[#279da6] shadow-inner ring-1 ring-[#279da6]/20">
+                                                    <LayoutGrid size={28} />
+                                                </div>
+                                                <p className="text-[10px] font-black text-storm-gray uppercase tracking-widest">Task</p>
+                                            </div>
+
+                                            <div className="flex-1 space-y-6">
+                                                {/* Top Row: Title & Assignee & Priority */}
+                                                <div className="grid grid-cols-1 md:grid-cols-4 gap-5">
+                                                    <div className="space-y-1.5 md:col-span-2">
+                                                        <label className="text-[10px] font-black text-storm-gray uppercase tracking-widest ml-1">Task Title</label>
+                                                        <div className="relative group">
+                                                            <Pencil size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-storm-gray group-focus-within:text-[#279da6] transition-colors" />
+                                                            <input
+                                                                ref={inlineTaskInputRef}
+                                                                type="text"
+                                                                value={taskFormData.title}
+                                                                onChange={(e) => setTaskFormData({ ...taskFormData, title: e.target.value })}
+                                                                placeholder="What needs to be done?"
+                                                                className="w-full bg-black/40 border border-shark/50 rounded-xl py-2.5 pl-10 pr-4 text-xs text-iron placeholder:text-storm-gray focus:outline-none focus:border-[#279da6]/40 transition-all font-bold"
+                                                            />
+                                                        </div>
+                                                    </div>
+                                                    <div className="space-y-1.5">
+                                                        <label className="text-[10px] font-black text-storm-gray uppercase tracking-widest ml-1">Assign To</label>
+                                                        <CustomDropdown
+                                                            value={taskFormData.assigned_to}
+                                                            onChange={(val: any) => setTaskFormData({ ...taskFormData, assigned_to: val })}
+                                                            placeholder="Unassigned"
+                                                            options={[
+                                                                { label: 'Unassigned', value: '' },
+                                                                ...teamMembers.map(tm => ({
+                                                                    label: tm.name || tm.full_name || 'Member',
+                                                                    value: tm.profile_id || '',
+                                                                    icon: <Users size={14} className="text-[#279da6]" />
+                                                                }))
+                                                            ]}
+                                                        />
+                                                    </div>
+                                                    <div className="space-y-1.5">
+                                                        <label className="text-[10px] font-black text-storm-gray uppercase tracking-widest ml-1">Priority</label>
+                                                        <CustomDropdown
+                                                            value={taskFormData.priority}
+                                                            onChange={(val: any) => setTaskFormData({ ...taskFormData, priority: val })}
+                                                            options={[
+                                                                { label: 'Low', value: 'Low', icon: <CheckCircle2 size={14} className="text-storm-gray" /> },
+                                                                { label: 'Medium', value: 'Medium', icon: <CheckCircle2 size={14} className="text-malibu" /> },
+                                                                { label: 'High', value: 'High', icon: <CheckCircle2 size={14} className="text-[#279da6]" /> },
+                                                                { label: 'Critical', value: 'Critical', icon: <CheckCircle2 size={14} className="text-rose-500" /> }
+                                                            ]}
+                                                        />
+                                                    </div>
+                                                </div>
+
+                                                {/* Bottom Row: Description & Due Date */}
+                                                <div className="grid grid-cols-1 md:grid-cols-4 gap-5">
+                                                    <div className="space-y-1.5 md:col-span-3">
+                                                        <label className="text-[10px] font-black text-storm-gray uppercase tracking-widest ml-1">Description</label>
+                                                        <textarea
+                                                            value={taskFormData.description}
+                                                            onChange={(e) => setTaskFormData({ ...taskFormData, description: e.target.value })}
+                                                            placeholder="Add task details..."
+                                                            className="w-full bg-black/40 border border-shark/50 rounded-xl py-2.5 px-4 text-xs text-iron placeholder:text-storm-gray focus:outline-none focus:border-[#279da6]/40 transition-all font-bold min-h-[80px] resize-none"
+                                                        />
+                                                    </div>
+                                                    <div className="space-y-1.5">
+                                                        <label className="text-[10px] font-black text-storm-gray uppercase tracking-widest ml-1">Due Date</label>
+                                                        <div className="relative group">
+                                                            <Calendar size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-storm-gray group-focus-within:text-[#279da6] transition-colors" />
+                                                            <input
+                                                                type="date"
+                                                                value={taskFormData.due_date}
+                                                                onChange={(e) => setTaskFormData({ ...taskFormData, due_date: e.target.value })}
+                                                                className="w-full bg-black/40 border border-shark/50 rounded-xl py-2.5 pl-10 pr-4 text-xs text-iron focus:outline-none focus:border-[#279da6]/40 transition-all font-bold [color-scheme:dark]"
+                                                            />
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                    </div>
+                                </div>
                             </div>
-                            <div className="ml-4 shrink-0">
-                                <ImpersonationWarning />
-                            </div>
+
                         </div>
 
-                        <div className="flex items-center gap-3 shrink-0 ml-4">
-                            {(activeTab === 'Requests' || activeTab === 'Tasks') && (
-                                <button
-                                    onClick={handleCreateNew}
-                                    className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-santas-gray hover:text-white transition-colors group cursor-pointer"
-                                >
-                                    <Plus size={16} className="group-hover:text-white" />
-                                    <span>new</span>
-                                </button>
-                            )}
-                            <div className="h-4 w-[1px] bg-shark" />
-                            <button
-                                onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
-                                className="p-2 text-santas-gray hover:text-white rounded-lg hover:bg-shark/40 transition-all cursor-pointer"
-                            >
-                                {theme === 'dark' ? <Moon size={18} /> : <Sun size={18} />}
-                            </button>
-                            <button className="p-2 text-santas-gray hover:text-white rounded-lg hover:bg-shark/40 transition-all relative cursor-pointer">
-                                <Bell size={18} />
-                                <div className="absolute top-2 right-2.5 w-1.5 h-1.5 bg-red-500 rounded-full border border-black" />
-                            </button>
-                            <div className="h-4 w-[1px] bg-shark ml-1" />
-                            <button
-                                onClick={() => setActiveTab('Settings')}
-                                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-santas-gray hover:text-white transition-colors group cursor-pointer"
-                            >
-                                <SettingsIcon size={16} className="group-hover:text-white" />
-                                <span>edit</span>
-                            </button>
-                        </div>
-
-                    </div>
-
-                    <main className="flex-1 overflow-y-auto custom-scrollbar relative">
                         {/* Status Notification */}
                         {status && (
                             <div className="absolute top-4 left-1/2 -translate-x-1/2 z-50 animate-slide-up">
@@ -708,7 +955,7 @@ export default function ClientDetailPage() {
                                     {status.type === 'success' ? <CheckCircle2 size={18} /> : <AlertCircle size={18} />}
                                     <span className="text-xs font-bold uppercase tracking-tight">{status.message}</span>
                                     <button onClick={() => setStatus(null)} className="ml-2 hover:opacity-70">
-                                        <CloseIcon size={14} />
+                                        <X size={14} />
                                     </button>
                                 </div>
                             </div>
@@ -943,7 +1190,7 @@ export default function ClientDetailPage() {
                                                         <CheckCircle2 size={16} />
                                                     </button>
                                                     <button onClick={() => { setIsCreatingFolder(false); setNewFolderName(''); }} className="text-storm-gray hover:text-white transition-all">
-                                                        <CloseIcon size={16} />
+                                                        <X size={16} />
                                                     </button>
                                                 </div>
                                             )}

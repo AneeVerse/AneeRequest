@@ -9,6 +9,8 @@ import {
     Plus,
     Filter,
     Users,
+    Plus as PlusIcon,
+    Users as UsersIcon,
     X,
     Eye,
     EyeOff,
@@ -24,7 +26,8 @@ import {
     FileText,
     UserCog,
     Camera,
-    Shield
+    Shield,
+    Mail
 } from 'lucide-react';
 import AvatarUpload from '@/components/AvatarUpload';
 import { useRouter } from 'next/navigation';
@@ -115,15 +118,27 @@ export default function TeamClient({ initialMembers, initialCounts }: TeamClient
         email: '',
         password: '',
         confirmPassword: '',
-        role: 'viewer',
+        role: 'viewer' as 'admin' | 'editor' | 'viewer',
+        department: '',
+        position: '',
         accessible_sections: [] as string[],
         avatarUrl: ''
     });
 
+    // Inline Creation State
+    const [isCreating, setIsCreating] = useState(false);
+    const inlineInputRef = useRef<HTMLInputElement>(null);
+
+    useEffect(() => {
+        if (isCreating) {
+            setTimeout(() => inlineInputRef.current?.focus(), 100);
+        }
+    }, [isCreating]);
+
 
 
     const resetForm = () => {
-        setFormData({ name: '', email: '', password: '', confirmPassword: '', role: 'viewer', accessible_sections: [], avatarUrl: '' });
+        setFormData({ name: '', email: '', password: '', confirmPassword: '', role: 'viewer', department: '', position: '', accessible_sections: [], avatarUrl: '' });
         setSelectedMember(null);
     };
 
@@ -177,6 +192,43 @@ export default function TeamClient({ initialMembers, initialCounts }: TeamClient
         }
     };
 
+    // Handle Inline Create Submit
+    const handleInlineCreate = async () => {
+        if (!formData.name || !formData.email || !formData.password) {
+            alert("Please fill in Name, Email, and Password.");
+            return;
+        }
+
+        if (formData.password !== formData.confirmPassword) {
+            alert("Passwords don't match!");
+            return;
+        }
+
+        setIsSubmitting(true);
+        try {
+            const response = await fetch('/api/team', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(formData)
+            });
+
+            if (response.ok) {
+                const newMember = await response.json();
+                setIsCreating(false);
+                resetForm();
+                // Optimistically update the list if possible, or just refresh
+                router.refresh();
+            } else {
+                const err = await response.json();
+                alert(`Error: ${err.error}`);
+            }
+        } catch (error) {
+            console.error('Submit failed:', error);
+        } finally {
+            setIsSubmitting(false);
+        }
+    };
+
     // Handle Edit Click
     const handleEditClick = (member: TeamMember) => {
         setSelectedMember(member);
@@ -186,6 +238,8 @@ export default function TeamClient({ initialMembers, initialCounts }: TeamClient
             password: '',
             confirmPassword: '',
             role: member.role || 'viewer',
+            department: (member as any).department || '',
+            position: (member as any).position || '',
             accessible_sections: member.accessible_sections || [],
             avatarUrl: member.avatar_url || ''
         });
@@ -399,7 +453,14 @@ export default function TeamClient({ initialMembers, initialCounts }: TeamClient
                             onToggleSidebar={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
                             label="Users"
                             labelIcon={<Users size={16} className="text-[#279da6]" />}
-                            onCreate={() => setIsModalOpen(true)}
+                            onCreate={() => setIsCreating(true)}
+                            isCreating={isCreating}
+                            onConfirm={handleInlineCreate}
+                            onCancel={() => {
+                                setIsCreating(false);
+                                resetForm();
+                            }}
+                            isSubmitting={isSubmitting}
                             pageSwitcher={[
                                 { name: 'Clients', path: '/clients' },
                                 { name: 'Team', path: '/team' }
@@ -410,6 +471,158 @@ export default function TeamClient({ initialMembers, initialCounts }: TeamClient
 
                     <main className="flex-1 overflow-y-auto custom-scrollbar bg-[#18181B]">
                         <div className="p-8">
+
+                            {/* Inline Creation Row */}
+                            <div
+                                className={`overflow-hidden transition-all duration-700 ease-[cubic-bezier(0.16,1,0.3,1)] ${isCreating
+                                    ? 'max-h-[800px] opacity-100 mb-8 translate-y-0 scale-100 blur-0'
+                                    : 'max-h-0 opacity-0 mb-0 -translate-y-4 scale-95 blur-md pointer-events-none'
+                                    }`}
+                            >
+                                <div className="p-1 bg-[#121214]/90 backdrop-blur-2xl border border-[#279da6]/30 rounded-[2rem] shadow-[0_25px_60px_rgba(0,0,0,0.4),0_0_40px_rgba(39,157,166,0.08)] ring-1 ring-white/5 relative overflow-hidden">
+                                    <div className="p-6 space-y-6">
+                                        <div className="flex items-start gap-6">
+                                            <div className="flex flex-col items-center gap-3 shrink-0">
+                                                <AvatarUpload
+                                                    currentAvatarUrl={formData.avatarUrl}
+                                                    onUploadSuccess={(url) => setFormData(prev => ({ ...prev, avatarUrl: url }))}
+                                                    onRemove={() => setFormData(prev => ({ ...prev, avatarUrl: '' }))}
+                                                    name={formData.name}
+                                                    email={formData.email}
+                                                />
+                                                <p className="text-[10px] font-black text-storm-gray uppercase tracking-widest">Photo</p>
+                                            </div>
+
+                                            <div className="flex-1 space-y-6">
+                                                {/* Top Row: Basic Info */}
+                                                <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                                                    <div className="space-y-1.5 flex-1">
+                                                        <label className="text-[10px] font-black text-storm-gray uppercase tracking-widest ml-1">Full Name</label>
+                                                        <div className="relative group">
+                                                            <Users size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-storm-gray group-focus-within:text-[#279da6] transition-colors" />
+                                                            <input
+                                                                ref={inlineInputRef}
+                                                                type="text"
+                                                                value={formData.name}
+                                                                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                                                                placeholder="John Doe"
+                                                                className="w-full bg-black/40 border border-shark/50 rounded-xl py-2.5 pl-10 pr-4 text-xs text-iron placeholder:text-storm-gray focus:outline-none focus:border-[#279da6]/40 transition-all font-bold"
+                                                            />
+                                                        </div>
+                                                    </div>
+                                                    <div className="space-y-1.5 flex-1">
+                                                        <label className="text-[10px] font-black text-storm-gray uppercase tracking-widest ml-1">Email Address</label>
+                                                        <div className="relative group">
+                                                            <Mail size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-storm-gray group-focus-within:text-[#279da6] transition-colors" />
+                                                            <input
+                                                                type="email"
+                                                                value={formData.email}
+                                                                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                                                                placeholder="email@example.com"
+                                                                className="w-full bg-black/40 border border-shark/50 rounded-xl py-2.5 pl-10 pr-4 text-xs text-iron placeholder:text-storm-gray focus:outline-none focus:border-[#279da6]/40 transition-all font-bold"
+                                                            />
+                                                        </div>
+                                                    </div>
+                                                </div>
+
+                                                {/* Middle Row: Security & Role */}
+                                                <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+                                                    <div className="space-y-1.5 flex-1">
+                                                        <label className="text-[10px] font-black text-storm-gray uppercase tracking-widest ml-1">Password</label>
+                                                        <div className="relative group">
+                                                            <Eye size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-storm-gray group-focus-within:text-[#279da6] transition-colors" />
+                                                            <input
+                                                                type="password"
+                                                                value={formData.password}
+                                                                onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                                                                placeholder="••••••••"
+                                                                className="w-full bg-black/40 border border-shark/50 rounded-xl py-2.5 pl-10 pr-4 text-xs text-iron placeholder:text-storm-gray focus:outline-none focus:border-[#279da6]/40 transition-all font-bold"
+                                                            />
+                                                        </div>
+                                                    </div>
+                                                    <div className="space-y-1.5 flex-1">
+                                                        <label className="text-[10px] font-black text-storm-gray uppercase tracking-widest ml-1">Confirm Password</label>
+                                                        <div className="relative group">
+                                                            <EyeOff size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-storm-gray group-focus-within:text-[#279da6] transition-colors" />
+                                                            <input
+                                                                type="password"
+                                                                value={formData.confirmPassword}
+                                                                onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
+                                                                placeholder="••••••••"
+                                                                className="w-full bg-black/40 border border-shark/50 rounded-xl py-2.5 pl-10 pr-4 text-xs text-iron placeholder:text-storm-gray focus:outline-none focus:border-[#279da6]/40 transition-all font-bold"
+                                                            />
+                                                        </div>
+                                                    </div>
+                                                    <div className="space-y-1.5 flex-1">
+                                                        <label className="text-[10px] font-black text-storm-gray uppercase tracking-widest ml-1">Access Role</label>
+                                                        <CustomDropdown
+                                                            value={formData.role}
+                                                            onChange={(val) => setFormData({ ...formData, role: val as any })}
+                                                            options={[
+                                                                { label: 'Viewer', value: 'viewer', icon: <Eye size={14} className="text-storm-gray" /> },
+                                                                { label: 'Editor', value: 'editor', icon: <Edit2 size={14} className="text-malibu" /> },
+                                                                { label: 'Admin', value: 'admin', icon: <Shield size={14} className="text-[#279da6]" /> }
+                                                            ]}
+                                                        />
+                                                    </div>
+                                                </div>
+
+                                                {/* Bottom Row: Dept & Position */}
+                                                <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                                                    <div className="space-y-1.5 flex-1">
+                                                        <label className="text-[10px] font-black text-storm-gray uppercase tracking-widest ml-1">Department</label>
+                                                        <input
+                                                            type="text"
+                                                            value={formData.department}
+                                                            onChange={(e) => setFormData({ ...formData, department: e.target.value })}
+                                                            placeholder="e.g. Design"
+                                                            className="w-full bg-black/40 border border-shark/50 rounded-xl py-2.5 px-4 text-xs text-iron placeholder:text-storm-gray focus:outline-none focus:border-[#279da6]/40 transition-all font-bold"
+                                                        />
+                                                    </div>
+                                                    <div className="space-y-1.5 flex-1">
+                                                        <label className="text-[10px] font-black text-storm-gray uppercase tracking-widest ml-1">Position</label>
+                                                        <input
+                                                            type="text"
+                                                            value={formData.position}
+                                                            onChange={(e) => setFormData({ ...formData, position: e.target.value })}
+                                                            placeholder="e.g. Senior Editor"
+                                                            className="w-full bg-black/40 border border-shark/50 rounded-xl py-2.5 px-4 text-xs text-iron placeholder:text-storm-gray focus:outline-none focus:border-[#279da6]/40 transition-all font-bold"
+                                                        />
+                                                    </div>
+                                                </div>
+
+                                                {/* Section Access */}
+                                                <div className="space-y-3">
+                                                    <label className="text-[10px] font-black text-storm-gray uppercase tracking-widest ml-1">Section Access</label>
+                                                    <div className="flex flex-wrap gap-2">
+                                                        {['Dashboard', 'Files', 'Clients', 'Team', 'Requests', 'Tasks', 'Storage'].map((section) => (
+                                                            <button
+                                                                key={section}
+                                                                type="button"
+                                                                onClick={() => {
+                                                                    const current = formData.accessible_sections;
+                                                                    const updated = current.includes(section)
+                                                                        ? current.filter(s => s !== section)
+                                                                        : [...current, section];
+                                                                    setFormData({ ...formData, accessible_sections: updated });
+                                                                }}
+                                                                className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all border ${formData.accessible_sections.includes(section)
+                                                                    ? 'bg-[#279da6]/10 border-[#279da6]/40 text-[#279da6]'
+                                                                    : 'bg-black/40 border-shark/50 text-storm-gray hover:border-shark/80'
+                                                                    }`}
+                                                            >
+                                                                {section}
+                                                            </button>
+                                                        ))}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                    </div>
+                                </div>
+                            </div>
+
 
                             {/* Toolbar */}
                             <div className="flex items-center justify-between mb-6">
@@ -761,7 +974,7 @@ export default function TeamClient({ initialMembers, initialCounts }: TeamClient
                                             <label className="block text-[10px] font-black uppercase tracking-widest text-storm-gray mb-2">Role *</label>
                                             <CustomDropdown
                                                 value={formData.role}
-                                                onChange={(val) => setFormData({ ...formData, role: val })}
+                                                onChange={(val: any) => setFormData({ ...formData, role: val })}
                                                 options={[
                                                     { label: 'Viewer – (view, chat)', value: 'viewer', icon: <Eye size={12} className="text-amber-400" />, color: 'text-amber-400' },
                                                     { label: 'Editor – (view, add, edit, chat)', value: 'editor', icon: <Edit2 size={12} className="text-blue-400" />, color: 'text-blue-400' },
@@ -915,7 +1128,7 @@ export default function TeamClient({ initialMembers, initialCounts }: TeamClient
                                             <label className="block text-[10px] font-black uppercase tracking-widest text-storm-gray mb-2">Role *</label>
                                             <CustomDropdown
                                                 value={formData.role}
-                                                onChange={(val) => setFormData({ ...formData, role: val })}
+                                                onChange={(val: any) => setFormData({ ...formData, role: val })}
                                                 options={[
                                                     { label: 'Viewer – (view, chat)', value: 'viewer', icon: <Eye size={12} className="text-amber-400" />, color: 'text-amber-400' },
                                                     { label: 'Editor – (view, add, edit, chat)', value: 'editor', icon: <Edit2 size={12} className="text-blue-400" />, color: 'text-blue-400' },

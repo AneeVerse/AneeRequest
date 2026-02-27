@@ -138,6 +138,16 @@ export default function ClientsClient({ initialClients }: ClientsClientProps) {
         avatarUrl: ''
     });
 
+    // Inline Creation State
+    const [isCreating, setIsCreating] = useState(false);
+    const inlineInputRef = useRef<HTMLInputElement>(null);
+
+    useEffect(() => {
+        if (isCreating) {
+            setTimeout(() => inlineInputRef.current?.focus(), 100);
+        }
+    }, [isCreating]);
+
     const clientCategories = ['Ongoing', 'Leads', 'Closed', 'Archive', 'All'];
 
     // Compute counts per status for notification badges
@@ -178,6 +188,41 @@ export default function ClientsClient({ initialClients }: ClientsClientProps) {
                 setIsModalOpen(false);
                 resetForm();
                 router.refresh(); // Trigger server-side re-fetch
+            } else {
+                const err = await response.json();
+                alert(`Error: ${err.error}`);
+            }
+        } catch (error) {
+            console.error('Submit failed:', error);
+        } finally {
+            setIsSubmitting(false);
+        }
+    };
+
+    // Handle Inline Create Submit
+    const handleInlineCreate = async () => {
+        if (!formData.name || !formData.email || !formData.organization || !formData.password) {
+            alert("Please fill in Name, Email, Organization, and Password.");
+            return;
+        }
+
+        if (formData.password !== formData.confirmPassword) {
+            alert("Passwords don't match!");
+            return;
+        }
+
+        setIsSubmitting(true);
+        try {
+            const response = await fetch('/api/clients', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(formData)
+            });
+
+            if (response.ok) {
+                setIsCreating(false);
+                resetForm();
+                router.refresh();
             } else {
                 const err = await response.json();
                 alert(`Error: ${err.error}`);
@@ -411,7 +456,14 @@ export default function ClientsClient({ initialClients }: ClientsClientProps) {
                             tabs={clientCategories}
                             activeTab={activeTab}
                             setActiveTab={setActiveTab}
-                            onCreate={() => setIsModalOpen(true)}
+                            onCreate={() => setIsCreating(true)}
+                            isCreating={isCreating}
+                            onConfirm={handleInlineCreate}
+                            onCancel={() => {
+                                setIsCreating(false);
+                                resetForm();
+                            }}
+                            isSubmitting={isSubmitting}
                             tabCounts={tabCounts}
                             pageSwitcher={[
                                 { name: 'Clients', path: '/clients' },
@@ -424,6 +476,139 @@ export default function ClientsClient({ initialClients }: ClientsClientProps) {
                     <main className="flex-1 overflow-y-auto custom-scrollbar bg-[#18181B]">
                         <div className="p-8">
 
+                            {/* Inline Creation Row */}
+                            <div
+                                className={`overflow-hidden transition-all duration-700 ease-[cubic-bezier(0.16,1,0.3,1)] ${isCreating
+                                    ? 'max-h-[500px] opacity-100 mb-8 translate-y-0 scale-100 blur-0'
+                                    : 'max-h-0 opacity-0 mb-0 -translate-y-4 scale-95 blur-md pointer-events-none'
+                                    }`}
+                            >
+                                <div className="p-1 bg-[#121214]/90 backdrop-blur-2xl border border-[#279da6]/30 rounded-[2rem] shadow-[0_25px_60px_rgba(0,0,0,0.4),0_0_40px_rgba(39,157,166,0.08)] ring-1 ring-white/5 relative overflow-hidden">
+                                    <div className="p-6 space-y-6">
+                                        <div className="flex items-start gap-6">
+                                            <div className="flex flex-col items-center gap-3 shrink-0">
+                                                <AvatarUpload
+                                                    currentAvatarUrl={formData.avatarUrl}
+                                                    onUploadSuccess={(url) => setFormData(prev => ({ ...prev, avatarUrl: url }))}
+                                                    onRemove={() => setFormData(prev => ({ ...prev, avatarUrl: '' }))}
+                                                    name={formData.name}
+                                                    email={formData.email}
+                                                />
+                                                <p className="text-[10px] font-black text-storm-gray uppercase tracking-widest">Client Photo</p>
+                                            </div>
+
+                                            <div className="flex-1 space-y-6">
+                                                {/* Top Row: Basic Info */}
+                                                <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+                                                    <div className="space-y-1.5 flex-1">
+                                                        <label className="text-[10px] font-black text-storm-gray uppercase tracking-widest ml-1">Organization</label>
+                                                        <div className="relative group">
+                                                            <Building size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-storm-gray group-focus-within:text-[#279da6] transition-colors" />
+                                                            <input
+                                                                ref={inlineInputRef}
+                                                                type="text"
+                                                                value={formData.organization}
+                                                                onChange={(e) => setFormData({ ...formData, organization: e.target.value })}
+                                                                placeholder="Company Name"
+                                                                className="w-full bg-black/40 border border-shark/50 rounded-xl py-2.5 pl-10 pr-4 text-xs text-iron placeholder:text-storm-gray focus:outline-none focus:border-[#279da6]/40 transition-all font-bold"
+                                                            />
+                                                        </div>
+                                                    </div>
+                                                    <div className="space-y-1.5 flex-1">
+                                                        <label className="text-[10px] font-black text-storm-gray uppercase tracking-widest ml-1">Client Name</label>
+                                                        <div className="relative group">
+                                                            <UsersIcon size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-storm-gray group-focus-within:text-[#279da6] transition-colors" />
+                                                            <input
+                                                                type="text"
+                                                                value={formData.name}
+                                                                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                                                                placeholder="Full Name"
+                                                                className="w-full bg-black/40 border border-shark/50 rounded-xl py-2.5 pl-10 pr-4 text-xs text-iron placeholder:text-storm-gray focus:outline-none focus:border-[#279da6]/40 transition-all font-bold"
+                                                            />
+                                                        </div>
+                                                    </div>
+                                                    <div className="space-y-1.5 flex-1">
+                                                        <label className="text-[10px] font-black text-storm-gray uppercase tracking-widest ml-1">Email Address</label>
+                                                        <div className="relative group">
+                                                            <FileText size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-storm-gray group-focus-within:text-[#279da6] transition-colors" />
+                                                            <input
+                                                                type="email"
+                                                                value={formData.email}
+                                                                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                                                                placeholder="email@example.com"
+                                                                className="w-full bg-black/40 border border-shark/50 rounded-xl py-2.5 pl-10 pr-4 text-xs text-iron placeholder:text-storm-gray focus:outline-none focus:border-[#279da6]/40 transition-all font-bold"
+                                                            />
+                                                        </div>
+                                                    </div>
+                                                </div>
+
+                                                {/* Bottom Row: Security & Status */}
+                                                <div className="grid grid-cols-1 md:grid-cols-4 gap-5">
+                                                    <div className="space-y-1.5 flex-1">
+                                                        <label className="text-[10px] font-black text-storm-gray uppercase tracking-widest ml-1">Password</label>
+                                                        <div className="relative group">
+                                                            <Eye size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-storm-gray group-focus-within:text-[#279da6] transition-colors" />
+                                                            <input
+                                                                type="password"
+                                                                value={formData.password}
+                                                                onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                                                                placeholder="••••••••"
+                                                                className="w-full bg-black/40 border border-shark/50 rounded-xl py-2.5 pl-10 pr-4 text-xs text-iron placeholder:text-storm-gray focus:outline-none focus:border-[#279da6]/40 transition-all font-bold"
+                                                            />
+                                                        </div>
+                                                    </div>
+                                                    <div className="space-y-1.5 flex-1">
+                                                        <label className="text-[10px] font-black text-storm-gray uppercase tracking-widest ml-1">Confirm Password</label>
+                                                        <div className="relative group">
+                                                            <EyeOff size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-storm-gray group-focus-within:text-[#279da6] transition-colors" />
+                                                            <input
+                                                                type="password"
+                                                                value={formData.confirmPassword}
+                                                                onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
+                                                                placeholder="••••••••"
+                                                                className="w-full bg-black/40 border border-shark/50 rounded-xl py-2.5 pl-10 pr-4 text-xs text-iron placeholder:text-storm-gray focus:outline-none focus:border-[#279da6]/40 transition-all font-bold"
+                                                            />
+                                                        </div>
+                                                    </div>
+                                                    <div className="space-y-1.5 flex-1">
+                                                        <label className="text-[10px] font-black text-storm-gray uppercase tracking-widest ml-1">Status</label>
+                                                        <CustomDropdown
+                                                            value={formData.status}
+                                                            onChange={(val) => setFormData({ ...formData, status: val })}
+                                                            options={[
+                                                                { label: 'Ongoing', value: 'Ongoing', icon: <CheckCircle2 size={14} className="text-emerald-500" /> },
+                                                                { label: 'Leads', value: 'Leads', icon: <Box size={14} className="text-amber-500" /> },
+                                                                { label: 'Closed', value: 'Closed', icon: <XCircle size={14} className="text-rose-500" /> },
+                                                                { label: 'Archive', value: 'Archive', icon: <Archive size={14} className="text-purple-500" /> }
+                                                            ]}
+                                                        />
+                                                    </div>
+                                                    <div className="space-y-1.5 flex-1">
+                                                        <label className="text-[10px] font-black text-storm-gray uppercase tracking-widest ml-1">Google Drive</label>
+                                                        <button
+                                                            onClick={() => setFormData({ ...formData, create_folder: !formData.create_folder })}
+                                                            className={`w-full flex items-center justify-between gap-3 px-4 py-2.5 rounded-xl border transition-all ${formData.create_folder
+                                                                ? 'bg-[#279da6]/10 border-[#279da6]/40 text-white'
+                                                                : 'bg-black/40 border-shark/50 text-storm-gray hover:border-shark/80'
+                                                                }`}
+                                                        >
+                                                            <div className="flex items-center gap-2">
+                                                                <FileText size={14} className={formData.create_folder ? 'text-[#279da6]' : ''} />
+                                                                <span className="text-[11px] font-bold">Create Folder</span>
+                                                            </div>
+                                                            <div className={`w-8 h-4 rounded-full relative transition-colors ${formData.create_folder ? 'bg-[#279da6]' : 'bg-shark'}`}>
+                                                                <div className={`absolute top-0.5 w-3 h-3 rounded-full bg-white transition-all ${formData.create_folder ? 'right-0.5' : 'left-0.5'}`} />
+                                                            </div>
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                    </div>
+                                </div>
+                            </div>
+
                             {/* Toolbar */}
                             <div className="flex items-center justify-between mb-6">
                                 <div className="relative w-80">
@@ -433,9 +618,10 @@ export default function ClientsClient({ initialClients }: ClientsClientProps) {
                                         placeholder="Search for Clients"
                                         value={searchQuery}
                                         onChange={(e) => setSearchQuery(e.target.value)}
-                                        className="w-full bg-[#09090B] border border-shark/50 rounded-lg py-2 pl-10 pr-4 text-xs text-iron placeholder:text-storm-gray focus:outline-none focus:border-[#279da6]/40 transition-all"
+                                        className="w-full bg-[#09090B] border border-shark/50 rounded-lg py-2 pl-10 pr-4 text-xs text-iron placeholder:text-storm-gray focus:outline-none focus:border-[#279da6]/40 transition-all font-bold"
                                     />
                                 </div>
+
                                 <div className="flex items-center gap-2">
                                     <div className="relative">
                                         <button
@@ -452,7 +638,6 @@ export default function ClientsClient({ initialClients }: ClientsClientProps) {
                                                 });
                                                 setSearchQuery('');
                                                 setSortConfig({ key: 'createdAt', direction: 'desc' });
-
                                             }}
                                             className={`relative flex items-center gap-2 px-3 py-1.5 rounded-lg border transition-all text-[11px] font-bold z-10 ${Object.values(filters).some(v => v !== '') || searchQuery !== '' || (sortConfig.key !== '' && !(sortConfig.key === 'createdAt' && sortConfig.direction === 'desc')) ? 'bg-[#279da6]/20 border-[#279da6]/60 text-[#279da6] active:scale-95' : 'border-shark bg-shark/20 text-santas-gray hover:text-white hover:bg-shark/40'}`}
                                         >
@@ -639,296 +824,302 @@ export default function ClientsClient({ initialClients }: ClientsClientProps) {
                 </div>
 
                 {/* --- Portal for Settings Dropdown --- */}
-                {activeDropdown && selectedClient && createPortal(
-                    <div
-                        ref={dropdownRef}
-                        style={{
-                            position: 'absolute',
-                            top: `${dropdownCoords.top}px`,
-                            left: `${dropdownCoords.left - 176}px`, // 176px is w-44
-                            width: '176px',
-                            transformOrigin: dropdownCoords.origin
-                        }}
-                        className="z-[9999] bg-[#18181B] border border-shark rounded-xl shadow-[0_20px_50px_rgba(0,0,0,0.6)] overflow-hidden py-1 animate-in fade-in zoom-in-95 duration-200"
-                    >
-                        <button
-                            onClick={() => router.push(`/clients/${selectedClient.id}`)}
-                            className="w-full flex items-center gap-3 px-4 py-2 text-[11px] font-bold text-santas-gray hover:text-white hover:bg-[#279da6]/10 transition-all text-left"
-                        >
-                            <Eye size={14} className="text-[#279da6]" />
-                            <span>View Details</span>
-                        </button>
-                        <button
-                            onClick={() => handleEditClick(selectedClient)}
-                            className="w-full flex items-center gap-3 px-4 py-2 text-[11px] font-bold text-santas-gray hover:text-white hover:bg-[#279da6]/10 transition-all text-left"
-                        >
-                            <Edit2 size={14} className="text-[#279da6]" />
-                            <span>Edit Account</span>
-                        </button>
-                        <button
-                            onClick={() => {
-                                impersonate({
-                                    id: selectedClient.profile_id || selectedClient.id,
-                                    email: selectedClient.email,
-                                    full_name: selectedClient.name,
-                                    role: 'client'
-                                }, '/clients');
-                                setActiveDropdown(null);
+                {
+                    activeDropdown && selectedClient && createPortal(
+                        <div
+                            ref={dropdownRef}
+                            style={{
+                                position: 'absolute',
+                                top: `${dropdownCoords.top}px`,
+                                left: `${dropdownCoords.left - 176}px`, // 176px is w-44
+                                width: '176px',
+                                transformOrigin: dropdownCoords.origin
                             }}
-                            className="w-full flex items-center gap-3 px-4 py-2 text-[11px] font-bold text-santas-gray hover:text-white hover:bg-[#279da6]/10 transition-all text-left"
+                            className="z-[9999] bg-[#18181B] border border-shark rounded-xl shadow-[0_20px_50px_rgba(0,0,0,0.6)] overflow-hidden py-1 animate-in fade-in zoom-in-95 duration-200"
                         >
-                            <UserCog size={14} className="text-[#279da6]" />
-                            <span>Impersonate</span>
-                        </button>
-                        <button className="w-full flex items-center gap-3 px-4 py-2 text-[11px] font-bold text-santas-gray hover:text-white hover:bg-[#279da6]/10 transition-all text-left">
-                            <Building size={14} className="text-[#279da6]" />
-                            <span>Change Organization</span>
-                        </button>
-                        <div className="h-px bg-shark my-1" />
-                        <button
-                            onClick={() => handleDeleteClick(selectedClient)}
-                            className="w-full flex items-center gap-3 px-4 py-2 text-[11px] font-bold text-rose-500 hover:text-rose-400 hover:bg-rose-500/10 transition-all text-left"
-                        >
-                            <Trash2 size={14} />
-                            <span>Delete Client</span>
-                        </button>
-                    </div>,
-                    document.body
-                )}
+                            <button
+                                onClick={() => router.push(`/clients/${selectedClient.id}`)}
+                                className="w-full flex items-center gap-3 px-4 py-2 text-[11px] font-bold text-santas-gray hover:text-white hover:bg-[#279da6]/10 transition-all text-left"
+                            >
+                                <Eye size={14} className="text-[#279da6]" />
+                                <span>View Details</span>
+                            </button>
+                            <button
+                                onClick={() => handleEditClick(selectedClient)}
+                                className="w-full flex items-center gap-3 px-4 py-2 text-[11px] font-bold text-santas-gray hover:text-white hover:bg-[#279da6]/10 transition-all text-left"
+                            >
+                                <Edit2 size={14} className="text-[#279da6]" />
+                                <span>Edit Account</span>
+                            </button>
+                            <button
+                                onClick={() => {
+                                    impersonate({
+                                        id: selectedClient.profile_id || selectedClient.id,
+                                        email: selectedClient.email,
+                                        full_name: selectedClient.name,
+                                        role: 'client'
+                                    }, '/clients');
+                                    setActiveDropdown(null);
+                                }}
+                                className="w-full flex items-center gap-3 px-4 py-2 text-[11px] font-bold text-santas-gray hover:text-white hover:bg-[#279da6]/10 transition-all text-left"
+                            >
+                                <UserCog size={14} className="text-[#279da6]" />
+                                <span>Impersonate</span>
+                            </button>
+                            <button className="w-full flex items-center gap-3 px-4 py-2 text-[11px] font-bold text-santas-gray hover:text-white hover:bg-[#279da6]/10 transition-all text-left">
+                                <Building size={14} className="text-[#279da6]" />
+                                <span>Change Organization</span>
+                            </button>
+                            <div className="h-px bg-shark my-1" />
+                            <button
+                                onClick={() => handleDeleteClick(selectedClient)}
+                                className="w-full flex items-center gap-3 px-4 py-2 text-[11px] font-bold text-rose-500 hover:text-rose-400 hover:bg-rose-500/10 transition-all text-left"
+                            >
+                                <Trash2 size={14} />
+                                <span>Delete Client</span>
+                            </button>
+                        </div>,
+                        document.body
+                    )
+                }
 
                 {/* --- Create Client Modal --- */}
-                {isModalOpen && (
-                    <div className="fixed inset-0 z-[100] flex items-center justify-center">
-                        <div className="absolute inset-0 bg-black/80 backdrop-blur-sm animate-fade-in" onClick={() => setIsModalOpen(false)} />
+                {
+                    isModalOpen && (
+                        <div className="fixed inset-0 z-[100] flex items-center justify-center">
+                            <div className="absolute inset-0 bg-black/80 backdrop-blur-sm animate-fade-in" onClick={() => setIsModalOpen(false)} />
 
-                        <div className="relative bg-[#18181B] border border-shark w-full max-w-md rounded-2xl shadow-2xl overflow-hidden animate-slide-up mx-4">
-                            <form onSubmit={handleSubmit}>
-                                <div className="flex items-center justify-between px-6 py-4 border-b border-shark">
-                                    <h3 className="text-lg font-bold text-iron">Client Information</h3>
-                                    <button type="button" onClick={() => setIsModalOpen(false)} className="p-1.5 text-santas-gray hover:text-white hover:bg-shark rounded-lg">
-                                        <X size={18} />
-                                    </button>
-                                </div>
-
-                                <div className="p-6 space-y-5">
-                                    <div className="flex flex-col items-center mb-2">
-                                        <AvatarUpload
-                                            currentAvatarUrl={formData.avatarUrl}
-                                            onUploadSuccess={(url) => setFormData(prev => ({ ...prev, avatarUrl: url }))}
-                                            onRemove={() => setFormData(prev => ({ ...prev, avatarUrl: '' }))}
-                                            name={formData.name || formData.organization}
-                                            email={formData.email}
-                                        />
-                                        <p className="text-[10px] font-bold text-storm-gray uppercase tracking-widest mt-1">Client Photo</p>
+                            <div className="relative bg-[#18181B] border border-shark w-full max-w-md rounded-2xl shadow-2xl overflow-hidden animate-slide-up mx-4">
+                                <form onSubmit={handleSubmit}>
+                                    <div className="flex items-center justify-between px-6 py-4 border-b border-shark">
+                                        <h3 className="text-lg font-bold text-iron">Client Information</h3>
+                                        <button type="button" onClick={() => setIsModalOpen(false)} className="p-1.5 text-santas-gray hover:text-white hover:bg-shark rounded-lg">
+                                            <X size={18} />
+                                        </button>
                                     </div>
 
-                                    <div className="space-y-1.5">
-                                        <label className="text-[11px] font-bold text-santas-gray uppercase tracking-wider">Company/Organization Name</label>
-                                        <input
-                                            type="text"
-                                            placeholder="Organization name"
-                                            value={formData.organization}
-                                            onChange={(e) => setFormData({ ...formData, organization: e.target.value })}
-                                            className="w-full bg-[#09090B] border border-shark/60 rounded-xl py-2.5 px-4 text-sm text-iron focus:outline-none focus:border-[#279da6]/60"
-                                        />
-                                    </div>
+                                    <div className="p-6 space-y-5">
+                                        <div className="flex flex-col items-center mb-2">
+                                            <AvatarUpload
+                                                currentAvatarUrl={formData.avatarUrl}
+                                                onUploadSuccess={(url) => setFormData(prev => ({ ...prev, avatarUrl: url }))}
+                                                onRemove={() => setFormData(prev => ({ ...prev, avatarUrl: '' }))}
+                                                name={formData.name || formData.organization}
+                                                email={formData.email}
+                                            />
+                                            <p className="text-[10px] font-bold text-storm-gray uppercase tracking-widest mt-1">Client Photo</p>
+                                        </div>
 
-                                    <div className="space-y-1.5">
-                                        <label className="text-[11px] font-bold text-santas-gray uppercase tracking-wider">Client Name *</label>
-                                        <input
-                                            required
-                                            type="text"
-                                            placeholder="Enter client name"
-                                            value={formData.name}
-                                            onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                                            className="w-full bg-[#09090B] border border-shark/60 rounded-xl py-2.5 px-4 text-sm text-iron focus:outline-none focus:border-[#279da6]/60"
-                                        />
-                                    </div>
-
-                                    <div className="space-y-1.5">
-                                        <label className="text-[11px] font-bold text-santas-gray uppercase tracking-wider">Email Address *</label>
-                                        <input
-                                            required
-                                            type="email"
-                                            placeholder="email@example.com"
-                                            value={formData.email}
-                                            onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                                            className="w-full bg-[#09090B] border border-shark/60 rounded-xl py-2.5 px-4 text-sm text-iron focus:outline-none focus:border-[#279da6]/60"
-                                        />
-                                    </div>
-
-                                    <div className="space-y-1.5">
-                                        <label className="text-[11px] font-bold text-santas-gray uppercase tracking-wider">Password *</label>
-                                        <div className="relative">
+                                        <div className="space-y-1.5">
+                                            <label className="text-[11px] font-bold text-santas-gray uppercase tracking-wider">Company/Organization Name</label>
                                             <input
-                                                required
-                                                type={showPassword ? "text" : "password"}
-                                                placeholder="Enter password"
-                                                value={formData.password}
-                                                onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                                                type="text"
+                                                placeholder="Organization name"
+                                                value={formData.organization}
+                                                onChange={(e) => setFormData({ ...formData, organization: e.target.value })}
                                                 className="w-full bg-[#09090B] border border-shark/60 rounded-xl py-2.5 px-4 text-sm text-iron focus:outline-none focus:border-[#279da6]/60"
                                             />
-                                            <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-storm-gray hover:text-iron">
-                                                {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
-                                            </button>
+                                        </div>
+
+                                        <div className="space-y-1.5">
+                                            <label className="text-[11px] font-bold text-santas-gray uppercase tracking-wider">Client Name *</label>
+                                            <input
+                                                required
+                                                type="text"
+                                                placeholder="Enter client name"
+                                                value={formData.name}
+                                                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                                                className="w-full bg-[#09090B] border border-shark/60 rounded-xl py-2.5 px-4 text-sm text-iron focus:outline-none focus:border-[#279da6]/60"
+                                            />
+                                        </div>
+
+                                        <div className="space-y-1.5">
+                                            <label className="text-[11px] font-bold text-santas-gray uppercase tracking-wider">Email Address *</label>
+                                            <input
+                                                required
+                                                type="email"
+                                                placeholder="email@example.com"
+                                                value={formData.email}
+                                                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                                                className="w-full bg-[#09090B] border border-shark/60 rounded-xl py-2.5 px-4 text-sm text-iron focus:outline-none focus:border-[#279da6]/60"
+                                            />
+                                        </div>
+
+                                        <div className="space-y-1.5">
+                                            <label className="text-[11px] font-bold text-santas-gray uppercase tracking-wider">Password *</label>
+                                            <div className="relative">
+                                                <input
+                                                    required
+                                                    type={showPassword ? "text" : "password"}
+                                                    placeholder="Enter password"
+                                                    value={formData.password}
+                                                    onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                                                    className="w-full bg-[#09090B] border border-shark/60 rounded-xl py-2.5 px-4 text-sm text-iron focus:outline-none focus:border-[#279da6]/60"
+                                                />
+                                                <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-storm-gray hover:text-iron">
+                                                    {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                                                </button>
+                                            </div>
+                                        </div>
+
+                                        <div className="space-y-1.5">
+                                            <label className="text-[11px] font-bold text-santas-gray uppercase tracking-wider">Confirm Password *</label>
+                                            <input
+                                                required
+                                                type="password"
+                                                placeholder="Confirm password"
+                                                value={formData.confirmPassword}
+                                                onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
+                                                className="w-full bg-[#09090B] border border-shark/60 rounded-xl py-2.5 px-4 text-sm text-iron focus:outline-none focus:border-[#279da6]/60"
+                                            />
+                                        </div>
+
+                                        <div className="space-y-1.5">
+                                            <label className="text-[11px] font-bold text-santas-gray uppercase tracking-wider">Status</label>
+                                            <CustomDropdown
+                                                value={formData.status}
+                                                onChange={(val) => setFormData({ ...formData, status: val })}
+                                                options={[
+                                                    { label: 'Ongoing', value: 'Ongoing', icon: <CheckCircle2 size={12} className="text-emerald-400" />, color: 'text-emerald-400' },
+                                                    { label: 'Leads', value: 'Leads', icon: <UsersIcon size={12} className="text-[#279da6]" />, color: 'text-[#279da6]' },
+                                                    { label: 'Closed', value: 'Closed', icon: <XCircle size={12} className="text-rose-400" />, color: 'text-rose-400' },
+                                                    { label: 'Archive', value: 'Archive', icon: <Archive size={12} className="text-[#F28C28]" />, color: 'text-[#F28C28]' },
+                                                ]}
+                                            />
+                                        </div>
+
+                                        <div className="flex items-center gap-3 p-4 bg-[#279da6]/5 border border-[#279da6]/20 rounded-xl mt-2 group cursor-pointer" onClick={() => setFormData({ ...formData, create_folder: !formData.create_folder })}>
+                                            <div className={`w-5 h-5 rounded flex items-center justify-center border transition-all ${formData.create_folder ? 'bg-[#279da6] border-[#279da6]' : 'border-shark bg-shark/50'}`}>
+                                                {formData.create_folder && <Check className="text-white" size={12} strokeWidth={4} />}
+                                            </div>
+                                            <div className="flex-1">
+                                                <p className="text-[11px] font-bold text-iron">Create Google Drive folder?</p>
+                                                <p className="text-[9px] text-storm-gray">Automatically sets up a dedicated folder in your Root storage.</p>
+                                            </div>
                                         </div>
                                     </div>
 
-                                    <div className="space-y-1.5">
-                                        <label className="text-[11px] font-bold text-santas-gray uppercase tracking-wider">Confirm Password *</label>
-                                        <input
-                                            required
-                                            type="password"
-                                            placeholder="Confirm password"
-                                            value={formData.confirmPassword}
-                                            onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
-                                            className="w-full bg-[#09090B] border border-shark/60 rounded-xl py-2.5 px-4 text-sm text-iron focus:outline-none focus:border-[#279da6]/60"
-                                        />
+                                    <div className="p-6 bg-[#121214] border-t border-shark flex items-center justify-end gap-3">
+                                        <button type="button" onClick={() => setIsModalOpen(false)} className="px-6 py-2.5 text-xs font-bold text-iron hover:bg-shark rounded-xl transition-all">
+                                            Cancel
+                                        </button>
+                                        <button
+                                            type="submit"
+                                            disabled={isSubmitting}
+                                            className="px-6 py-2.5 text-xs font-bold bg-[#279da6] text-white rounded-xl shadow-lg hover:bg-[#279da6]/90 transition-all flex items-center gap-2 disabled:opacity-50"
+                                        >
+                                            {isSubmitting ? (
+                                                <>
+                                                    <Loader2 size={14} className="animate-spin" />
+                                                    Creating...
+                                                </>
+                                            ) : 'Create Client Account'}
+                                        </button>
                                     </div>
-
-                                    <div className="space-y-1.5">
-                                        <label className="text-[11px] font-bold text-santas-gray uppercase tracking-wider">Status</label>
-                                        <CustomDropdown
-                                            value={formData.status}
-                                            onChange={(val) => setFormData({ ...formData, status: val })}
-                                            options={[
-                                                { label: 'Ongoing', value: 'Ongoing', icon: <CheckCircle2 size={12} className="text-emerald-400" />, color: 'text-emerald-400' },
-                                                { label: 'Leads', value: 'Leads', icon: <UsersIcon size={12} className="text-[#279da6]" />, color: 'text-[#279da6]' },
-                                                { label: 'Closed', value: 'Closed', icon: <XCircle size={12} className="text-rose-400" />, color: 'text-rose-400' },
-                                                { label: 'Archive', value: 'Archive', icon: <Archive size={12} className="text-[#F28C28]" />, color: 'text-[#F28C28]' },
-                                            ]}
-                                        />
-                                    </div>
-
-                                    <div className="flex items-center gap-3 p-4 bg-[#279da6]/5 border border-[#279da6]/20 rounded-xl mt-2 group cursor-pointer" onClick={() => setFormData({ ...formData, create_folder: !formData.create_folder })}>
-                                        <div className={`w-5 h-5 rounded flex items-center justify-center border transition-all ${formData.create_folder ? 'bg-[#279da6] border-[#279da6]' : 'border-shark bg-shark/50'}`}>
-                                            {formData.create_folder && <Check className="text-white" size={12} strokeWidth={4} />}
-                                        </div>
-                                        <div className="flex-1">
-                                            <p className="text-[11px] font-bold text-iron">Create Google Drive folder?</p>
-                                            <p className="text-[9px] text-storm-gray">Automatically sets up a dedicated folder in your Root storage.</p>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <div className="p-6 bg-[#121214] border-t border-shark flex items-center justify-end gap-3">
-                                    <button type="button" onClick={() => setIsModalOpen(false)} className="px-6 py-2.5 text-xs font-bold text-iron hover:bg-shark rounded-xl transition-all">
-                                        Cancel
-                                    </button>
-                                    <button
-                                        type="submit"
-                                        disabled={isSubmitting}
-                                        className="px-6 py-2.5 text-xs font-bold bg-[#279da6] text-white rounded-xl shadow-lg hover:bg-[#279da6]/90 transition-all flex items-center gap-2 disabled:opacity-50"
-                                    >
-                                        {isSubmitting ? (
-                                            <>
-                                                <Loader2 size={14} className="animate-spin" />
-                                                Creating...
-                                            </>
-                                        ) : 'Create Client Account'}
-                                    </button>
-                                </div>
-                            </form>
+                                </form>
+                            </div>
                         </div>
-                    </div>
-                )}
+                    )
+                }
 
                 {/* --- Edit Client Modal --- */}
-                {isEditModalOpen && (
-                    <div className="fixed inset-0 z-[100] flex items-center justify-center">
-                        <div className="absolute inset-0 bg-black/80 backdrop-blur-sm animate-fade-in" onClick={() => setIsEditModalOpen(false)} />
+                {
+                    isEditModalOpen && (
+                        <div className="fixed inset-0 z-[100] flex items-center justify-center">
+                            <div className="absolute inset-0 bg-black/80 backdrop-blur-sm animate-fade-in" onClick={() => setIsEditModalOpen(false)} />
 
-                        <div className="relative bg-[#18181B] border border-shark w-full max-w-md rounded-2xl shadow-2xl overflow-hidden animate-slide-up mx-4">
-                            <form onSubmit={handleEditSubmit}>
-                                <div className="flex items-center justify-between px-6 py-4 border-b border-shark">
-                                    <h3 className="text-lg font-bold text-iron">Edit Client Account</h3>
-                                    <button type="button" onClick={() => setIsEditModalOpen(false)} className="p-1.5 text-santas-gray hover:text-white hover:bg-shark rounded-lg">
-                                        <X size={18} />
-                                    </button>
-                                </div>
-
-                                <div className="p-6 space-y-5">
-                                    <div className="flex flex-col items-center mb-2">
-                                        <AvatarUpload
-                                            currentAvatarUrl={formData.avatarUrl}
-                                            onUploadSuccess={(url) => setFormData(prev => ({ ...prev, avatarUrl: url }))}
-                                            onRemove={() => setFormData(prev => ({ ...prev, avatarUrl: '' }))}
-                                            name={formData.name || formData.organization}
-                                            email={formData.email}
-                                        />
-                                        <p className="text-[10px] font-bold text-storm-gray uppercase tracking-widest mt-1">Client Photo</p>
+                            <div className="relative bg-[#18181B] border border-shark w-full max-w-md rounded-2xl shadow-2xl overflow-hidden animate-slide-up mx-4">
+                                <form onSubmit={handleEditSubmit}>
+                                    <div className="flex items-center justify-between px-6 py-4 border-b border-shark">
+                                        <h3 className="text-lg font-bold text-iron">Edit Client Account</h3>
+                                        <button type="button" onClick={() => setIsEditModalOpen(false)} className="p-1.5 text-santas-gray hover:text-white hover:bg-shark rounded-lg">
+                                            <X size={18} />
+                                        </button>
                                     </div>
 
-                                    <div className="space-y-1.5">
-                                        <label className="text-[11px] font-bold text-santas-gray uppercase tracking-wider">Company/Organization Name</label>
-                                        <input
-                                            type="text"
-                                            value={formData.organization}
-                                            onChange={(e) => setFormData({ ...formData, organization: e.target.value })}
-                                            className="w-full bg-[#09090B] border border-shark/60 rounded-xl py-2.5 px-4 text-sm text-iron focus:outline-none focus:border-[#279da6]/60"
-                                        />
+                                    <div className="p-6 space-y-5">
+                                        <div className="flex flex-col items-center mb-2">
+                                            <AvatarUpload
+                                                currentAvatarUrl={formData.avatarUrl}
+                                                onUploadSuccess={(url) => setFormData(prev => ({ ...prev, avatarUrl: url }))}
+                                                onRemove={() => setFormData(prev => ({ ...prev, avatarUrl: '' }))}
+                                                name={formData.name || formData.organization}
+                                                email={formData.email}
+                                            />
+                                            <p className="text-[10px] font-bold text-storm-gray uppercase tracking-widest mt-1">Client Photo</p>
+                                        </div>
+
+                                        <div className="space-y-1.5">
+                                            <label className="text-[11px] font-bold text-santas-gray uppercase tracking-wider">Company/Organization Name</label>
+                                            <input
+                                                type="text"
+                                                value={formData.organization}
+                                                onChange={(e) => setFormData({ ...formData, organization: e.target.value })}
+                                                className="w-full bg-[#09090B] border border-shark/60 rounded-xl py-2.5 px-4 text-sm text-iron focus:outline-none focus:border-[#279da6]/60"
+                                            />
+                                        </div>
+
+                                        <div className="space-y-1.5">
+                                            <label className="text-[11px] font-bold text-santas-gray uppercase tracking-wider">Client Name *</label>
+                                            <input
+                                                required
+                                                type="text"
+                                                value={formData.name}
+                                                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                                                className="w-full bg-[#09090B] border border-shark/60 rounded-xl py-2.5 px-4 text-sm text-iron focus:outline-none focus:border-[#279da6]/60"
+                                            />
+                                        </div>
+
+                                        <div className="space-y-1.5">
+                                            <label className="text-[11px] font-bold text-santas-gray uppercase tracking-wider">Email Address *</label>
+                                            <input
+                                                required
+                                                type="email"
+                                                value={formData.email}
+                                                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                                                className="w-full bg-[#09090B] border border-shark/60 rounded-xl py-2.5 px-4 text-sm text-iron focus:outline-none focus:border-[#279da6]/60"
+                                            />
+                                        </div>
+
+                                        <div className="space-y-1.5">
+                                            <label className="text-[11px] font-bold text-santas-gray uppercase tracking-wider">Status</label>
+                                            <CustomDropdown
+                                                value={formData.status}
+                                                onChange={(val) => setFormData({ ...formData, status: val })}
+                                                options={[
+                                                    { label: 'Ongoing', value: 'Ongoing', icon: <CheckCircle2 size={12} className="text-emerald-400" />, color: 'text-emerald-400' },
+                                                    { label: 'Leads', value: 'Leads', icon: <UsersIcon size={12} className="text-[#279da6]" />, color: 'text-[#279da6]' },
+                                                    { label: 'Closed', value: 'Closed', icon: <XCircle size={12} className="text-rose-400" />, color: 'text-rose-400' },
+                                                    { label: 'Archive', value: 'Archive', icon: <Archive size={12} className="text-[#F28C28]" />, color: 'text-[#F28C28]' },
+                                                ]}
+                                            />
+                                        </div>
+
+                                        <p className="text-[10px] text-storm-gray">Note: Password changes are handled via individual account settings.</p>
                                     </div>
 
-                                    <div className="space-y-1.5">
-                                        <label className="text-[11px] font-bold text-santas-gray uppercase tracking-wider">Client Name *</label>
-                                        <input
-                                            required
-                                            type="text"
-                                            value={formData.name}
-                                            onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                                            className="w-full bg-[#09090B] border border-shark/60 rounded-xl py-2.5 px-4 text-sm text-iron focus:outline-none focus:border-[#279da6]/60"
-                                        />
+                                    <div className="p-6 bg-[#121214] border-t border-shark flex items-center justify-end gap-3">
+                                        <button type="button" onClick={() => setIsEditModalOpen(false)} className="px-6 py-2.5 text-xs font-bold text-iron hover:bg-shark rounded-xl transition-all">
+                                            Cancel
+                                        </button>
+                                        <button
+                                            type="submit"
+                                            disabled={isSubmitting}
+                                            className="px-6 py-2.5 text-xs font-bold bg-[#279da6] text-white rounded-xl shadow-lg hover:bg-[#279da6]/90 transition-all flex items-center gap-2 disabled:opacity-50"
+                                        >
+                                            {isSubmitting ? (
+                                                <>
+                                                    <Loader2 size={14} className="animate-spin" />
+                                                    Updating...
+                                                </>
+                                            ) : 'Update Account'}
+                                        </button>
                                     </div>
-
-                                    <div className="space-y-1.5">
-                                        <label className="text-[11px] font-bold text-santas-gray uppercase tracking-wider">Email Address *</label>
-                                        <input
-                                            required
-                                            type="email"
-                                            value={formData.email}
-                                            onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                                            className="w-full bg-[#09090B] border border-shark/60 rounded-xl py-2.5 px-4 text-sm text-iron focus:outline-none focus:border-[#279da6]/60"
-                                        />
-                                    </div>
-
-                                    <div className="space-y-1.5">
-                                        <label className="text-[11px] font-bold text-santas-gray uppercase tracking-wider">Status</label>
-                                        <CustomDropdown
-                                            value={formData.status}
-                                            onChange={(val) => setFormData({ ...formData, status: val })}
-                                            options={[
-                                                { label: 'Ongoing', value: 'Ongoing', icon: <CheckCircle2 size={12} className="text-emerald-400" />, color: 'text-emerald-400' },
-                                                { label: 'Leads', value: 'Leads', icon: <UsersIcon size={12} className="text-[#279da6]" />, color: 'text-[#279da6]' },
-                                                { label: 'Closed', value: 'Closed', icon: <XCircle size={12} className="text-rose-400" />, color: 'text-rose-400' },
-                                                { label: 'Archive', value: 'Archive', icon: <Archive size={12} className="text-[#F28C28]" />, color: 'text-[#F28C28]' },
-                                            ]}
-                                        />
-                                    </div>
-
-                                    <p className="text-[10px] text-storm-gray">Note: Password changes are handled via individual account settings.</p>
-                                </div>
-
-                                <div className="p-6 bg-[#121214] border-t border-shark flex items-center justify-end gap-3">
-                                    <button type="button" onClick={() => setIsEditModalOpen(false)} className="px-6 py-2.5 text-xs font-bold text-iron hover:bg-shark rounded-xl transition-all">
-                                        Cancel
-                                    </button>
-                                    <button
-                                        type="submit"
-                                        disabled={isSubmitting}
-                                        className="px-6 py-2.5 text-xs font-bold bg-[#279da6] text-white rounded-xl shadow-lg hover:bg-[#279da6]/90 transition-all flex items-center gap-2 disabled:opacity-50"
-                                    >
-                                        {isSubmitting ? (
-                                            <>
-                                                <Loader2 size={14} className="animate-spin" />
-                                                Updating...
-                                            </>
-                                        ) : 'Update Account'}
-                                    </button>
-                                </div>
-                            </form>
+                                </form>
+                            </div>
                         </div>
-                    </div>
-                )}
+                    )
+                }
 
                 {/* --- Delete Confirmation Modal --- */}
                 {
@@ -972,7 +1163,8 @@ export default function ClientsClient({ initialClients }: ClientsClientProps) {
                                 </div>
                             </div>
                         </div>
-                    )}
+                    )
+                }
             </div>
         </div>
     );

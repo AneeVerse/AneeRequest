@@ -11,6 +11,10 @@ import {
     Plus,
     ListFilter,
     Shield,
+    Settings,
+    Check,
+    X,
+    Loader2,
     ChevronLeft
 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
@@ -24,6 +28,12 @@ interface HeaderProps {
     activeTab?: string;
     setActiveTab?: (tab: string) => void;
     onCreate?: () => void;
+    onEdit?: () => void;
+    onConfirm?: () => void;
+    onCancel?: () => void;
+    isCreating?: boolean;
+    isSubmitting?: boolean;
+    confirmLabel?: string;
     tabCounts?: Record<string, number>;
     pageSwitcher?: { name: string; path: string }[];
     activePath?: string;
@@ -37,6 +47,12 @@ const Header: React.FC<HeaderProps> = ({
     activeTab,
     setActiveTab,
     onCreate,
+    onEdit,
+    onConfirm,
+    onCancel,
+    isCreating,
+    isSubmitting,
+    confirmLabel = 'Create',
     tabCounts,
     pageSwitcher,
     activePath
@@ -75,9 +91,9 @@ const Header: React.FC<HeaderProps> = ({
                 </button>
 
                 {/* Section Label / User Card */}
-                <div className="flex items-center gap-2 px-3 py-1.5 bg-shark/40 border border-shark rounded-lg shrink-0">
+                <div className="flex items-center gap-2 px-3 py-1.5 bg-shark/40 border border-shark rounded-lg shrink-0 overflow-hidden">
                     {labelIcon || <ListFilter size={16} className="text-[#279da6]" />}
-                    <span className="text-xs font-bold text-iron">{label}</span>
+                    <span className="text-xs font-bold text-iron truncate max-w-[200px]">{label}</span>
                 </div>
 
                 {/* Page Switcher */}
@@ -139,25 +155,62 @@ const Header: React.FC<HeaderProps> = ({
             </div>
 
             {/* Right side: New + Theme + Notification */}
-            <div className="flex items-center gap-3 ml-4">
-                <button
-                    onClick={onCreate}
-                    className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-santas-gray hover:text-white transition-colors group cursor-pointer"
-                >
-                    <Plus size={16} className="group-hover:text-white" />
-                    <span>new</span>
-                </button>
+            <div className="flex items-center gap-3 ml-4 h-full">
+                {isCreating ? (
+                    <div className="flex items-center gap-2 animate-zoom-in">
+                        <button
+                            onClick={onConfirm}
+                            disabled={isSubmitting}
+                            className="flex items-center gap-1.5 px-3 py-1.5 bg-[#279da6] text-white rounded-lg hover:bg-[#279da6]/90 transition-all font-bold text-xs shadow-lg shadow-[#279da6]/20 active:scale-95 disabled:opacity-30"
+                        >
+                            {isSubmitting ? <Loader2 size={14} className="animate-spin" /> : <Check size={14} />}
+                            <span>{confirmLabel}</span>
+                        </button>
+                        <button
+                            onClick={onCancel}
+                            className="p-1.5 bg-white/5 text-storm-gray rounded-lg hover:text-white hover:bg-white/10 transition-all active:scale-95"
+                        >
+                            <X size={14} />
+                        </button>
+                    </div>
+                ) : (
+                    onCreate && (
+                        <button
+                            onClick={onCreate}
+                            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-santas-gray hover:text-white transition-colors group cursor-pointer"
+                        >
+                            <Plus size={16} className="group-hover:text-white" />
+                            <span>new</span>
+                        </button>
+                    )
+                )}
+
                 <div className="h-4 w-[1px] bg-shark" />
+
                 <button
                     onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
                     className="p-2 text-santas-gray hover:text-white rounded-lg hover:bg-shark/40 transition-all cursor-pointer"
                 >
                     {theme === 'dark' ? <Moon size={18} /> : <Sun size={18} />}
                 </button>
+
                 <button className="p-2 text-santas-gray hover:text-white rounded-lg hover:bg-shark/40 transition-all relative cursor-pointer">
                     <Bell size={18} />
                     <div className="absolute top-2 right-2.5 w-1.5 h-1.5 bg-red-500 rounded-full border border-black" />
                 </button>
+
+                {onEdit && (
+                    <>
+                        <div className="h-4 w-[1px] bg-shark" />
+                        <button
+                            onClick={onEdit}
+                            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-santas-gray hover:text-white transition-colors group cursor-pointer"
+                        >
+                            <Settings size={16} className="group-hover:text-white" />
+                            <span>edit</span>
+                        </button>
+                    </>
+                )}
             </div>
         </header>
     );
