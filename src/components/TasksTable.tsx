@@ -246,10 +246,12 @@ export default function TasksTable({
                                         {(index + 1).toString().padStart(2, '0')}
                                     </td>
                                     <td
-                                        className="px-6 py-4.5 font-black text-iron border-r border-shark/60 group-hover:text-[#279da6] whitespace-nowrap cursor-pointer transition-colors"
+                                        className="px-6 py-4.5 font-black text-iron border-r border-shark/60 group-hover:text-[#279da6] transition-colors cursor-pointer"
                                         onClick={() => router.push(`/tasks/${item.slug || item.id}`)}
                                     >
-                                        {item.title}
+                                        <div className="line-clamp-2 min-w-[200px] leading-snug">
+                                            {item.title}
+                                        </div>
                                     </td>
                                     {showRequestColumn && (
                                         <td className="px-6 py-4.5 text-santas-gray border-r border-shark/60 whitespace-nowrap">

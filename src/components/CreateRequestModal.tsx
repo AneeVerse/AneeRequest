@@ -33,9 +33,10 @@ interface CreateRequestModalProps {
     isOpen: boolean;
     onClose: () => void;
     onSuccess: () => void;
+    initialClientId?: string;
 }
 
-export default function CreateRequestModal({ isOpen, onClose, onSuccess }: CreateRequestModalProps) {
+export default function CreateRequestModal({ isOpen, onClose, onSuccess, initialClientId }: CreateRequestModalProps) {
     const router = useRouter();
     const [step, setStep] = useState(1);
     const [clients, setClients] = useState<Profile[]>([]);
@@ -50,10 +51,16 @@ export default function CreateRequestModal({ isOpen, onClose, onSuccess }: Creat
     const [createFolder, setCreateFolder] = useState(false);
 
     useEffect(() => {
-        if (isOpen && step === 1) {
+        if (isOpen) {
             fetchClients();
+            if (initialClientId) {
+                setSelectedClientId(initialClientId);
+                setStep(2);
+            } else {
+                setStep(1);
+            }
         }
-    }, [isOpen]);
+    }, [isOpen, initialClientId]);
 
     const fetchClients = async () => {
         setIsLoadingClients(true);

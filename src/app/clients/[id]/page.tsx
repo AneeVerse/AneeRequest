@@ -54,6 +54,8 @@ import RequestsTable from '@/components/RequestsTable';
 import TasksTable from '@/components/TasksTable';
 import { RequestItem } from '@/lib/data/requests';
 import { TaskItem } from '@/lib/data/tasks';
+import CreateRequestModal from '@/components/CreateRequestModal';
+import CreateTaskModal from '@/components/CreateTaskModal';
 
 interface Client {
     id: string;
@@ -166,6 +168,45 @@ export default function ClientDetailPage() {
     const [isUpdating, setIsUpdating] = useState(false);
     const [showSettingsPassword, setShowSettingsPassword] = useState(false);
     const [status, setStatus] = useState<{ type: 'success' | 'error', message: string } | null>(null);
+
+    // Modal States
+    const [isCreateRequestModalOpen, setIsCreateRequestModalOpen] = useState(false);
+    const [isCreateTaskModalOpen, setIsCreateTaskModalOpen] = useState(false);
+
+    const handleCreateNew = () => {
+        if (activeTab === 'Requests') {
+            setIsCreateRequestModalOpen(true);
+        } else if (activeTab === 'Tasks') {
+            setIsCreateTaskModalOpen(true);
+        }
+    };
+
+    const handleDataRefresh = async () => {
+        setIsLoadingData(true);
+        try {
+            const [reqRes, tasksRes] = await Promise.all([
+                fetch(`/api/requests`).then(res => res.json()),
+                fetch(`/api/tasks`).then(res => res.json())
+            ]);
+
+            const clientRequests = Array.isArray(reqRes)
+                ? reqRes.filter((r: RequestItem) => r.client?.id === client?.profile_id)
+                : [];
+            setRequests(clientRequests);
+
+            const requestIds = new Set(clientRequests.map(r => r.id));
+            const clientTasks = Array.isArray(tasksRes)
+                ? tasksRes.filter((t: TaskItem) =>
+                    t.request_links?.some(link => requestIds.has(link.request?.id))
+                )
+                : [];
+            setTasks(clientTasks);
+        } catch (error) {
+            console.error('Error refreshing data:', error);
+        } finally {
+            setIsLoadingData(false);
+        }
+    };
 
     // Auto-hide status after 5 seconds
     useEffect(() => {
@@ -624,13 +665,15 @@ export default function ClientDetailPage() {
                         </div>
 
                         <div className="flex items-center gap-3">
-                            <button
-                                onClick={() => { /* Implementation for creating new item if needed */ }}
-                                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-santas-gray hover:text-white transition-colors group cursor-pointer"
-                            >
-                                <Plus size={16} className="group-hover:text-white" />
-                                <span>new</span>
-                            </button>
+                            {(activeTab === 'Requests' || activeTab === 'Tasks') && (
+                                <button
+                                    onClick={handleCreateNew}
+                                    className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-santas-gray hover:text-white transition-colors group cursor-pointer"
+                                >
+                                    <Plus size={16} className="group-hover:text-white" />
+                                    <span>new</span>
+                                </button>
+                            )}
                             <div className="h-4 w-[1px] bg-shark" />
                             <button
                                 onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
@@ -1215,6 +1258,22 @@ export default function ClientDetailPage() {
                     previewUrl: previewUrl(previewFile) || undefined,
                     type: previewFile.mimeType
                 } : null}
+            />
+            {/* Modals */}
+            <CreateRequestModal
+                isOpen={isCreateRequestModalOpen}
+                onClose={() => setIsCreateRequestModalOpen(false)}
+                onSuccess={handleDataRefresh}
+                initialClientId={client.profile_id || undefined}
+            />
+
+            <CreateTaskModal
+                isOpen={isCreateTaskModalOpen}
+                onClose={() => setIsCreateTaskModalOpen(false)}
+                onSuccess={handleDataRefresh}
+                profiles={profiles}
+                teamMembers={teamMembers}
+                requests={requests}
             />
         </div>
     );
