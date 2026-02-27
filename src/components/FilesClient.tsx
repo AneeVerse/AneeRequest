@@ -38,6 +38,10 @@ import {
     Presentation,
     ClipboardList,
     MoreHorizontal,
+    LayoutGrid,
+    List,
+    Settings2,
+    ChevronDown,
 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 
@@ -122,13 +126,20 @@ export default function FilesClient({ initialRootId, initialDriveItems, initialD
         initialValue: string;
         onConfirm: (name: string) => void;
     }>({ isOpen: false, type: '', title: '', initialValue: '', onConfirm: () => { } });
+    const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
+    const [filterType, setFilterType] = useState<string>('all');
+    const [isFilterMenuOpen, setIsFilterMenuOpen] = useState(false);
+    const filterMenuRef = useRef<HTMLDivElement>(null);
     const newMenuRef = useRef<HTMLDivElement>(null);
 
-    // Close new menu on click outside
+    // Close menus on click outside
     useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {
             if (newMenuRef.current && !newMenuRef.current.contains(event.target as Node)) {
                 setIsNewMenuOpen(false);
+            }
+            if (filterMenuRef.current && !filterMenuRef.current.contains(event.target as Node)) {
+                setIsFilterMenuOpen(false);
             }
         };
         document.addEventListener('mousedown', handleClickOutside);
@@ -417,10 +428,19 @@ export default function FilesClient({ initialRootId, initialDriveItems, initialD
         return `${(bytes / 1048576).toFixed(1)} MB`;
     };
 
-    // ─── Filtered items for search ───
-    const filteredItems = driveItems.filter(item =>
-        item.name.toLowerCase().includes(searchQuery.toLowerCase())
-    );
+    // ─── Filtered items for search and type ───
+    const filteredItems = driveItems.filter(item => {
+        const matchesSearch = item.name.toLowerCase().includes(searchQuery.toLowerCase());
+        const matchesType = filterType === 'all' ||
+            (filterType === 'folder' && item.isFolder) ||
+            (filterType === 'doc' && item.mimeType === 'application/vnd.google-apps.document') ||
+            (filterType === 'sheet' && item.mimeType === 'application/vnd.google-apps.spreadsheet') ||
+            (filterType === 'slide' && item.mimeType === 'application/vnd.google-apps.presentation') ||
+            (filterType === 'pdf' && item.mimeType.includes('pdf')) ||
+            (filterType === 'image' && item.mimeType.startsWith('image/'));
+
+        return matchesSearch && matchesType;
+    });
 
     return (
         <div className={`flex h-screen bg-[#09090B] text-iron font-sans overflow-hidden transition-all duration-500 ${isImpersonating ? 'p-1.5' : ''}`} style={isImpersonating ? { backgroundColor: '#0f2b1a' } : undefined}>
@@ -599,6 +619,7 @@ export default function FilesClient({ initialRootId, initialDriveItems, initialD
                                     )}
                                 </div>
                             )}
+
                             <input type="file" ref={fileInputRef} className="hidden" onChange={handleUpload} />
                             <input type="file" ref={folderInputRef} className="hidden" onChange={handleUpload} {...{ webkitdirectory: "", directory: "" } as any} />
                         </div>
@@ -623,17 +644,80 @@ export default function FilesClient({ initialRootId, initialDriveItems, initialD
                         <div className="p-6">
                             {/* Toolbar */}
                             <div className="flex items-center justify-between mb-6">
-                                <div className="relative w-80">
-                                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-santas-gray" size={16} />
-                                    <input
-                                        type="text"
-                                        placeholder="Search files and folders"
-                                        value={searchQuery}
-                                        onChange={(e) => setSearchQuery(e.target.value)}
-                                        className="w-full bg-[#09090B] border border-shark/50 rounded-lg py-2 pl-10 pr-4 text-xs text-iron placeholder:text-storm-gray focus:outline-none focus:border-[#279da6]/40 transition-all"
-                                    />
+                                <div className="flex items-center gap-4">
+                                    <div className="relative w-80">
+                                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-santas-gray" size={16} />
+                                        <input
+                                            type="text"
+                                            placeholder="Search files and folders"
+                                            value={searchQuery}
+                                            onChange={(e) => setSearchQuery(e.target.value)}
+                                            className="w-full bg-[#09090B] border border-shark/50 rounded-lg py-2 pl-10 pr-4 text-xs text-iron placeholder:text-storm-gray focus:outline-none focus:border-[#279da6]/40 transition-all"
+                                        />
+                                    </div>
                                 </div>
-                                {/* Toolbar actions moved to header */}
+
+                                <div className="flex items-center gap-2">
+                                    {/* Filters Dropdown */}
+                                    <div className="relative" ref={filterMenuRef}>
+                                        <button
+                                            onClick={() => setIsFilterMenuOpen(!isFilterMenuOpen)}
+                                            className={`flex items-center gap-2 px-3 py-1.5 rounded-lg border border-shark/60 hover:border-[#279da6]/40 hover:bg-white/5 transition-all group ${filterType !== 'all' ? 'bg-[#279da6]/10 border-[#279da6]/40 text-[#279da6]' : 'text-santas-gray'}`}
+                                        >
+                                            <Filter size={14} className={filterType !== 'all' ? 'text-[#279da6]' : 'group-hover:text-white'} />
+                                            <span className="text-[11px] font-bold uppercase tracking-tight">
+                                                {filterType === 'all' ? 'Filters' : filterType}
+                                            </span>
+                                            <ChevronDown size={12} className={`transition-transform duration-300 ${isFilterMenuOpen ? 'rotate-180' : ''}`} />
+                                        </button>
+
+                                        {isFilterMenuOpen && (
+                                            <div className="absolute top-full right-0 mt-2 w-48 bg-[#18181B] border border-shark/60 rounded-xl shadow-2xl py-2 z-[60] animate-zoom-in backdrop-blur-xl bg-opacity-95">
+                                                {[
+                                                    { id: 'all', label: 'All Files', icon: <FileIcon size={14} /> },
+                                                    { id: 'folder', label: 'Folders', icon: <FolderOpen size={14} /> },
+                                                    { id: 'doc', label: 'Google Docs', icon: <FileText size={14} className="text-blue-500" /> },
+                                                    { id: 'sheet', label: 'Google Sheets', icon: <Table size={14} className="text-green-500" /> },
+                                                    { id: 'slide', label: 'Google Slides', icon: <Presentation size={14} className="text-yellow-500" /> },
+                                                    { id: 'image', label: 'Images', icon: <ImageIcon size={14} className="text-emerald-500" /> },
+                                                    { id: 'pdf', label: 'PDFs', icon: <FileText size={14} className="text-rose-500" /> },
+                                                ].map((opt) => (
+                                                    <button
+                                                        key={opt.id}
+                                                        onClick={() => { setFilterType(opt.id); setIsFilterMenuOpen(false); }}
+                                                        className={`w-full flex items-center gap-3 px-4 py-2 hover:bg-white/5 text-xs transition-colors ${filterType === opt.id ? 'text-[#279da6] bg-[#279da6]/5 font-bold' : 'text-iron'}`}
+                                                    >
+                                                        <span className="opacity-80 group-hover:opacity-100">{opt.icon}</span>
+                                                        <span>{opt.label}</span>
+                                                        {filterType === opt.id && <Check size={12} className="ml-auto" />}
+                                                    </button>
+                                                ))}
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    <div className="h-4 w-[1px] bg-shark mx-1" />
+
+                                    {/* View Mode Switcher */}
+                                    <div className="flex items-center bg-[#09090B] border border-shark/60 rounded-xl p-0.5 overflow-hidden">
+                                        <button
+                                            onClick={() => setViewMode('list')}
+                                            className={`p-1.5 rounded-lg transition-all flex items-center gap-2 ${viewMode === 'list' ? 'bg-[#279da6] text-white shadow-lg shadow-[#279da6]/20' : 'text-santas-gray hover:text-white hover:bg-white/5'}`}
+                                            title="List view"
+                                        >
+                                            <List size={14} />
+                                            {viewMode === 'list' && <span className="text-[10px] font-black uppercase pr-1">List</span>}
+                                        </button>
+                                        <button
+                                            onClick={() => setViewMode('grid')}
+                                            className={`p-1.5 rounded-lg transition-all flex items-center gap-2 ${viewMode === 'grid' ? 'bg-[#279da6] text-white shadow-lg shadow-[#279da6]/20' : 'text-santas-gray hover:text-white hover:bg-white/5'}`}
+                                            title="Grid view"
+                                        >
+                                            <LayoutGrid size={14} />
+                                            {viewMode === 'grid' && <span className="text-[10px] font-black uppercase pr-1">Grid</span>}
+                                        </button>
+                                    </div>
+                                </div>
                             </div>
 
                             {/* New Folder Creation Input */}
@@ -678,111 +762,205 @@ export default function FilesClient({ initialRootId, initialDriveItems, initialD
                                     <p className="text-[10px] text-storm-gray uppercase tracking-widest">Upload your first file or create a subfolder.</p>
                                 </div>
                             ) : (
-                                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-8 gap-6">
-                                    {filteredItems.map((item) => (
-                                        <div
-                                            key={item.id}
-                                            className="group relative flex flex-col items-center gap-4 p-6 rounded-3xl border border-shark/40 hover:border-[#279da6]/30 bg-[#09090B]/40 hover:bg-[#279da6]/5 transition-all cursor-pointer text-center overflow-hidden"
-                                            onClick={() => item.isFolder ? navigateToSubfolder(item) : (setPreviewFile({ ...item, url: item.webViewLink, previewUrl: item.previewUrl, type: item.mimeType }), setIsPreviewOpen(true))}
-                                        >
-                                            {/* Glow Background */}
-                                            <div className="absolute inset-0 bg-gradient-to-b from-white/[0.02] to-transparent pointer-events-none" />
+                                <div className="animate-fade-in">
+                                    {viewMode === 'grid' ? (
+                                        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-8 gap-6">
+                                            {filteredItems.map((item) => (
+                                                <div
+                                                    key={item.id}
+                                                    className="group relative flex flex-col items-center gap-4 p-6 rounded-3xl border border-shark/40 hover:border-[#279da6]/30 bg-[#09090B]/40 hover:bg-[#279da6]/5 transition-all cursor-pointer text-center overflow-hidden"
+                                                    onClick={() => item.isFolder ? navigateToSubfolder(item) : (setPreviewFile({ ...item, url: item.webViewLink, previewUrl: item.previewUrl, type: item.mimeType }), setIsPreviewOpen(true))}
+                                                >
+                                                    {/* Glow Background */}
+                                                    <div className="absolute inset-0 bg-gradient-to-b from-white/[0.02] to-transparent pointer-events-none" />
 
-                                            <div className="relative z-10 group-hover:scale-110 transition-transform duration-300">
-                                                {getFileIcon(item.mimeType, item.name)}
-                                            </div>
+                                                    <div className="relative z-10 group-hover:scale-110 transition-transform duration-300">
+                                                        {getFileIcon(item.mimeType, item.name)}
+                                                    </div>
 
-                                            <div className="relative z-10 w-full min-w-0">
-                                                <div className="space-y-1">
-                                                    <p className="text-[11px] font-black text-white truncate px-2 group-hover:text-[#279da6] transition-all uppercase tracking-tight">{item.name}</p>
-                                                    <div className="flex items-center justify-center gap-2">
-                                                        <span className="text-[9px] font-black text-storm-gray uppercase tracking-widest">{getFileTypeLabel(item.mimeType)}</span>
-                                                        {dbEnrichment.clients.some(c => (c.org || c.name) === item.name) && (
-                                                            <>
-                                                                <div className="w-1 h-1 rounded-full bg-cyan-500/40" />
-                                                                <span className="text-[9px] font-black text-cyan-400 uppercase tracking-widest">CLIENT</span>
-                                                            </>
-                                                        )}
-                                                        {dbEnrichment.requests.some(r => r.title === item.name) && (
-                                                            <>
-                                                                <div className="w-1 h-1 rounded-full bg-blue-500/40" />
-                                                                <span className="text-[9px] font-black text-blue-400 uppercase tracking-widest">REQUEST</span>
-                                                            </>
-                                                        )}
-                                                        {!item.isFolder && item.size && (
-                                                            <>
-                                                                <div className="w-1 h-1 rounded-full bg-shark" />
-                                                                <span className="text-[9px] font-black text-storm-gray uppercase tracking-widest">{formatFileSize(item.size)}</span>
-                                                            </>
+                                                    <div className="relative z-10 w-full min-w-0">
+                                                        <div className="space-y-1">
+                                                            <p className="text-[11px] font-black text-white truncate px-2 group-hover:text-[#279da6] transition-all uppercase tracking-tight">{item.name}</p>
+                                                            <div className="flex items-center justify-center gap-2">
+                                                                <span className="text-[9px] font-black text-storm-gray uppercase tracking-widest">{getFileTypeLabel(item.mimeType)}</span>
+                                                                {dbEnrichment.clients.some(c => (c.org || c.name) === item.name) && (
+                                                                    <>
+                                                                        <div className="w-1 h-1 rounded-full bg-cyan-500/40" />
+                                                                        <span className="text-[9px] font-black text-cyan-400 uppercase tracking-widest">CLIENT</span>
+                                                                    </>
+                                                                )}
+                                                                {dbEnrichment.requests.some(r => r.title === item.name) && (
+                                                                    <>
+                                                                        <div className="w-1 h-1 rounded-full bg-blue-500/40" />
+                                                                        <span className="text-[9px] font-black text-blue-400 uppercase tracking-widest">REQUEST</span>
+                                                                    </>
+                                                                )}
+                                                                {!item.isFolder && item.size && (
+                                                                    <>
+                                                                        <div className="w-1 h-1 rounded-full bg-shark" />
+                                                                        <span className="text-[9px] font-black text-storm-gray uppercase tracking-widest">{formatFileSize(item.size)}</span>
+                                                                    </>
+                                                                )}
+                                                            </div>
+                                                        </div>
+                                                    </div>
+
+                                                    {/* Floating Actions */}
+                                                    <div className="absolute top-3 right-3 flex flex-col gap-2 opacity-0 group-hover:opacity-100 transition-all translate-x-2 group-hover:translate-x-0">
+                                                        <button
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                setNamingModal({
+                                                                    isOpen: true,
+                                                                    type: 'rename',
+                                                                    title: `Rename ${item.isFolder ? 'Folder' : 'File'}`,
+                                                                    initialValue: item.name,
+                                                                    onConfirm: async (newName) => {
+                                                                        if (!newName.trim()) return;
+                                                                        try {
+                                                                            const res = await fetch('/api/drive/browse', {
+                                                                                method: 'PATCH',
+                                                                                headers: { 'Content-Type': 'application/json' },
+                                                                                body: JSON.stringify({
+                                                                                    id: item.id,
+                                                                                    newName: newName.trim(),
+                                                                                    isFolder: item.isFolder
+                                                                                })
+                                                                            });
+                                                                            if (res.ok) {
+                                                                                refreshFolder();
+                                                                                router.refresh();
+                                                                            }
+                                                                        } catch (e) {
+                                                                            console.error('Rename error:', e);
+                                                                        } finally {
+                                                                            setNamingModal(prev => ({ ...prev, isOpen: false }));
+                                                                        }
+                                                                    }
+                                                                });
+                                                            }}
+                                                            className="p-2 rounded-xl bg-shark/80 hover:bg-[#279da6]/20 text-storm-gray hover:text-[#279da6] hover:scale-110 transition-all border border-shark"
+                                                        >
+                                                            <Pencil size={12} />
+                                                        </button>
+                                                        <button
+                                                            onClick={(e) => { e.stopPropagation(); setDeleteTarget(item); setIsDeleting(true); }}
+                                                            className="p-2 rounded-xl bg-shark/80 hover:bg-rose-500/20 text-storm-gray hover:text-rose-400 hover:scale-110 transition-all border border-shark"
+                                                        >
+                                                            <Trash2 size={12} />
+                                                        </button>
+                                                        {!item.isFolder && (
+                                                            <a
+                                                                href={item.webContentLink || item.webViewLink}
+                                                                target="_blank"
+                                                                rel="noopener noreferrer"
+                                                                onClick={(e) => e.stopPropagation()}
+                                                                className="p-2 rounded-xl bg-shark/80 hover:bg-white/10 text-storm-gray hover:text-white hover:scale-110 transition-all border border-shark"
+                                                            >
+                                                                <Download size={12} />
+                                                            </a>
                                                         )}
                                                     </div>
                                                 </div>
-                                            </div>
-
-                                            {/* Floating Actions */}
-                                            <div className="absolute top-3 right-3 flex flex-col gap-2 opacity-0 group-hover:opacity-100 transition-all translate-x-2 group-hover:translate-x-0">
-                                                <button
-                                                    onClick={(e) => {
-                                                        e.stopPropagation();
-                                                        setNamingModal({
-                                                            isOpen: true,
-                                                            type: 'rename',
-                                                            title: `Rename ${item.isFolder ? 'Folder' : 'File'}`,
-                                                            initialValue: item.name,
-                                                            onConfirm: async (newName) => {
-                                                                if (!newName.trim()) return;
-                                                                try {
-                                                                    const res = await fetch('/api/drive/browse', {
-                                                                        method: 'PATCH',
-                                                                        headers: { 'Content-Type': 'application/json' },
-                                                                        body: JSON.stringify({
-                                                                            id: item.id,
-                                                                            newName: newName.trim(),
-                                                                            isFolder: item.isFolder
-                                                                        })
-                                                                    });
-                                                                    if (res.ok) {
-                                                                        refreshFolder();
-                                                                        router.refresh();
-                                                                    }
-                                                                } catch (e) {
-                                                                    console.error('Rename error:', e);
-                                                                } finally {
-                                                                    setNamingModal(prev => ({ ...prev, isOpen: false }));
-                                                                }
-                                                            }
-                                                        });
-                                                    }}
-                                                    className="p-2 rounded-xl bg-shark/80 hover:bg-[#279da6]/20 text-storm-gray hover:text-[#279da6] hover:scale-110 transition-all border border-shark"
-                                                >
-                                                    <Pencil size={12} />
-                                                </button>
-                                                <button
-                                                    onClick={(e) => { e.stopPropagation(); setDeleteTarget(item); setIsDeleting(true); }}
-                                                    className="p-2 rounded-xl bg-shark/80 hover:bg-rose-500/20 text-storm-gray hover:text-rose-400 hover:scale-110 transition-all border border-shark"
-                                                >
-                                                    <Trash2 size={12} />
-                                                </button>
-                                                {!item.isFolder && (
-                                                    <a
-                                                        href={item.webContentLink || item.webViewLink}
-                                                        target="_blank"
-                                                        rel="noopener noreferrer"
-                                                        onClick={(e) => e.stopPropagation()}
-                                                        className="p-2 rounded-xl bg-shark/80 hover:bg-white/10 text-storm-gray hover:text-white hover:scale-110 transition-all border border-shark"
-                                                    >
-                                                        <Download size={12} />
-                                                    </a>
-                                                )}
-                                            </div>
+                                            ))}
                                         </div>
-                                    ))}
+                                    ) : (
+                                        /* List View */
+                                        <div className="flex flex-col gap-1 border border-shark/40 rounded-2xl overflow-hidden bg-[#09090B]/20">
+                                            {/* Header */}
+                                            <div className="flex items-center px-4 py-3 bg-white/5 border-b border-shark/60 text-[10px] font-black text-storm-gray uppercase tracking-widest">
+                                                <div className="flex-1">Name</div>
+                                                <div className="w-32 hidden md:block">Type</div>
+                                                <div className="w-24 hidden sm:block">Size</div>
+                                                <div className="w-32 text-right">Actions</div>
+                                            </div>
+                                            {/* Items */}
+                                            {filteredItems.map((item) => (
+                                                <div
+                                                    key={item.id}
+                                                    onClick={() => item.isFolder ? navigateToSubfolder(item) : (setPreviewFile({ ...item, url: item.webViewLink, previewUrl: item.previewUrl, type: item.mimeType }), setIsPreviewOpen(true))}
+                                                    className="flex items-center px-4 py-3 hover:bg-white/5 transition-all cursor-pointer group border-b border-shark/20 last:border-none"
+                                                >
+                                                    <div className="flex-1 flex items-center gap-3 min-w-0">
+                                                        <div className="shrink-0 scale-75 origin-left">
+                                                            {getFileIcon(item.mimeType, item.name)}
+                                                        </div>
+                                                        <p className="text-xs font-bold text-iron truncate uppercase tracking-tight group-hover:text-[#279da6] transition-colors">{item.name}</p>
+                                                        {dbEnrichment.clients.some(c => (c.org || c.name) === item.name) && (
+                                                            <span className="text-[8px] font-black bg-cyan-500/10 text-cyan-400 px-1.5 py-0.5 rounded border border-cyan-500/20 uppercase">CLIENT</span>
+                                                        )}
+                                                    </div>
+                                                    <div className="w-32 hidden md:block">
+                                                        <span className="text-[9px] font-black text-storm-gray uppercase tracking-widest">{getFileTypeLabel(item.mimeType)}</span>
+                                                    </div>
+                                                    <div className="w-24 hidden sm:block">
+                                                        <span className="text-[9px] font-black text-storm-gray uppercase tracking-widest">{!item.isFolder && item.size ? formatFileSize(item.size) : '--'}</span>
+                                                    </div>
+                                                    <div className="w-32 flex items-center justify-end gap-1 opacity-100 transition-opacity">
+                                                        <button
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                setNamingModal({
+                                                                    isOpen: true,
+                                                                    type: 'rename',
+                                                                    title: `Rename ${item.isFolder ? 'Folder' : 'File'}`,
+                                                                    initialValue: item.name,
+                                                                    onConfirm: async (newName) => {
+                                                                        if (!newName.trim()) return;
+                                                                        try {
+                                                                            const res = await fetch('/api/drive/browse', {
+                                                                                method: 'PATCH',
+                                                                                headers: { 'Content-Type': 'application/json' },
+                                                                                body: JSON.stringify({
+                                                                                    id: item.id,
+                                                                                    newName: newName.trim(),
+                                                                                    isFolder: item.isFolder
+                                                                                })
+                                                                            });
+                                                                            if (res.ok) {
+                                                                                refreshFolder();
+                                                                                router.refresh();
+                                                                            }
+                                                                        } catch (e) {
+                                                                            console.error('Rename error:', e);
+                                                                        } finally {
+                                                                            setNamingModal(prev => ({ ...prev, isOpen: false }));
+                                                                        }
+                                                                    }
+                                                                });
+                                                            }}
+                                                            className="p-1.5 rounded-lg hover:bg-[#279da6]/20 text-storm-gray hover:text-[#279da6] transition-all"
+                                                        >
+                                                            <Pencil size={12} />
+                                                        </button>
+                                                        <button
+                                                            onClick={(e) => { e.stopPropagation(); setDeleteTarget(item); setIsDeleting(true); }}
+                                                            className="p-1.5 rounded-lg hover:bg-rose-500/20 text-storm-gray hover:text-rose-400 transition-all"
+                                                        >
+                                                            <Trash2 size={12} />
+                                                        </button>
+                                                        {!item.isFolder && (
+                                                            <a
+                                                                href={item.webContentLink || item.webViewLink}
+                                                                target="_blank"
+                                                                rel="noopener noreferrer"
+                                                                onClick={(e) => e.stopPropagation()}
+                                                                className="p-1.5 rounded-lg hover:bg-white/10 text-storm-gray hover:text-white transition-all"
+                                                            >
+                                                                <Download size={12} />
+                                                            </a>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
                                 </div>
                             )}
                         </div>
                     </main>
                 </div>
-            </div >
+            </div>
 
             {/* Delete Confirmation */}
             {
@@ -794,7 +972,7 @@ export default function FilesClient({ initialRootId, initialDriveItems, initialD
                             </div>
                             <h3 className="text-xl font-black text-white text-center mb-2 uppercase tracking-tight">Confirm Deletion</h3>
                             <p className="text-sm font-bold text-storm-gray text-center mb-8 uppercase tracking-widest text-[10px]">
-                                Are you sure you want to delete <span className="text-iron">"{deleteTarget.name}"</span>? This action cannot be undone.
+                                Are you sure you want to delete <span className="text-iron">"{deleteTarget?.name}"</span>? This action cannot be undone.
                             </p>
                             <div className="flex gap-3">
                                 <button
@@ -823,65 +1001,67 @@ export default function FilesClient({ initialRootId, initialDriveItems, initialD
             />
 
             {/* Name Input Modal */}
-            {namingModal.isOpen && (
-                <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
-                    <div
-                        className="absolute inset-0 bg-black/60 backdrop-blur-sm animate-fade-in"
-                        onClick={() => setNamingModal(prev => ({ ...prev, isOpen: false }))}
-                    />
-                    <div className="bg-[#18181B] border border-shark/60 w-full max-w-md rounded-2xl shadow-2xl relative z-10 overflow-hidden animate-zoom-in">
-                        <div className="px-6 py-5 border-b border-shark">
-                            <h3 className="text-lg font-black text-iron tracking-tight uppercase">
-                                {namingModal.title}
-                            </h3>
-                            <button
-                                onClick={() => setNamingModal(prev => ({ ...prev, isOpen: false }))}
-                                className="absolute top-5 right-5 p-1 text-storm-gray hover:text-white transition-colors"
-                            >
-                                <X size={20} />
-                            </button>
-                        </div>
+            {
+                namingModal.isOpen && (
+                    <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
+                        <div
+                            className="absolute inset-0 bg-black/60 backdrop-blur-sm animate-fade-in"
+                            onClick={() => setNamingModal(prev => ({ ...prev, isOpen: false }))}
+                        />
+                        <div className="bg-[#18181B] border border-shark/60 w-full max-w-md rounded-2xl shadow-2xl relative z-10 overflow-hidden animate-zoom-in">
+                            <div className="px-6 py-5 border-b border-shark">
+                                <h3 className="text-lg font-black text-iron tracking-tight uppercase">
+                                    {namingModal.title}
+                                </h3>
+                                <button
+                                    onClick={() => setNamingModal(prev => ({ ...prev, isOpen: false }))}
+                                    className="absolute top-5 right-5 p-1 text-storm-gray hover:text-white transition-colors"
+                                >
+                                    <X size={20} />
+                                </button>
+                            </div>
 
-                        <div className="p-6">
-                            <label className="block text-[10px] font-black text-storm-gray uppercase tracking-widest mb-2 ml-1">
-                                Enter Name
-                            </label>
-                            <input
-                                autoFocus
-                                type="text"
-                                defaultValue={namingModal.initialValue}
-                                onKeyDown={(e) => {
-                                    if (e.key === 'Enter') {
-                                        namingModal.onConfirm(e.currentTarget.value);
-                                    } else if (e.key === 'Escape') {
-                                        setNamingModal(prev => ({ ...prev, isOpen: false }));
-                                    }
-                                }}
-                                className="w-full bg-shark/40 border border-shark rounded-xl px-4 py-3 text-iron focus:outline-none focus:border-[#279da6] transition-all placeholder:text-storm-gray/40 font-medium"
-                                placeholder="e.g. Project Proposal"
-                            />
-                        </div>
+                            <div className="p-6">
+                                <label className="block text-[10px] font-black text-storm-gray uppercase tracking-widest mb-2 ml-1">
+                                    Enter Name
+                                </label>
+                                <input
+                                    autoFocus
+                                    type="text"
+                                    defaultValue={namingModal.initialValue}
+                                    onKeyDown={(e) => {
+                                        if (e.key === 'Enter') {
+                                            namingModal.onConfirm(e.currentTarget.value);
+                                        } else if (e.key === 'Escape') {
+                                            setNamingModal(prev => ({ ...prev, isOpen: false }));
+                                        }
+                                    }}
+                                    className="w-full bg-shark/40 border border-shark rounded-xl px-4 py-3 text-iron focus:outline-none focus:border-[#279da6] transition-all placeholder:text-storm-gray/40 font-medium"
+                                    placeholder="e.g. Project Proposal"
+                                />
+                            </div>
 
-                        <div className="px-6 py-4 bg-shark/20 flex items-center justify-end gap-3">
-                            <button
-                                onClick={() => setNamingModal(prev => ({ ...prev, isOpen: false }))}
-                                className="px-5 py-2 text-xs font-black text-storm-gray hover:text-white transition-colors uppercase tracking-widest"
-                            >
-                                Cancel
-                            </button>
-                            <button
-                                onClick={(e) => {
-                                    const input = (e.currentTarget.parentElement?.previousElementSibling?.querySelector('input') as HTMLInputElement);
-                                    if (input) namingModal.onConfirm(input.value);
-                                }}
-                                className="px-6 py-2 bg-[#279da6] text-white rounded-xl text-xs font-black hover:bg-[#279da6]/90 transition-all shadow-lg shadow-[#279da6]/20 uppercase tracking-widest active:scale-95"
-                            >
-                                Create
-                            </button>
+                            <div className="px-6 py-4 bg-shark/20 flex items-center justify-end gap-3">
+                                <button
+                                    onClick={() => setNamingModal(prev => ({ ...prev, isOpen: false }))}
+                                    className="px-5 py-2 text-xs font-black text-storm-gray hover:text-white transition-colors uppercase tracking-widest"
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    onClick={(e) => {
+                                        const input = (e.currentTarget.parentElement?.previousElementSibling?.querySelector('input') as HTMLInputElement);
+                                        if (input) namingModal.onConfirm(input.value);
+                                    }}
+                                    className="px-6 py-2 bg-[#279da6] text-white rounded-xl text-xs font-black hover:bg-[#279da6]/90 transition-all shadow-lg shadow-[#279da6]/20 uppercase tracking-widest active:scale-95"
+                                >
+                                    Create
+                                </button>
+                            </div>
                         </div>
                     </div>
-                </div>
-            )}
+                )
+            }
         </div >
     );
 }
