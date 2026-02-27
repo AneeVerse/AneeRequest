@@ -37,6 +37,7 @@ interface HeaderProps {
     tabCounts?: Record<string, number>;
     pageSwitcher?: { name: string; path: string }[];
     activePath?: string;
+    children?: React.ReactNode;
 }
 
 const Header: React.FC<HeaderProps> = ({
@@ -55,7 +56,8 @@ const Header: React.FC<HeaderProps> = ({
     confirmLabel = 'Create',
     tabCounts,
     pageSwitcher,
-    activePath
+    activePath,
+    children
 }) => {
     const { isImpersonating, viewAsProfile, stopImpersonating } = useAuth();
     const router = useRouter();
@@ -95,6 +97,8 @@ const Header: React.FC<HeaderProps> = ({
                     {labelIcon || <ListFilter size={16} className="text-[#279da6]" />}
                     <span className="text-xs font-bold text-iron truncate max-w-[200px]">{label}</span>
                 </div>
+
+                {children}
 
                 {/* Page Switcher */}
                 {pageSwitcher && (

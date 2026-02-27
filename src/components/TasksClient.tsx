@@ -1,28 +1,35 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Sidebar from '@/components/Sidebar';
 import Header from '@/components/Header';
 import {
     Search,
     ChevronDown,
-    Calendar as CalendarIcon,
-    Plus as PlusIcon,
+    Calendar,
     Filter,
     SlidersHorizontal,
     LayoutList,
     Box,
-    Check,
     SortAsc,
-    SortDesc
+    SortDesc,
+    Loader2,
+    Pencil,
+    FileText,
+    Flag,
+    UserCog,
+    CircleDashed,
+    RefreshCcw,
+    AlertCircle,
+    CheckCircle2,
+    User as UserIcon,
+    X
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
-import CreateTaskModal from '@/components/CreateTaskModal';
 import CustomDropdown from '@/components/CustomDropdown';
 import TasksTable from '@/components/TasksTable';
 import { TaskItem } from '@/lib/data/tasks';
-import { CircleDashed, RefreshCcw, AlertCircle, CheckCircle2, Flag, User as UserIcon } from 'lucide-react';
 
 interface TasksClientProps {
     initialTasks: TaskItem[];
@@ -40,7 +47,8 @@ export default function TasksClient({ initialTasks, profiles, teamMembers, reque
     const [activeTab, setActiveTab] = useState('All Tasks');
     const [tasks, setTasks] = useState<TaskItem[]>(initialTasks);
     const [searchQuery, setSearchQuery] = useState('');
-    const [showCreateModal, setShowCreateModal] = useState(false);
+    const [isCreating, setIsCreating] = useState(false);
+    const [isSubmitting, setIsSubmitting] = useState(false);
     const [isFilterOpen, setIsFilterOpen] = useState(false);
     const [filters, setFilters] = useState({
         assigned_to: '',
@@ -48,6 +56,17 @@ export default function TasksClient({ initialTasks, profiles, teamMembers, reque
         priority: '',
         due_date: ''
     });
+
+    const [taskFormData, setTaskFormData] = useState({
+        title: '',
+        priority: 'Medium',
+        description: '',
+        assigned_to: '',
+        due_date: '',
+        request_ids: [] as string[]
+    });
+
+    const inlineTaskInputRef = React.useRef<HTMLInputElement>(null);
     const [sortConfig, setSortConfig] = useState<{ key: string; direction: 'asc' | 'desc' | null }>({
         key: 'created_at',
         direction: 'desc'
@@ -102,8 +121,40 @@ export default function TasksClient({ initialTasks, profiles, teamMembers, reque
         }
     };
 
-    const handleTaskCreated = (newTask: TaskItem) => {
-        setTasks([newTask, ...tasks]);
+    useEffect(() => {
+        if (isCreating && inlineTaskInputRef.current) {
+            inlineTaskInputRef.current.focus();
+        }
+    }, [isCreating]);
+
+    const handleInlineCreate = async () => {
+        if (!taskFormData.title.trim()) return;
+        setIsSubmitting(true);
+
+        try {
+            const res = await fetch('/api/tasks', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    ...taskFormData,
+                    status: 'Todo'
+                })
+            });
+
+            if (res.ok) {
+                setIsCreating(false);
+                setTaskFormData({ title: '', priority: 'Medium', description: '', assigned_to: '', due_date: '', request_ids: [] });
+                router.refresh();
+            } else {
+                const err = await res.json();
+                alert(err.error || 'Failed to create task');
+            }
+        } catch (e) {
+            console.error(e);
+            alert('Error creating task');
+        } finally {
+            setIsSubmitting(false);
+        }
     };
 
     // Data visibility logic
@@ -210,12 +261,150 @@ export default function TasksClient({ initialTasks, profiles, teamMembers, reque
                             activeTab={activeTab}
                             setActiveTab={setActiveTab}
                             tabCounts={tabCounts}
-                            onCreate={displayProfile?.role === 'super_admin' ? () => setShowCreateModal(true) : undefined}
+                            onCreate={displayProfile?.role === 'super_admin' ? () => setIsCreating(true) : undefined}
+                            isCreating={isCreating}
+                            onConfirm={handleInlineCreate}
+                            onCancel={() => {
+                                setIsCreating(false);
+                                setTaskFormData({ title: '', priority: 'Medium', description: '', assigned_to: '', due_date: '', request_ids: [] });
+                            }}
+                            isSubmitting={isSubmitting}
                         />
                     </div>
 
                     <main className="flex-1 overflow-y-auto custom-scrollbar bg-[#18181B]">
                         <div className="p-8">
+
+                            {/* Inline Creation Row */}
+                            <div
+                                className={`overflow-hidden transition-all duration-700 ease-[cubic-bezier(0.16,1,0.3,1)] ${isCreating
+                                    ? 'max-h-[600px] opacity-100 mb-8 translate-y-0 scale-100 blur-0'
+                                    : 'max-h-0 opacity-0 mb-0 -translate-y-4 scale-95 blur-md pointer-events-none'
+                                    }`}
+                            >
+                                <div className="p-1 bg-[#121214]/90 backdrop-blur-2xl border border-[#279da6]/30 rounded-[2rem] shadow-[0_25px_60px_rgba(0,0,0,0.4),0_0_40px_rgba(39,157,166,0.08)] ring-1 ring-white/5 relative overflow-hidden">
+                                    <div className="p-6 space-y-6">
+                                        <div className="flex items-start gap-6">
+                                            <div className="flex flex-col items-center gap-3 shrink-0">
+                                                <div className="w-14 h-14 rounded-2xl bg-[#279da6]/10 flex items-center justify-center text-[#279da6] shadow-inner ring-1 ring-[#279da6]/20">
+                                                    <Box size={28} />
+                                                </div>
+                                                <p className="text-[10px] font-black text-storm-gray uppercase tracking-widest">Task</p>
+                                            </div>
+
+                                            <div className="flex-1 space-y-6">
+                                                {/* Top Row: Title & Priority & Assignee */}
+                                                <div className="grid grid-cols-1 md:grid-cols-4 gap-5">
+                                                    <div className="space-y-1.5 md:col-span-2">
+                                                        <label className="text-[10px] font-black text-storm-gray uppercase tracking-widest ml-1">Task Title</label>
+                                                        <div className="relative group">
+                                                            <Pencil size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-storm-gray group-focus-within:text-[#279da6] transition-colors" />
+                                                            <input
+                                                                ref={inlineTaskInputRef}
+                                                                type="text"
+                                                                value={taskFormData.title}
+                                                                onChange={(e) => setTaskFormData({ ...taskFormData, title: e.target.value })}
+                                                                placeholder="What needs to be done?"
+                                                                className="w-full bg-black/40 border border-shark/50 rounded-xl py-2.5 pl-10 pr-4 text-xs text-iron placeholder:text-storm-gray focus:outline-none focus:border-[#279da6]/40 transition-all font-bold"
+                                                            />
+                                                        </div>
+                                                    </div>
+                                                    <div className="space-y-1.5">
+                                                        <label className="text-[10px] font-black text-storm-gray uppercase tracking-widest ml-1">Priority</label>
+                                                        <CustomDropdown
+                                                            value={taskFormData.priority}
+                                                            onChange={(val: any) => setTaskFormData({ ...taskFormData, priority: val })}
+                                                            options={[
+                                                                { label: 'Low', value: 'Low', icon: <div className="w-2 h-2 rounded-full bg-storm-gray" /> },
+                                                                { label: 'Medium', value: 'Medium', icon: <div className="w-2 h-2 rounded-full bg-malibu" /> },
+                                                                { label: 'High', value: 'High', icon: <div className="w-2 h-2 rounded-full bg-amber-500" /> },
+                                                                { label: 'Critical', value: 'Critical', icon: <div className="w-2 h-2 rounded-full bg-rose-500" /> }
+                                                            ]}
+                                                        />
+                                                    </div>
+                                                    <div className="space-y-1.5">
+                                                        <label className="text-[10px] font-black text-storm-gray uppercase tracking-widest ml-1">Assignee</label>
+                                                        <CustomDropdown
+                                                            value={taskFormData.assigned_to}
+                                                            onChange={(val: any) => setTaskFormData({ ...taskFormData, assigned_to: val })}
+                                                            options={[
+                                                                { label: 'Select Member', value: '' },
+                                                                ...teamMembers.map((m: any) => ({
+                                                                    label: m.full_name || (m as any).name,
+                                                                    value: m.profile_id || m.id,
+                                                                    icon: <UserCog size={14} className="text-[#279da6]" />
+                                                                }))
+                                                            ]}
+                                                        />
+                                                    </div>
+                                                </div>
+
+                                                {/* Bottom Row: Description & Due Date & Requests */}
+                                                <div className="grid grid-cols-1 md:grid-cols-4 gap-5">
+                                                    <div className="space-y-1.5 md:col-span-2">
+                                                        <label className="text-[10px] font-black text-storm-gray uppercase tracking-widest ml-1">Description</label>
+                                                        <div className="relative group/input">
+                                                            <FileText size={14} className="absolute left-3.5 top-3 text-storm-gray group-focus-within/input:text-[#279da6] transition-colors" />
+                                                            <textarea
+                                                                value={taskFormData.description}
+                                                                onChange={(e) => setTaskFormData({ ...taskFormData, description: e.target.value })}
+                                                                placeholder="Add details about this task..."
+                                                                className="w-full bg-black/40 border border-shark/50 rounded-xl py-2.5 pl-10 pr-4 text-xs text-iron placeholder:text-storm-gray focus:outline-none focus:border-[#279da6]/40 transition-all font-bold min-h-[42px] max-h-[120px] custom-scrollbar"
+                                                            />
+                                                        </div>
+                                                    </div>
+                                                    <div className="space-y-1.5">
+                                                        <label className="text-[10px] font-black text-storm-gray uppercase tracking-widest ml-1">Due Date</label>
+                                                        <div className="relative group/input">
+                                                            <Calendar size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-storm-gray group-focus-within/input:text-[#279da6] transition-colors z-10" />
+                                                            <input
+                                                                type="date"
+                                                                value={taskFormData.due_date}
+                                                                onChange={(e) => setTaskFormData({ ...taskFormData, due_date: e.target.value })}
+                                                                className="w-full bg-black/40 border border-shark/50 rounded-xl py-2.5 pl-10 pr-4 text-xs text-iron focus:outline-none focus:border-[#279da6]/40 transition-all font-bold [color-scheme:dark]"
+                                                            />
+                                                        </div>
+                                                    </div>
+                                                    <div className="space-y-1.5">
+                                                        <label className="text-[10px] font-black text-storm-gray uppercase tracking-widest ml-1">Link to Requests</label>
+                                                        <CustomDropdown
+                                                            value={''} // Multiple selection not handled by CustomDropdown easily, but we'll show available requests
+                                                            onChange={(val: any) => {
+                                                                if (val && !taskFormData.request_ids.includes(val)) {
+                                                                    setTaskFormData({ ...taskFormData, request_ids: [...taskFormData.request_ids, val] });
+                                                                }
+                                                            }}
+                                                            options={[
+                                                                { label: 'Select Requests', value: '' },
+                                                                ...requests.map((r: any) => ({
+                                                                    label: r.title,
+                                                                    value: r.id,
+                                                                    icon: <FileText size={14} className={taskFormData.request_ids.includes(r.id) ? 'text-[#279da6]' : 'text-storm-gray'} />
+                                                                }))
+                                                            ]}
+                                                        />
+                                                        {taskFormData.request_ids.length > 0 && (
+                                                            <div className="flex flex-wrap gap-1 mt-1">
+                                                                {taskFormData.request_ids.map(id => {
+                                                                    const req = requests.find((r: any) => r.id === id);
+                                                                    return (
+                                                                        <div key={id} className="flex items-center gap-1 px-2 py-0.5 bg-[#279da6]/10 border border-[#279da6]/20 rounded-md text-[9px] font-bold text-[#279da6]">
+                                                                            <span className="truncate max-w-[80px]">{req?.title || 'Unknown'}</span>
+                                                                            <button onClick={() => setTaskFormData({ ...taskFormData, request_ids: taskFormData.request_ids.filter(rid => rid !== id) })}>
+                                                                                <X size={10} />
+                                                                            </button>
+                                                                        </div>
+                                                                    );
+                                                                })}
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
 
                             {/* Toolbar */}
                             <div className="flex items-center justify-between mb-6">
@@ -355,14 +544,6 @@ export default function TasksClient({ initialTasks, profiles, teamMembers, reque
                 </div>
             </div>
 
-            <CreateTaskModal
-                isOpen={showCreateModal}
-                onClose={() => setShowCreateModal(false)}
-                onSuccess={handleTaskCreated}
-                profiles={profiles}
-                teamMembers={teamMembers}
-                requests={requests}
-            />
         </div >
     );
 }

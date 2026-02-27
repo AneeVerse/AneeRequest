@@ -1,17 +1,25 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Sidebar from '@/components/Sidebar';
 import Header from '@/components/Header';
 import {
-    LayoutList
+    LayoutList,
+    Plus,
+    Pencil,
+    Check,
+    X,
+    Loader2,
+    Calendar,
+    FileText,
+    Building
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import ChatDrawer from '@/components/ChatDrawer';
-import CreateRequestModal from '@/components/CreateRequestModal';
-import type { RequestItem, Profile, TeamMember } from '@/lib/data/requests';
 import RequestsTable from '@/components/RequestsTable';
+import CustomDropdown from '@/components/CustomDropdown';
+import type { RequestItem, Profile, TeamMember } from '@/lib/data/requests';
 
 interface RequestsClientProps {
     initialRequests: RequestItem[];
@@ -32,8 +40,20 @@ export default function RequestsClient({
     const [activeTab, setActiveTab] = useState('All');
     const [selectedRequest, setSelectedRequest] = useState<RequestItem | null>(null);
     const [isChatOpen, setIsChatOpen] = useState(false);
-    const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+    const [isCreating, setIsCreating] = useState(false);
+    const [isSubmitting, setIsSubmitting] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
+
+    const [requestFormData, setRequestFormData] = useState({
+        title: '',
+        priority: 'Medium',
+        description: '',
+        due_date: '',
+        client_id: '',
+        create_folder: false
+    });
+
+    const inlineRequestInputRef = React.useRef<HTMLInputElement>(null);
 
     const subTabs = ['All', 'Assigned', 'Open', 'Unassigned', 'Completed'];
 
@@ -47,6 +67,42 @@ export default function RequestsClient({
         setProfiles(initialProfiles);
         setTeamMembers(initialTeamMembers);
     }, [initialRequests, initialProfiles, initialTeamMembers]);
+
+    useEffect(() => {
+        if (isCreating && inlineRequestInputRef.current) {
+            inlineRequestInputRef.current.focus();
+        }
+    }, [isCreating]);
+
+    const handleInlineCreate = async () => {
+        if (!requestFormData.title.trim()) return;
+        setIsSubmitting(true);
+
+        try {
+            const res = await fetch('/api/requests', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    ...requestFormData,
+                    status: 'Todo'
+                })
+            });
+
+            if (res.ok) {
+                setIsCreating(false);
+                setRequestFormData({ title: '', priority: 'Medium', description: '', due_date: '', client_id: '', create_folder: false });
+                router.refresh();
+            } else {
+                const err = await res.json();
+                alert(err.error || 'Failed to create request');
+            }
+        } catch (e) {
+            console.error(e);
+            alert('Error creating request');
+        } finally {
+            setIsSubmitting(false);
+        }
+    };
 
     const handleUpdateField = async (requestId: string, field: string, value: any) => {
         const originalRequests = [...requests];
@@ -86,11 +142,6 @@ export default function RequestsClient({
             console.error(`Error updating ${field}:`, error);
             setRequests(originalRequests);
         }
-    };
-
-    const handleRequestCreated = () => {
-        // Revalidate requests after creating a new one
-        router.refresh();
     };
 
     // Data visibility logic
@@ -150,12 +201,135 @@ export default function RequestsClient({
                             activeTab={activeTab}
                             setActiveTab={setActiveTab}
                             tabCounts={tabCounts}
-                            onCreate={() => setIsCreateModalOpen(true)}
+                            onCreate={() => setIsCreating(true)}
+                            isCreating={isCreating}
+                            onConfirm={handleInlineCreate}
+                            onCancel={() => {
+                                setIsCreating(false);
+                                setRequestFormData({ title: '', priority: 'Medium', description: '', due_date: '', client_id: '', create_folder: false });
+                            }}
+                            isSubmitting={isSubmitting}
                         />
                     </div>
 
                     <main className="flex-1 overflow-y-auto custom-scrollbar bg-[#18181B]">
                         <div className="p-8">
+
+                            {/* Inline Creation Row */}
+                            <div
+                                className={`overflow-hidden transition-all duration-700 ease-[cubic-bezier(0.16,1,0.3,1)] ${isCreating
+                                    ? 'max-h-[500px] opacity-100 mb-8 translate-y-0 scale-100 blur-0'
+                                    : 'max-h-0 opacity-0 mb-0 -translate-y-4 scale-95 blur-md pointer-events-none'
+                                    }`}
+                            >
+                                <div className="p-1 bg-[#121214]/90 backdrop-blur-2xl border border-[#279da6]/30 rounded-[2rem] shadow-[0_25px_60px_rgba(0,0,0,0.4),0_0_40px_rgba(39,157,166,0.08)] ring-1 ring-white/5 relative overflow-hidden">
+                                    <div className="p-6 space-y-6">
+                                        <div className="flex items-start gap-6">
+                                            <div className="flex flex-col items-center gap-3 shrink-0">
+                                                <div className="w-14 h-14 rounded-2xl bg-[#279da6]/10 flex items-center justify-center text-[#279da6] shadow-inner ring-1 ring-[#279da6]/20">
+                                                    <FileText size={28} />
+                                                </div>
+                                                <p className="text-[10px] font-black text-storm-gray uppercase tracking-widest">Request</p>
+                                            </div>
+
+                                            <div className="flex-1 space-y-6">
+                                                {/* Top Row: Title & Priority & Client */}
+                                                <div className="grid grid-cols-1 md:grid-cols-4 gap-5">
+                                                    <div className="space-y-1.5 md:col-span-2">
+                                                        <label className="text-[10px] font-black text-storm-gray uppercase tracking-widest ml-1">Request Title</label>
+                                                        <div className="relative group">
+                                                            <Pencil size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-storm-gray group-focus-within:text-[#279da6] transition-colors" />
+                                                            <input
+                                                                ref={inlineRequestInputRef}
+                                                                type="text"
+                                                                value={requestFormData.title}
+                                                                onChange={(e) => setRequestFormData({ ...requestFormData, title: e.target.value })}
+                                                                placeholder="What do you need?"
+                                                                className="w-full bg-black/40 border border-shark/50 rounded-xl py-2.5 pl-10 pr-4 text-xs text-iron placeholder:text-storm-gray focus:outline-none focus:border-[#279da6]/40 transition-all font-bold"
+                                                            />
+                                                        </div>
+                                                    </div>
+                                                    <div className="space-y-1.5">
+                                                        <label className="text-[10px] font-black text-storm-gray uppercase tracking-widest ml-1">Priority</label>
+                                                        <CustomDropdown
+                                                            value={requestFormData.priority}
+                                                            onChange={(val: any) => setRequestFormData({ ...requestFormData, priority: val })}
+                                                            options={[
+                                                                { label: 'Low', value: 'Low', icon: <div className="w-2 h-2 rounded-full bg-storm-gray" /> },
+                                                                { label: 'Medium', value: 'Medium', icon: <div className="w-2 h-2 rounded-full bg-malibu" /> },
+                                                                { label: 'High', value: 'High', icon: <div className="w-2 h-2 rounded-full bg-amber-500" /> },
+                                                                { label: 'Critical', value: 'Critical', icon: <div className="w-2 h-2 rounded-full bg-rose-500" /> }
+                                                            ]}
+                                                        />
+                                                    </div>
+                                                    <div className="space-y-1.5">
+                                                        <label className="text-[10px] font-black text-storm-gray uppercase tracking-widest ml-1">Client</label>
+                                                        <CustomDropdown
+                                                            value={requestFormData.client_id}
+                                                            onChange={(val: any) => setRequestFormData({ ...requestFormData, client_id: val })}
+                                                            options={[
+                                                                { label: 'Select Client', value: '' },
+                                                                ...profiles.filter(p => p.role === 'client').map(p => ({
+                                                                    label: p.full_name || p.email,
+                                                                    value: p.id,
+                                                                    icon: <Building size={14} className="text-[#279da6]" />
+                                                                }))
+                                                            ]}
+                                                        />
+                                                    </div>
+                                                </div>
+
+                                                {/* Bottom Row: Description & Due Date & Folder */}
+                                                <div className="grid grid-cols-1 md:grid-cols-4 gap-5">
+                                                    <div className="space-y-1.5 md:col-span-2">
+                                                        <label className="text-[10px] font-black text-storm-gray uppercase tracking-widest ml-1">Description</label>
+                                                        <div className="relative group/input">
+                                                            <FileText size={14} className="absolute left-3.5 top-3 text-storm-gray group-focus-within/input:text-[#279da6] transition-colors" />
+                                                            <textarea
+                                                                value={requestFormData.description}
+                                                                onChange={(e) => setRequestFormData({ ...requestFormData, description: e.target.value })}
+                                                                placeholder="Add details about your request..."
+                                                                className="w-full bg-black/40 border border-shark/50 rounded-xl py-2.5 pl-10 pr-4 text-xs text-iron placeholder:text-storm-gray focus:outline-none focus:border-[#279da6]/40 transition-all font-bold min-h-[42px] max-h-[120px] custom-scrollbar"
+                                                            />
+                                                        </div>
+                                                    </div>
+                                                    <div className="space-y-1.5">
+                                                        <label className="text-[10px] font-black text-storm-gray uppercase tracking-widest ml-1">Due Date</label>
+                                                        <div className="relative group/input">
+                                                            <Calendar size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-storm-gray group-focus-within/input:text-[#279da6] transition-colors z-10" />
+                                                            <input
+                                                                type="date"
+                                                                value={requestFormData.due_date}
+                                                                onChange={(e) => setRequestFormData({ ...requestFormData, due_date: e.target.value })}
+                                                                className="w-full bg-black/40 border border-shark/50 rounded-xl py-2.5 pl-10 pr-4 text-xs text-iron focus:outline-none focus:border-[#279da6]/40 transition-all font-bold [color-scheme:dark]"
+                                                            />
+                                                        </div>
+                                                    </div>
+                                                    <div className="space-y-1.5">
+                                                        <label className="text-[10px] font-black text-storm-gray uppercase tracking-widest ml-1">Google Drive</label>
+                                                        <button
+                                                            onClick={() => setRequestFormData({ ...requestFormData, create_folder: !requestFormData.create_folder })}
+                                                            className={`w-full flex items-center justify-between gap-3 px-4 py-2.5 rounded-xl border transition-all ${requestFormData.create_folder
+                                                                ? 'bg-[#279da6]/10 border-[#279da6]/40 text-white'
+                                                                : 'bg-black/40 border-shark/50 text-storm-gray hover:border-shark/80'
+                                                                }`}
+                                                        >
+                                                            <div className="flex items-center gap-2">
+                                                                <Plus size={14} className={requestFormData.create_folder ? 'text-[#279da6]' : ''} />
+                                                                <span className="text-[11px] font-bold">Create Folder</span>
+                                                            </div>
+                                                            <div className={`w-8 h-4 rounded-full relative transition-colors ${requestFormData.create_folder ? 'bg-[#279da6]' : 'bg-shark'}`}>
+                                                                <div className={`absolute top-0.5 w-3 h-3 rounded-full bg-white transition-all ${requestFormData.create_folder ? 'right-0.5' : 'left-0.5'}`} />
+                                                            </div>
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
                             <RequestsTable
                                 requests={tabFilteredRequests}
                                 profiles={profiles}
@@ -175,12 +349,6 @@ export default function RequestsClient({
                 onClose={() => setIsChatOpen(false)}
                 requestId={selectedRequest?.id || ''}
                 requestTitle={selectedRequest?.title || ''}
-            />
-
-            <CreateRequestModal
-                isOpen={isCreateModalOpen}
-                onClose={() => setIsCreateModalOpen(false)}
-                onSuccess={handleRequestCreated}
             />
         </div >
     );

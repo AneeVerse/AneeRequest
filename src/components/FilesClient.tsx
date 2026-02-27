@@ -450,31 +450,31 @@ export default function FilesClient({ initialRootId, initialDriveItems, initialD
 
             <div className="flex-1 flex flex-col min-w-0 bg-[#09090B] relative">
                 <div className={`flex-1 flex flex-col min-w-0 bg-[#121214] rounded-t-2xl overflow-hidden border-t border-l border-r mt-6 mr-6 transition-all duration-500 ${isImpersonating ? 'border-[#22c55e]/60 shadow-[0_0_15px_rgba(34,197,94,0.15)]' : 'border-shark'}`}>
-                    <div className="h-16 flex items-center justify-between px-6 shrink-0 z-30 border-b border-shark">
-                        <div className="flex items-center gap-4 flex-1 overflow-hidden">
-                            {driveBreadcrumbs.length > 1 && (
-                                <button
-                                    onClick={() => navigateToBreadcrumb(driveBreadcrumbs.length - 2)}
-                                    className="p-1 text-santas-gray hover:text-white transition-colors group active:scale-95"
-                                    title="Go to parent folder"
-                                >
-                                    <ChevronLeft size={20} className="group-hover:-translate-x-0.5 transition-transform" />
-                                </button>
-                            )}
-                            <button
-                                onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
-                                className="p-1 text-santas-gray hover:text-white transition-colors"
-                            >
-                                <PanelLeft size={18} />
-                            </button>
-
-                            <div className="flex items-center gap-2 px-3 py-1.5 bg-shark/40 border border-shark rounded-lg shrink-0">
-                                <HardDrive size={16} className="text-[#279da6]" />
-                                <span className="text-[11px] font-bold text-iron uppercase tracking-tight">Files</span>
-                            </div>
-
+                    <div className="border-b border-shark">
+                        <Header
+                            onToggleSidebar={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
+                            label="Files"
+                            labelIcon={<HardDrive size={16} className="text-[#279da6]" />}
+                            onCreate={() => setIsNewMenuOpen(!isNewMenuOpen)}
+                            isCreating={isCreatingFolder}
+                            onConfirm={handleCreateFolder}
+                            onCancel={() => {
+                                setIsCreatingFolder(false);
+                                setNewFolderName('');
+                            }}
+                            isSubmitting={isDriveLoading}
+                        >
                             {/* Breadcrumbs */}
                             <div className="flex items-center gap-2 text-sm ml-2 overflow-hidden">
+                                {driveBreadcrumbs.length > 1 && (
+                                    <button
+                                        onClick={() => navigateToBreadcrumb(driveBreadcrumbs.length - 2)}
+                                        className="p-1 text-santas-gray hover:text-white transition-colors group active:scale-95"
+                                        title="Go to parent folder"
+                                    >
+                                        <ChevronLeft size={20} className="group-hover:-translate-x-0.5 transition-transform" />
+                                    </button>
+                                )}
                                 {driveBreadcrumbs.map((crumb, i) => (
                                     <React.Fragment key={crumb.id}>
                                         {i > 0 && <ChevronRight size={14} className="text-storm-gray shrink-0" />}
@@ -487,171 +487,95 @@ export default function FilesClient({ initialRootId, initialDriveItems, initialD
                                     </React.Fragment>
                                 ))}
                             </div>
-                        </div>
 
-                        <div className="flex items-center gap-2 relative" ref={newMenuRef}>
                             {/* Consolidated Actions */}
-                            <button
-                                onClick={refreshFolder}
-                                className="p-1.5 text-santas-gray hover:text-white transition-all shrink-0"
-                                title="Refresh"
-                            >
-                                <RefreshCw size={14} className={isDriveLoading ? 'animate-spin' : ''} />
-                            </button>
+                            <div className="flex items-center gap-2 ml-auto">
+                                <button
+                                    onClick={refreshFolder}
+                                    className="p-1.5 text-santas-gray hover:text-white transition-all shrink-0"
+                                    title="Refresh"
+                                >
+                                    <RefreshCw size={14} className={isDriveLoading ? 'animate-spin' : ''} />
+                                </button>
 
-                            {isUploading && uploadStatus && (
-                                <div className="flex items-center gap-2 px-3 py-1.5 bg-[#279da6]/10 border border-[#279da6]/20 rounded-lg animate-pulse">
-                                    <Loader2 size={14} className="text-[#279da6] animate-spin" />
-                                    <span className="text-[10px] font-bold text-[#279da6] uppercase tracking-wider truncate max-w-[200px]">
-                                        {uploadStatus}
-                                    </span>
-                                </div>
-                            )}
-
-                            <div className="h-4 w-[1px] bg-shark mx-1" />
-
-                            {isCreatingFolder ? (
-                                <div className="flex items-center gap-2 animate-zoom-in">
-                                    <button
-                                        onClick={handleCreateFolder}
-                                        className="flex items-center gap-1.5 px-3 py-1.5 bg-[#279da6] text-white rounded-lg hover:bg-[#279da6]/90 transition-all font-bold text-xs shadow-lg shadow-[#279da6]/20 active:scale-95"
-                                    >
-                                        <Check size={14} />
-                                        <span>Create</span>
-                                    </button>
-                                    <button
-                                        onClick={() => { setIsCreatingFolder(false); setNewFolderName(''); }}
-                                        className="p-1.5 bg-white/5 text-storm-gray rounded-lg hover:text-white hover:bg-white/10 transition-all active:scale-95"
-                                    >
-                                        <X size={14} />
-                                    </button>
-                                </div>
-                            ) : (
-                                <div className="relative">
-                                    <button
-                                        onClick={() => setIsNewMenuOpen(!isNewMenuOpen)}
-                                        className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold transition-all group rounded-lg ${isNewMenuOpen ? 'bg-[#279da6] text-white shadow-lg shadow-[#279da6]/20' : 'text-santas-gray hover:text-white hover:bg-white/5'}`}
-                                    >
-                                        <Plus size={16} className={isNewMenuOpen ? 'text-white' : 'group-hover:text-white'} />
-                                        <span>new</span>
-                                    </button>
-
-                                    {/* Google Drive Style "New" Menu */}
-                                    {isNewMenuOpen && (
-                                        <div className="absolute top-full right-0 mt-2 w-64 bg-[#18181B] border border-shark/60 rounded-xl shadow-2xl py-2 z-[100] animate-zoom-in backdrop-blur-xl bg-opacity-95 overflow-hidden">
-                                            {/* Folder Item */}
-                                            <button
-                                                onClick={() => { setIsCreatingFolder(true); setIsNewMenuOpen(false); }}
-                                                className="w-full flex items-center justify-between px-4 py-2 hover:bg-white/5 text-iron transition-colors group"
-                                            >
-                                                <div className="flex items-center gap-3">
-                                                    <FolderPlus size={16} className="text-storm-gray group-hover:text-[#279da6] transition-colors" />
-                                                    <span className="text-xs font-medium">New folder</span>
-                                                </div>
-                                                <span className="text-[10px] text-storm-gray opacity-40 group-hover:opacity-100 transition-opacity uppercase tracking-widest px-1.5 border border-shark/40 rounded bg-shark/20">⌘F</span>
-                                            </button>
-
-                                            <div className="h-[1px] bg-shark/40 my-1" />
-
-                                            {/* Upload Items */}
-                                            <button
-                                                onClick={() => { fileInputRef.current?.click(); setIsNewMenuOpen(false); }}
-                                                className="w-full flex items-center justify-between px-4 py-2 hover:bg-white/5 text-iron transition-colors group"
-                                            >
-                                                <div className="flex items-center gap-3">
-                                                    <FileUp size={16} className="text-storm-gray group-hover:text-[#279da6] transition-colors" />
-                                                    <span className="text-xs font-medium">File upload</span>
-                                                </div>
-                                                <span className="text-[10px] text-storm-gray opacity-40 group-hover:opacity-100 transition-opacity uppercase tracking-widest px-1.5 border border-shark/40 rounded bg-shark/20">⌘U</span>
-                                            </button>
-                                            <button
-                                                onClick={() => { folderInputRef.current?.click(); setIsNewMenuOpen(false); }}
-                                                className="w-full flex items-center justify-between px-4 py-2 hover:bg-white/5 text-iron transition-colors group"
-                                            >
-                                                <div className="flex items-center gap-3">
-                                                    <FolderUp size={16} className="text-storm-gray group-hover:text-[#279da6] transition-colors" />
-                                                    <span className="text-xs font-medium">Folder upload</span>
-                                                </div>
-                                                <span className="text-[10px] text-storm-gray opacity-40 group-hover:opacity-100 transition-opacity uppercase tracking-widest px-1.5 border border-shark/40 rounded bg-shark/20">⌘I</span>
-                                            </button>
-
-                                            <div className="h-[1px] bg-shark/40 my-1" />
-
-                                            {/* Google Workspace Apps */}
-                                            <button
-                                                onClick={() => { handleCreateGoogleFile('document'); setIsNewMenuOpen(false); }}
-                                                className="w-full flex items-center justify-between px-4 py-2 hover:bg-white/5 text-iron transition-colors group"
-                                            >
-                                                <div className="flex items-center gap-3">
-                                                    <div className="w-5 h-5 rounded bg-blue-500/10 border border-blue-500/20 flex items-center justify-center text-[10px] font-black text-blue-500 shadow-sm">
-                                                        <FileText size={12} />
-                                                    </div>
-                                                    <span className="text-xs font-medium">Google Docs</span>
-                                                </div>
-                                                <ChevronRight size={12} className="text-storm-gray opacity-40 group-hover:opacity-100" />
-                                            </button>
-                                            <button
-                                                onClick={() => { handleCreateGoogleFile('spreadsheet'); setIsNewMenuOpen(false); }}
-                                                className="w-full flex items-center justify-between px-4 py-2 hover:bg-white/5 text-iron transition-colors group"
-                                            >
-                                                <div className="flex items-center gap-3">
-                                                    <div className="w-5 h-5 rounded bg-green-500/10 border border-green-500/20 flex items-center justify-center text-[10px] font-black text-green-500 shadow-sm">
-                                                        <Table className="size-3" />
-                                                    </div>
-                                                    <span className="text-xs font-medium">Google Sheets</span>
-                                                </div>
-                                                <ChevronRight size={12} className="text-storm-gray opacity-40 group-hover:opacity-100" />
-                                            </button>
-                                            <button
-                                                onClick={() => { handleCreateGoogleFile('presentation'); setIsNewMenuOpen(false); }}
-                                                className="w-full flex items-center justify-between px-4 py-2 hover:bg-white/5 text-iron transition-colors group"
-                                            >
-                                                <div className="flex items-center gap-3">
-                                                    <div className="w-5 h-5 rounded bg-yellow-500/10 border border-yellow-500/20 flex items-center justify-center text-[10px] font-black text-yellow-500 shadow-sm">
-                                                        <Presentation className="size-3" />
-                                                    </div>
-                                                    <span className="text-xs font-medium">Google Slides</span>
-                                                </div>
-                                                <ChevronRight size={12} className="text-storm-gray opacity-40 group-hover:opacity-100" />
-                                            </button>
-                                            <button
-                                                onClick={() => { handleCreateGoogleFile('form'); setIsNewMenuOpen(false); }}
-                                                className="w-full flex items-center justify-between px-4 py-2 hover:bg-white/5 text-iron transition-colors group"
-                                            >
-                                                <div className="flex items-center gap-3">
-                                                    <div className="w-5 h-5 rounded bg-purple-500/10 border border-purple-500/20 flex items-center justify-center text-[10px] font-black text-purple-500 shadow-sm">
-                                                        <ClipboardList size={12} />
-                                                    </div>
-                                                    <span className="text-xs font-medium">Google Forms</span>
-                                                </div>
-                                                <ChevronRight size={12} className="text-storm-gray opacity-40 group-hover:opacity-100" />
-                                            </button>
-                                        </div>
-                                    )}
-                                </div>
-                            )}
-
-                            <input type="file" ref={fileInputRef} className="hidden" onChange={handleUpload} />
-                            <input type="file" ref={folderInputRef} className="hidden" onChange={handleUpload} {...{ webkitdirectory: "", directory: "" } as any} />
-                        </div>
-
-                        {/* Right side global elements */}
-                        <div className="flex items-center gap-3 ml-4">
-                            <div className="h-4 w-[1px] bg-shark" />
-                            <button
-                                onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
-                                className="p-2 text-santas-gray hover:text-white rounded-lg hover:bg-shark/40 transition-all"
-                            >
-                                {theme === 'dark' ? <Moon size={18} /> : <Sun size={18} />}
-                            </button>
-                            <button className="p-2 text-santas-gray hover:text-white rounded-lg hover:bg-shark/40 transition-all relative">
-                                <Bell size={18} />
-                                <div className="absolute top-2 right-2.5 w-1.5 h-1.5 bg-red-500 rounded-full border border-black" />
-                            </button>
-                        </div>
+                                {isUploading && uploadStatus && (
+                                    <div className="flex items-center gap-2 px-3 py-1.5 bg-[#279da6]/10 border border-[#279da6]/20 rounded-lg animate-pulse">
+                                        <Loader2 size={14} className="text-[#279da6] animate-spin" />
+                                        <span className="text-[10px] font-bold text-[#279da6] uppercase tracking-wider truncate max-w-[200px]">
+                                            {uploadStatus}
+                                        </span>
+                                    </div>
+                                )}
+                            </div>
+                        </Header>
                     </div>
 
+
+                    <input type="file" ref={fileInputRef} className="hidden" onChange={handleUpload} />
+                    <input type="file" ref={folderInputRef} className="hidden" onChange={handleUpload} {...{ webkitdirectory: "", directory: "" } as any} />
+
                     <main className="flex-1 overflow-y-auto custom-scrollbar relative bg-[#18181B]">
+                        {/* New Menu Dropdown */}
+                        {isNewMenuOpen && (
+                            <div className="absolute top-2 right-6 w-64 bg-[#18181B] border border-shark/60 rounded-xl shadow-2xl py-2 z-[100] animate-zoom-in backdrop-blur-xl bg-opacity-95 overflow-hidden" ref={newMenuRef}>
+                                <button
+                                    onClick={() => { setIsCreatingFolder(true); setIsNewMenuOpen(false); }}
+                                    className="w-full flex items-center justify-between px-4 py-2 hover:bg-white/5 text-iron transition-colors group"
+                                >
+                                    <div className="flex items-center gap-3">
+                                        <FolderPlus size={16} className="text-storm-gray group-hover:text-[#279da6] transition-colors" />
+                                        <span className="text-xs font-medium">New folder</span>
+                                    </div>
+                                    <span className="text-[10px] text-storm-gray opacity-40 group-hover:opacity-100 transition-opacity uppercase tracking-widest px-1.5 border border-shark/40 rounded bg-shark/20">⌘F</span>
+                                </button>
+                                <div className="h-[1px] bg-shark/40 my-1" />
+                                <button
+                                    onClick={() => { fileInputRef.current?.click(); setIsNewMenuOpen(false); }}
+                                    className="w-full flex items-center justify-between px-4 py-2 hover:bg-white/5 text-iron transition-colors group"
+                                >
+                                    <div className="flex items-center gap-3">
+                                        <FileUp size={16} className="text-storm-gray group-hover:text-[#279da6] transition-colors" />
+                                        <span className="text-xs font-medium">File upload</span>
+                                    </div>
+                                    <span className="text-[10px] text-storm-gray opacity-40 group-hover:opacity-100 transition-opacity uppercase tracking-widest px-1.5 border border-shark/40 rounded bg-shark/20">⌘U</span>
+                                </button>
+                                <button
+                                    onClick={() => { folderInputRef.current?.click(); setIsNewMenuOpen(false); }}
+                                    className="w-full flex items-center justify-between px-4 py-2 hover:bg-white/5 text-iron transition-colors group"
+                                >
+                                    <div className="flex items-center gap-3">
+                                        <FolderUp size={16} className="text-storm-gray group-hover:text-[#279da6] transition-colors" />
+                                        <span className="text-xs font-medium">Folder upload</span>
+                                    </div>
+                                    <span className="text-[10px] text-storm-gray opacity-40 group-hover:opacity-100 transition-opacity uppercase tracking-widest px-1.5 border border-shark/40 rounded bg-shark/20">⌘I</span>
+                                </button>
+                                <div className="h-[1px] bg-shark/40 my-1" />
+                                <button
+                                    onClick={() => { handleCreateGoogleFile('document'); setIsNewMenuOpen(false); }}
+                                    className="w-full flex items-center justify-between px-4 py-2 hover:bg-white/5 text-iron transition-colors group"
+                                >
+                                    <div className="flex items-center gap-3">
+                                        <div className="w-5 h-5 rounded bg-blue-500/10 border border-blue-500/20 flex items-center justify-center text-[10px] font-black text-blue-500 shadow-sm">
+                                            <FileText size={12} />
+                                        </div>
+                                        <span className="text-xs font-medium">Google Docs</span>
+                                    </div>
+                                    <ChevronRight size={12} className="text-storm-gray opacity-40 group-hover:opacity-100" />
+                                </button>
+                                <button
+                                    onClick={() => { handleCreateGoogleFile('spreadsheet'); setIsNewMenuOpen(false); }}
+                                    className="w-full flex items-center justify-between px-4 py-2 hover:bg-white/5 text-iron transition-colors group"
+                                >
+                                    <div className="flex items-center gap-3">
+                                        <div className="w-5 h-5 rounded bg-green-500/10 border border-green-500/20 flex items-center justify-center text-[10px] font-black text-green-500 shadow-sm">
+                                            <Table className="size-3" />
+                                        </div>
+                                        <span className="text-xs font-medium">Google Sheets</span>
+                                    </div>
+                                    <ChevronRight size={12} className="text-storm-gray opacity-40 group-hover:opacity-100" />
+                                </button>
+                            </div>
+                        )}
                         <div className="p-6">
                             {/* Toolbar */}
                             <div className="flex items-center justify-between mb-6">
@@ -989,8 +913,8 @@ export default function FilesClient({ initialRootId, initialDriveItems, initialD
                             )}
                         </div>
                     </main>
-                </div>
-            </div>
+                </div >
+            </div >
 
             {/* Delete Confirmation */}
             {
