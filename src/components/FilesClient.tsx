@@ -277,6 +277,7 @@ export default function FilesClient({ initialRootId, initialDriveItems, initialD
                 formData.append('parentId', targetFolderId);
                 await fetch('/api/drive/browse', { method: 'POST', body: formData });
             }
+            refreshFolder();
             router.refresh();
         } catch (e) {
             console.error('Upload error:', e);
@@ -314,6 +315,7 @@ export default function FilesClient({ initialRootId, initialDriveItems, initialD
                         if (data.webViewLink) {
                             window.open(data.webViewLink, '_blank');
                         }
+                        refreshFolder();
                         router.refresh();
                     }
                 } catch (e) {
@@ -340,6 +342,7 @@ export default function FilesClient({ initialRootId, initialDriveItems, initialD
             if (res.ok) {
                 setIsCreatingFolder(false);
                 setNewFolderName('');
+                refreshFolder();
                 router.refresh();
             }
         } catch (e) {
@@ -358,6 +361,7 @@ export default function FilesClient({ initialRootId, initialDriveItems, initialD
             if (res.ok) {
                 setDeleteTarget(null);
                 setIsDeleting(false);
+                refreshFolder();
                 router.refresh();
             }
         } catch (e) {
@@ -738,6 +742,7 @@ export default function FilesClient({ initialRootId, initialDriveItems, initialD
                                                                         })
                                                                     });
                                                                     if (res.ok) {
+                                                                        refreshFolder();
                                                                         router.refresh();
                                                                     }
                                                                 } catch (e) {
