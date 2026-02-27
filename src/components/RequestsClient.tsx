@@ -201,7 +201,7 @@ export default function RequestsClient({
                             activeTab={activeTab}
                             setActiveTab={setActiveTab}
                             tabCounts={tabCounts}
-                            onCreate={() => setIsCreating(true)}
+                            onCreate={(displayProfile?.role === 'super_admin' || displayProfile?.team_role === 'admin') ? () => setIsCreating(true) : undefined}
                             isCreating={isCreating}
                             onConfirm={handleInlineCreate}
                             onCancel={() => {

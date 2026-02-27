@@ -455,7 +455,7 @@ export default function FilesClient({ initialRootId, initialDriveItems, initialD
                             onToggleSidebar={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
                             label="Files"
                             labelIcon={<HardDrive size={16} className="text-[#279da6]" />}
-                            onCreate={() => setIsNewMenuOpen(!isNewMenuOpen)}
+                            onCreate={(displayProfile?.role === 'super_admin' || displayProfile?.team_role === 'admin') ? () => setIsNewMenuOpen(!isNewMenuOpen) : undefined}
                             isCreating={isCreatingFolder}
                             onConfirm={handleCreateFolder}
                             onCancel={() => {

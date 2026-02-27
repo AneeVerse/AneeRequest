@@ -178,6 +178,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             if (returnTo) {
                 sessionStorage.setItem('impersonate_return_to', returnTo);
             }
+            // Auto-redirect to requests page when impersonating
+            window.location.href = '/requests';
         }
     };
 

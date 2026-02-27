@@ -261,7 +261,7 @@ export default function TasksClient({ initialTasks, profiles, teamMembers, reque
                             activeTab={activeTab}
                             setActiveTab={setActiveTab}
                             tabCounts={tabCounts}
-                            onCreate={displayProfile?.role === 'super_admin' ? () => setIsCreating(true) : undefined}
+                            onCreate={(displayProfile?.role === 'super_admin' || displayProfile?.team_role === 'admin') ? () => setIsCreating(true) : undefined}
                             isCreating={isCreating}
                             onConfirm={handleInlineCreate}
                             onCancel={() => {
