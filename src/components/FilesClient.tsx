@@ -7,6 +7,7 @@ import FilePreviewModal from '@/components/FilePreviewModal';
 import { usePathname, useRouter } from 'next/navigation';
 import {
     FolderOpen,
+    ChevronLeft,
     ChevronRight,
     Search,
     Upload,
@@ -451,6 +452,15 @@ export default function FilesClient({ initialRootId, initialDriveItems, initialD
                 <div className={`flex-1 flex flex-col min-w-0 bg-[#121214] rounded-t-2xl overflow-hidden border-t border-l border-r mt-6 mr-6 transition-all duration-500 ${isImpersonating ? 'border-[#22c55e]/60 shadow-[0_0_15px_rgba(34,197,94,0.15)]' : 'border-shark'}`}>
                     <div className="h-16 flex items-center justify-between px-6 shrink-0 z-30 border-b border-shark">
                         <div className="flex items-center gap-4 flex-1 overflow-hidden">
+                            {driveBreadcrumbs.length > 1 && (
+                                <button
+                                    onClick={() => navigateToBreadcrumb(driveBreadcrumbs.length - 2)}
+                                    className="p-1 text-santas-gray hover:text-white transition-colors group active:scale-95"
+                                    title="Go to parent folder"
+                                >
+                                    <ChevronLeft size={20} className="group-hover:-translate-x-0.5 transition-transform" />
+                                </button>
+                            )}
                             <button
                                 onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
                                 className="p-1 text-santas-gray hover:text-white transition-colors"

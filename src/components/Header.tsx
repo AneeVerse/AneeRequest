@@ -1,6 +1,8 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import {
     Bell,
     PanelLeft,
@@ -8,11 +10,11 @@ import {
     Sun,
     Plus,
     ListFilter,
-    Shield
+    Shield,
+    ChevronLeft
 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import ImpersonationWarning from '@/components/ImpersonationWarning';
-import Link from 'next/link';
 
 interface HeaderProps {
     onToggleSidebar: () => void;
@@ -40,6 +42,7 @@ const Header: React.FC<HeaderProps> = ({
     activePath
 }) => {
     const { isImpersonating, viewAsProfile, stopImpersonating } = useAuth();
+    const router = useRouter();
     const [theme, setTheme] = useState<'dark' | 'light'>('dark');
 
     // Theme toggle effect
@@ -56,6 +59,14 @@ const Header: React.FC<HeaderProps> = ({
         <header className="h-16 flex items-center justify-between px-6 z-30 shrink-0">
             {/* Left side: Sidebar Toggle + Category Label + Tabs */}
             <div className="flex items-center gap-4 flex-1 min-w-0">
+                <button
+                    onClick={() => router.back()}
+                    className="p-1 text-santas-gray hover:text-white transition-colors cursor-pointer"
+                    title="Go back"
+                >
+                    <ChevronLeft size={20} />
+                </button>
+
                 <button
                     onClick={onToggleSidebar}
                     className="p-1 text-santas-gray hover:text-white transition-colors cursor-pointer"
