@@ -18,12 +18,11 @@ import {
     FileText,
     Flag,
     UserCog,
-    CircleDashed,
-    RefreshCcw,
-    AlertCircle,
-    CheckCircle2,
+    Check,
     User as UserIcon,
-    X
+    X,
+    Circle,
+    Eye
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
@@ -315,10 +314,10 @@ export default function TasksClient({ initialTasks, profiles, teamMembers, reque
                                                             value={taskFormData.priority}
                                                             onChange={(val: any) => setTaskFormData({ ...taskFormData, priority: val })}
                                                             options={[
-                                                                { label: 'Low', value: 'Low', icon: <div className="w-2 h-2 rounded-full bg-storm-gray" /> },
-                                                                { label: 'Medium', value: 'Medium', icon: <div className="w-2 h-2 rounded-full bg-malibu" /> },
-                                                                { label: 'High', value: 'High', icon: <div className="w-2 h-2 rounded-full bg-amber-500" /> },
-                                                                { label: 'Critical', value: 'Critical', icon: <div className="w-2 h-2 rounded-full bg-rose-500" /> }
+                                                                { label: 'Low', value: 'Low', icon: <Flag size={14} className="text-storm-gray" />, color: 'text-storm-gray' },
+                                                                { label: 'Medium', value: 'Medium', icon: <Flag size={14} className="text-blue-400" />, color: 'text-blue-400' },
+                                                                { label: 'High', value: 'High', icon: <Flag size={14} className="text-amber-500" />, color: 'text-amber-500' },
+                                                                { label: 'Critical', value: 'Critical', icon: <Flag size={14} className="text-rose-500" />, color: 'text-rose-500' }
                                                             ]}
                                                         />
                                                     </div>
@@ -477,10 +476,10 @@ export default function TasksClient({ initialTasks, profiles, teamMembers, reque
                                                                 onChange={(val) => setFilters(f => ({ ...f, status: val }))}
                                                                 options={[
                                                                     { label: 'All Statuses', value: '' },
-                                                                    { label: 'Todo', value: 'Todo', icon: <CircleDashed size={12} className="text-storm-gray" /> },
-                                                                    { label: 'In Progress', value: 'In Progress', icon: <RefreshCcw size={12} className="text-malibu" /> },
-                                                                    { label: 'Review', value: 'Review', icon: <AlertCircle size={12} className="text-amber-400" /> },
-                                                                    { label: 'Done', value: 'Done', icon: <CheckCircle2 size={12} className="text-emerald-400" /> },
+                                                                    { label: 'Todo', value: 'Todo', icon: <Circle size={12} className="text-[#279da6]" />, color: 'text-[#279da6]' },
+                                                                    { label: 'In Progress', value: 'In Progress', icon: <Loader2 size={12} className="text-amber-500 animate-spin" />, color: 'text-amber-500' },
+                                                                    { label: 'Review', value: 'Review', icon: <Eye size={12} className="text-blue-400" />, color: 'text-blue-400' },
+                                                                    { label: 'Done', value: 'Done', icon: <Check size={12} className="text-emerald-500" />, color: 'text-emerald-500' },
                                                                 ]}
                                                             />
                                                         </div>
@@ -495,7 +494,7 @@ export default function TasksClient({ initialTasks, profiles, teamMembers, reque
                                                                 options={[
                                                                     { label: 'All Priorities', value: '' },
                                                                     { label: 'Low', value: 'Low', icon: <Flag size={12} className="text-storm-gray" />, color: 'text-storm-gray' },
-                                                                    { label: 'Medium', value: 'Medium', icon: <Flag size={12} className="text-malibu" />, color: 'text-malibu' },
+                                                                    { label: 'Medium', value: 'Medium', icon: <Flag size={12} className="text-blue-400" />, color: 'text-blue-400' },
                                                                     { label: 'High', value: 'High', icon: <Flag size={12} className="text-amber-500" />, color: 'text-amber-500' },
                                                                     { label: 'Critical', value: 'Critical', icon: <Flag size={12} className="text-rose-500" />, color: 'text-rose-500' },
                                                                 ]}

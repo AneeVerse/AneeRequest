@@ -39,7 +39,11 @@ import {
     ExternalLink,
     RefreshCw,
     Pencil,
-    UserCog
+    UserCog,
+    Flag,
+    Circle,
+    Eye,
+    User as UserIcon
 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/context/AuthContext';
@@ -168,6 +172,11 @@ export default function RequestDetailsPage() {
     const dateInputRef = useRef<HTMLInputElement>(null);
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const editorRef = useRef<HTMLDivElement>(null);
+
+
+
+
+
 
     // Preview state
     const [isPreviewOpen, setIsPreviewOpen] = useState(false);
@@ -765,117 +774,45 @@ export default function RequestDetailsPage() {
                     <div className={`flex-1 flex flex-col min-w-0 bg-[#121214] rounded-t-2xl overflow-hidden border-t border-l border-r mt-6 mr-6 transition-all duration-500 ${isImpersonating ? 'border-[#22c55e]/60 shadow-[0_0_15px_rgba(34,197,94,0.15),0_0_40px_rgba(34,197,94,0.08),inset_0_0_20px_rgba(34,197,94,0.03)]' : 'border-shark'}`}>
 
                         {/* Header */}
-                        <div className="h-16 border-b border-shark flex items-center justify-between px-6 bg-shark/5">
-                            <div className="flex items-center gap-4">
-                                <button
-                                    onClick={() => router.back()}
-                                    className="p-2 hover:bg-shark rounded-lg text-santas-gray hover:text-white transition-all"
-                                >
-                                    <ChevronLeft size={20} />
-                                </button>
-                                <div className="flex items-center gap-3">
-                                    <span className="text-[10px] font-black text-[#279da6] bg-shark/40 py-1 px-2.5 rounded-lg border border-[#279da6]/20 shadow-sm">
-                                        #{request.request_number || 1}
+                        <div className="border-b border-shark">
+                            <Header
+                                onToggleSidebar={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
+                                label={request.title || 'Request Details'}
+                                labelIcon={
+                                    <div className="flex items-center gap-2">
+                                        <FileText size={16} className="text-[#279da6]" />
+                                        <span className="text-[10px] font-black text-[#279da6] bg-shark/40 py-0.5 px-1.5 rounded border border-[#279da6]/20">
+                                            #{request.request_number || 1}
+                                        </span>
+                                    </div>
+                                }
+                                tabs={[
+                                    { label: 'chat', icon: <MessageSquare size={12} /> },
+                                    { label: 'tasks', icon: <CheckSquare size={12} /> },
+                                    ...(isSuperAdmin || isTeamAdmin ? [{ label: 'files', icon: <FolderOpen size={12} /> }] : [])
+                                ]}
+                                activeTab={activeTab}
+                                setActiveTab={(tab) => setActiveTab(tab as any)}
+                                tabCounts={{
+                                    tasks: linkedTasks.length,
+                                    files: requestFiles.length
+                                }}
+                                onCreate={(isAdmin && activeTab === 'tasks') ? () => setIsCreatingTask(true) : undefined}
+                                isCreating={activeTab === 'tasks' ? isCreatingTask : false}
+                                onConfirm={handleCreateLinkedTask}
+                                onCancel={() => {
+                                    setIsCreatingTask(false);
+                                    setTaskFormData({ title: '', priority: 'Medium', description: '', assigned_to: request?.assigned_to || '', due_date: '', request_ids: [id as string] });
+                                }}
+                                isSubmitting={isSubmittingTask}
+                            >
+                                <div className="flex items-center gap-1.5 ml-2">
+                                    <div className={`w-1.5 h-1.5 rounded-full ${isOnline ? 'bg-emerald-500 animate-pulse shadow-[0_0_8px_rgba(16,185,129,0.4)]' : 'bg-rose-500'}`} />
+                                    <span className="text-[8px] text-storm-gray font-black uppercase tracking-[0.2em] opacity-70">
+                                        {isOnline ? 'Active' : 'Inactive'}
                                     </span>
-                                    <div className="flex flex-col justify-center">
-                                        <h1 className="text-sm font-bold text-iron leading-tight">{request.title}</h1>
-                                        <div className="flex items-center gap-1.5 mt-0.5">
-                                            <div className={`w-1.5 h-1.5 rounded-full ${isOnline ? 'bg-emerald-500 animate-pulse shadow-[0_0_8px_rgba(16,185,129,0.4)]' : 'bg-rose-500'}`} />
-                                            <span className="text-[8px] text-storm-gray font-black uppercase tracking-[0.2em] opacity-70">
-                                                {isOnline ? 'Active' : 'Inactive'}
-                                            </span>
-                                        </div>
-                                    </div>
                                 </div>
-
-                                {/* Header Tabs */}
-                                {showTabs && (
-                                    <div className="ml-4 flex items-center">
-                                        <div className="inline-flex items-center p-0.5 bg-[#09090B]/40 border border-shark/50 rounded-xl overflow-visible">
-                                            <button
-                                                onClick={() => setActiveTab('chat')}
-                                                className={`relative flex items-center gap-1.5 px-3 py-1.5 text-[9px] font-black uppercase tracking-wider transition-all rounded-[10px] ${activeTab === 'chat'
-                                                    ? 'bg-shark/80 text-[#279da6] border border-[#279da6]/20 shadow-sm'
-                                                    : 'text-storm-gray hover:text-iron hover:bg-white/5'
-                                                    }`}
-                                            >
-                                                <MessageSquare size={12} />
-                                                Chat
-                                            </button>
-                                            <button
-                                                onClick={() => setActiveTab('tasks')}
-                                                className={`relative flex items-center gap-1.5 px-3 py-1.5 text-[9px] font-black uppercase tracking-wider transition-all rounded-[10px] ${activeTab === 'tasks'
-                                                    ? 'bg-shark/80 text-[#279da6] border border-[#279da6]/20 shadow-sm'
-                                                    : 'text-storm-gray hover:text-iron hover:bg-white/5'
-                                                    }`}
-                                            >
-                                                <CheckSquare size={12} />
-                                                Tasks
-                                                {linkedTasks.length > 0 && (
-                                                    <span className="absolute -top-3 -right-0.5 min-w-[17px] h-[17px] flex items-center justify-center rounded-full text-[9px] font-black px-1 border border-[#09090B] shadow-md bg-[#279da6] text-white z-[20]">
-                                                        {linkedTasks.length > 99 ? '99+' : linkedTasks.length}
-                                                    </span>
-                                                )}
-                                            </button>
-                                            {(isSuperAdmin || isTeamAdmin) && (
-                                                <button
-                                                    onClick={() => setActiveTab('files')}
-                                                    className={`relative flex items-center gap-1.5 px-3 py-1.5 text-[9px] font-black uppercase tracking-wider transition-all rounded-[10px] ${activeTab === 'files'
-                                                        ? 'bg-shark/80 text-[#279da6] border border-[#279da6]/20 shadow-sm'
-                                                        : 'text-storm-gray hover:text-iron hover:bg-white/5'
-                                                        }`}
-                                                >
-                                                    <FolderOpen size={12} />
-                                                    Files
-                                                    {requestFiles.length > 0 && (
-                                                        <span className="absolute -top-3 -right-0.5 min-w-[17px] h-[17px] flex items-center justify-center rounded-full text-[9px] font-black px-1 border border-[#09090B] shadow-md bg-[#279da6] text-white z-[20]">
-                                                            {requestFiles.length > 99 ? '99+' : requestFiles.length}
-                                                        </span>
-                                                    )}
-                                                </button>
-                                            )}
-                                        </div>
-                                    </div>
-                                )}
-
-                                <div className="ml-4">
-                                    <ImpersonationWarning />
-                                </div>
-                            </div>
-                            <div className="flex items-center gap-3">
-                                {/* + NEW / Confirm / Cancel for Tasks tab */}
-                                {activeTab === 'tasks' && isAdmin && (
-                                    isCreatingTask ? (
-                                        <div className="flex items-center gap-2 animate-zoom-in">
-                                            <button
-                                                onClick={handleCreateLinkedTask}
-                                                disabled={!taskFormData.title.trim() || isSubmittingTask}
-                                                className="flex items-center gap-1.5 px-3 py-1.5 bg-[#279da6] text-white rounded-lg hover:bg-[#279da6]/90 transition-all font-bold text-xs shadow-lg shadow-[#279da6]/20 active:scale-95 disabled:opacity-30"
-                                            >
-                                                {isSubmittingTask ? <Loader2 size={14} className="animate-spin" /> : <Check size={14} />}
-                                                <span>Create</span>
-                                            </button>
-                                            <button
-                                                onClick={() => { setIsCreatingTask(false); setTaskFormData({ title: '', priority: 'Medium', description: '', assigned_to: request?.assigned_to || '', due_date: '', request_ids: [id as string] }); }}
-                                                className="p-1.5 bg-white/5 text-storm-gray rounded-lg hover:text-white hover:bg-white/10 transition-all active:scale-95"
-                                            >
-                                                <X size={14} />
-                                            </button>
-                                        </div>
-                                    ) : (
-                                        <button
-                                            onClick={() => setIsCreatingTask(true)}
-                                            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-santas-gray hover:text-white transition-colors group cursor-pointer"
-                                        >
-                                            <Plus size={16} className="group-hover:text-white" />
-                                            <span>new</span>
-                                        </button>
-                                    )
-                                )}
-                                <button className="p-2 hover:bg-shark rounded-full text-santas-gray hover:text-white transition-all">
-                                    <MoreHorizontal size={20} />
-                                </button>
-                            </div>
+                            </Header>
                         </div>
 
                         <div className="flex-1 flex overflow-hidden">
@@ -1163,10 +1100,10 @@ export default function RequestDetailsPage() {
                                                                             value={taskFormData.priority}
                                                                             onChange={(val: any) => setTaskFormData({ ...taskFormData, priority: val })}
                                                                             options={[
-                                                                                { label: 'Low', value: 'Low', icon: <div className="w-2 h-2 rounded-full bg-storm-gray" /> },
-                                                                                { label: 'Medium', value: 'Medium', icon: <div className="w-2 h-2 rounded-full bg-malibu" /> },
-                                                                                { label: 'High', value: 'High', icon: <div className="w-2 h-2 rounded-full bg-amber-500" /> },
-                                                                                { label: 'Critical', value: 'Critical', icon: <div className="w-2 h-2 rounded-full bg-rose-500" /> }
+                                                                                { label: 'Low', value: 'Low', icon: <Flag size={14} className="text-storm-gray" />, color: 'text-storm-gray' },
+                                                                                { label: 'Medium', value: 'Medium', icon: <Flag size={14} className="text-blue-400" />, color: 'text-blue-400' },
+                                                                                { label: 'High', value: 'High', icon: <Flag size={14} className="text-amber-500" />, color: 'text-amber-500' },
+                                                                                { label: 'Critical', value: 'Critical', icon: <Flag size={14} className="text-rose-500" />, color: 'text-rose-500' }
                                                                             ]}
                                                                         />
                                                                     </div>
@@ -1394,66 +1331,49 @@ export default function RequestDetailsPage() {
 
                                             <div className="flex items-center gap-2">
                                                 <span className="text-[12px] font-bold text-storm-gray w-20">Status</span>
-                                                <select
+                                                <CustomDropdown
                                                     value={request.status}
-                                                    onChange={(e) => handleUpdateField('status', e.target.value)}
-                                                    className="flex-1 bg-shark/30 text-iron border border-shark/60 px-3 py-1.5 rounded-lg text-xs font-bold hover:bg-shark/50 focus:outline-none transition-all appearance-none cursor-pointer"
-                                                >
-                                                    <option value="Todo">Todo</option>
-                                                    <option value="In Progress">In Progress</option>
-                                                    <option value="Review">Review</option>
-                                                    <option value="Done">Done</option>
-                                                </select>
+                                                    onChange={(val) => handleUpdateField('status', val)}
+                                                    options={[
+                                                        { label: 'Todo', value: 'Todo', icon: <Circle size={14} className="text-[#279da6]" />, color: 'text-[#279da6]' },
+                                                        { label: 'In Progress', value: 'In Progress', icon: <Loader2 size={14} className="text-amber-500 animate-spin" />, color: 'text-amber-500' },
+                                                        { label: 'Review', value: 'Review', icon: <Eye size={14} className="text-blue-400" />, color: 'text-blue-400' },
+                                                        { label: 'Done', value: 'Done', icon: <Check size={14} className="text-emerald-500" />, color: 'text-emerald-500' },
+                                                    ]}
+                                                    className="flex-1"
+                                                />
                                             </div>
 
                                             <div className="flex items-center gap-2">
                                                 <span className="text-[12px] font-bold text-storm-gray w-20">Priority</span>
-                                                <div className="flex-1 relative">
-                                                    <select
-                                                        value={request.priority}
-                                                        onChange={(e) => handleUpdateField('priority', e.target.value)}
-                                                        className={`w-full bg-shark/20 border border-shark/40 pl-5 pr-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest focus:outline-none cursor-pointer hover:bg-shark/30 transition-all appearance-none ${request.priority === 'Critical' ? 'text-rose-500' :
-                                                            request.priority === 'High' ? 'text-amber-500' :
-                                                                request.priority === 'Medium' ? 'text-blue-400' :
-                                                                    'text-storm-gray'
-                                                            }`}
-                                                    >
-                                                        <option value="Low">Low</option>
-                                                        <option value="Medium">Medium</option>
-                                                        <option value="High">High</option>
-                                                        <option value="Critical">Critical</option>
-                                                    </select>
-                                                    <div className={`absolute left-2.5 top-1/2 -translate-y-1/2 w-1 h-1 rounded-full ${request.priority === 'Critical' ? 'bg-rose-500' :
-                                                        request.priority === 'High' ? 'bg-amber-500' :
-                                                            request.priority === 'Medium' ? 'bg-blue-400' :
-                                                                'bg-storm-gray'
-                                                        }`} />
-                                                </div>
+                                                <CustomDropdown
+                                                    value={request.priority}
+                                                    onChange={(val) => handleUpdateField('priority', val)}
+                                                    options={[
+                                                        { label: 'Low', value: 'Low', icon: <Flag size={14} className="text-storm-gray" />, color: 'text-storm-gray' },
+                                                        { label: 'Medium', value: 'Medium', icon: <Flag size={14} className="text-blue-400" />, color: 'text-blue-400' },
+                                                        { label: 'High', value: 'High', icon: <Flag size={14} className="text-amber-500" />, color: 'text-amber-500' },
+                                                        { label: 'Critical', value: 'Critical', icon: <Flag size={14} className="text-rose-500" />, color: 'text-rose-500' },
+                                                    ]}
+                                                    className="flex-1"
+                                                />
                                             </div>
 
                                             <div className="flex items-center gap-2">
                                                 <span className="text-[12px] font-bold text-storm-gray w-20">Assigned To</span>
-                                                <div className="flex-1 flex items-center gap-2">
-                                                    <select
-                                                        value={request.assigned_to || ''}
-                                                        onChange={(e) => handleUpdateField('assigned_to', e.target.value)}
-                                                        className="flex-1 bg-transparent text-[11px] font-bold text-iron focus:outline-none cursor-pointer hover:text-white transition-all appearance-none"
-                                                    >
-                                                        <option value="">Unassigned</option>
-                                                        {teamMembers.filter((tm: any) => tm.profile_id).map((tm: any) => (
-                                                            <option key={tm.id} value={tm.profile_id}>{tm.name}</option>
-                                                        ))}
-                                                    </select>
-                                                    <div className="w-6 h-6 rounded-full bg-shark/40 border border-shark flex items-center justify-center text-storm-gray overflow-hidden">
-                                                        {request.assignee ? (
-                                                            <div className="w-full h-full bg-[#279da6] text-white flex items-center justify-center text-[10px] font-black">
-                                                                {request.assignee.full_name?.split(' ').map(n => n[0]).join('')}
-                                                            </div>
-                                                        ) : (
-                                                            <Plus size={14} />
-                                                        )}
-                                                    </div>
-                                                </div>
+                                                <CustomDropdown
+                                                    value={request.assigned_to || ''}
+                                                    onChange={(val) => handleUpdateField('assigned_to', val)}
+                                                    options={[
+                                                        { label: 'Unassigned', value: '' },
+                                                        ...teamMembers.filter((tm: any) => tm.profile_id).map((tm: any) => ({
+                                                            label: tm.name || tm.profile?.full_name || tm.profile?.email || 'Unknown',
+                                                            value: tm.profile_id,
+                                                            icon: <UserIcon size={14} className="text-[#279da6]" />
+                                                        }))
+                                                    ]}
+                                                    className="flex-1"
+                                                />
                                             </div>
 
                                             <div className="flex items-center gap-2">

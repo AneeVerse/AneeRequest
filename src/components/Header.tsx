@@ -24,7 +24,7 @@ interface HeaderProps {
     onToggleSidebar: () => void;
     label: string;
     labelIcon?: React.ReactNode;
-    tabs?: string[];
+    tabs?: (string | { label: string; icon?: React.ReactNode })[];
     activeTab?: string;
     setActiveTab?: (tab: string) => void;
     onCreate?: () => void;
@@ -131,18 +131,21 @@ const Header: React.FC<HeaderProps> = ({
                 {/* Dynamic Sub-Navigation */}
                 {tabs && tabs.length > 0 && (
                     <div className="flex items-center bg-black/60 border border-shark/50 p-1 rounded-xl overflow-visible ml-2 shrink-0">
-                        {tabs.map((tab) => {
-                            const count = tabCounts?.[tab];
+                        {tabs.map((tabItem) => {
+                            const label = typeof tabItem === 'string' ? tabItem : tabItem.label;
+                            const icon = typeof tabItem === 'string' ? null : tabItem.icon;
+                            const count = tabCounts?.[label];
                             return (
                                 <button
-                                    key={tab}
-                                    onClick={() => setActiveTab?.(tab)}
-                                    className={`relative px-4 py-1.5 rounded-lg text-[11px] font-bold transition-all whitespace-nowrap cursor-pointer tracking-tight ${activeTab === tab
+                                    key={label}
+                                    onClick={() => setActiveTab?.(label)}
+                                    className={`relative px-4 py-1.5 rounded-lg text-[11px] font-bold transition-all whitespace-nowrap cursor-pointer tracking-tight flex items-center gap-1.5 ${activeTab === label
                                         ? 'bg-shark/80 text-[#279da6] shadow-lg'
                                         : 'text-storm-gray hover:text-iron hover:bg-white/5'
                                         }`}
                                 >
-                                    {tab}
+                                    {icon}
+                                    {label}
                                     {count !== undefined && count > 0 && (
                                         <span className="absolute -top-3 -right-0.5 min-w-[17px] h-[17px] flex items-center justify-center rounded-full text-[9px] font-black px-1 border border-[#09090B] shadow-md bg-[#279da6] text-white z-[20]">
                                             {count > 99 ? '99+' : count}

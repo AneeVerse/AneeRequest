@@ -256,7 +256,7 @@ export default function RequestsClient({
                                                             onChange={(val: any) => setRequestFormData({ ...requestFormData, priority: val })}
                                                             options={[
                                                                 { label: 'Low', value: 'Low', icon: <div className="w-2 h-2 rounded-full bg-storm-gray" /> },
-                                                                { label: 'Medium', value: 'Medium', icon: <div className="w-2 h-2 rounded-full bg-malibu" /> },
+                                                                { label: 'Medium', value: 'Medium', icon: <div className="w-2 h-2 rounded-full bg-blue-400" /> },
                                                                 { label: 'High', value: 'High', icon: <div className="w-2 h-2 rounded-full bg-amber-500" /> },
                                                                 { label: 'Critical', value: 'Critical', icon: <div className="w-2 h-2 rounded-full bg-rose-500" /> }
                                                             ]}

@@ -4,7 +4,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import Linkify from 'linkify-react';
 import {
     X, Send, User, Calendar, Flag, Loader2, Trash2,
-    CheckCircle2, CircleDashed, RefreshCcw, AlertCircle,
+    CheckCircle2, Circle, Eye,
     MessageSquare, CheckCheck, Check, Shield, ChevronLeft, FileText,
     User as UserIcon, Plus as PlusIcon
 } from 'lucide-react';
@@ -261,11 +261,11 @@ export default function TaskDetailModal({
 
     const getStatusIcon = (status: string) => {
         switch (status) {
-            case 'Todo': return <CircleDashed size={16} className="text-storm-gray" />;
-            case 'In Progress': return <RefreshCcw size={16} className="text-malibu animate-spin-slow" />;
-            case 'Review': return <AlertCircle size={16} className="text-amber-400" />;
-            case 'Done': return <CheckCircle2 size={16} className="text-emerald-400" />;
-            default: return <CircleDashed size={16} />;
+            case 'Todo': return <Circle size={16} className="text-[#279da6]" />;
+            case 'In Progress': return <Loader2 size={16} className="text-amber-500 animate-spin" />;
+            case 'Review': return <Eye size={16} className="text-blue-400" />;
+            case 'Done': return <Check size={16} className="text-emerald-500" />;
+            default: return <Circle size={16} />;
         }
     };
 
@@ -330,10 +330,10 @@ export default function TaskDetailModal({
                                     disabled={displayProfile?.role !== 'super_admin'}
                                     onChange={val => handleUpdate('status', val)}
                                     options={[
-                                        { label: 'Todo', value: 'Todo', icon: <CircleDashed size={14} className="text-storm-gray" /> },
-                                        { label: 'In Progress', value: 'In Progress', icon: <RefreshCcw size={14} className="text-malibu" /> },
-                                        { label: 'Review', value: 'Review', icon: <AlertCircle size={14} className="text-amber-400" /> },
-                                        { label: 'Done', value: 'Done', icon: <CheckCircle2 size={14} className="text-emerald-400" /> },
+                                        { label: 'Todo', value: 'Todo', icon: <Circle size={14} className="text-[#279da6]" />, color: 'text-[#279da6]' },
+                                        { label: 'In Progress', value: 'In Progress', icon: <Loader2 size={14} className="text-amber-500 animate-spin" />, color: 'text-amber-500' },
+                                        { label: 'Review', value: 'Review', icon: <Eye size={14} className="text-blue-400" />, color: 'text-blue-400' },
+                                        { label: 'Done', value: 'Done', icon: <Check size={14} className="text-emerald-500" />, color: 'text-emerald-500' },
                                     ]}
                                     className="flex-1"
                                 />
@@ -347,7 +347,7 @@ export default function TaskDetailModal({
                                     onChange={val => handleUpdate('priority', val)}
                                     options={[
                                         { label: 'Low', value: 'Low', icon: <Flag size={14} className="text-storm-gray" />, color: 'text-storm-gray' },
-                                        { label: 'Medium', value: 'Medium', icon: <Flag size={14} className="text-malibu" />, color: 'text-malibu' },
+                                        { label: 'Medium', value: 'Medium', icon: <Flag size={14} className="text-blue-400" />, color: 'text-blue-400' },
                                         { label: 'High', value: 'High', icon: <Flag size={14} className="text-amber-500" />, color: 'text-amber-500' },
                                         { label: 'Critical', value: 'Critical', icon: <Flag size={14} className="text-rose-500" />, color: 'text-rose-500' },
                                     ]}
