@@ -175,7 +175,7 @@ export default function TasksClient({ initialTasks, profiles, teamMembers, reque
 
         // Tab filters
         let matchesTab = true;
-        if (activeTab === 'My Tasks') matchesTab = task.assigned_to === user?.id;
+        if (activeTab === 'My Tasks') matchesTab = task.assigned_to === displayProfile?.id;
         else if (activeTab === 'In Progress') matchesTab = task.status === 'In Progress';
         else if (activeTab === 'Done') matchesTab = task.status === 'Done';
 
@@ -236,7 +236,7 @@ export default function TasksClient({ initialTasks, profiles, teamMembers, reque
         taskTabs.forEach(tab => {
             counts[tab] = visibleTasks.filter(task => {
                 if (tab === 'All Tasks') return true;
-                if (tab === 'My Tasks') return task.assigned_to === user?.id;
+                if (tab === 'My Tasks') return task.assigned_to === displayProfile?.id;
                 if (tab === 'In Progress') return task.status === 'In Progress';
                 if (tab === 'Done') return task.status === 'Done';
                 return true;
@@ -533,7 +533,7 @@ export default function TasksClient({ initialTasks, profiles, teamMembers, reque
 
                             {/* Table */}
                             <TasksTable
-                                tasks={visibleTasks}
+                                tasks={sortedTasks}
                                 profiles={profiles}
                                 teamMembers={teamMembers}
                                 searchQuery={searchQuery}
