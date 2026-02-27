@@ -42,6 +42,7 @@ import {
     List,
     Settings2,
     ChevronDown,
+    Folder,
 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 
@@ -381,32 +382,32 @@ export default function FilesClient({ initialRootId, initialDriveItems, initialD
     };
 
     // ─── Visual Helpers ───
-    const getFileIcon = (mimeType: string, itemName?: string) => {
+    const getFileIcon = (mimeType: string, itemName?: string, iconSize: number = 24) => {
         if (mimeType === 'application/vnd.google-apps.folder') {
             // Check if it's a client or request folder
             const isClient = dbEnrichment.clients.some(c => (c.org || c.name) === itemName);
             const isRequest = dbEnrichment.requests.some(r => r.title === itemName);
 
-            if (isClient) return <div className="p-2.5 rounded-xl bg-cyan-500/10 text-cyan-400 border border-cyan-500/20 shadow-[0_0_15px_rgba(6,182,212,0.1)]"><FolderOpen size={24} /></div>;
-            if (isRequest) return <div className="p-2.5 rounded-xl bg-blue-500/10 text-blue-400 border border-blue-500/20 shadow-[0_0_15px_rgba(59,130,246,0.1)]"><FolderOpen size={24} /></div>;
+            if (isClient) return <div className="p-2.5 rounded-xl bg-cyan-500/10 text-cyan-400 border border-cyan-500/20 shadow-[0_0_15px_rgba(6,182,212,0.1)]"><FolderOpen size={iconSize} /></div>;
+            if (isRequest) return <div className="p-2.5 rounded-xl bg-blue-500/10 text-blue-400 border border-blue-500/20 shadow-[0_0_15px_rgba(59,130,246,0.1)]"><FolderOpen size={iconSize} /></div>;
 
-            return <div className="p-2.5 rounded-xl bg-amber-500/10 text-amber-400"><FolderOpen size={24} /></div>;
+            return <div className="p-2.5 rounded-xl bg-amber-500/10 text-amber-400"><FolderOpen size={iconSize} /></div>;
         }
-        if (mimeType?.startsWith('image/')) return <div className="p-2.5 rounded-xl bg-emerald-500/10 text-emerald-400"><ImageIcon size={24} /></div>;
-        if (mimeType?.includes('pdf')) return <div className="p-2.5 rounded-xl bg-rose-500/10 text-rose-400"><FileText size={24} /></div>;
-        if (mimeType?.startsWith('video/')) return <div className="p-2.5 rounded-xl bg-purple-500/10 text-purple-400"><Film size={24} /></div>;
+        if (mimeType?.startsWith('image/')) return <div className="p-2.5 rounded-xl bg-emerald-500/10 text-emerald-400"><ImageIcon size={iconSize} /></div>;
+        if (mimeType?.includes('pdf')) return <div className="p-2.5 rounded-xl bg-rose-500/10 text-rose-400"><FileText size={iconSize} /></div>;
+        if (mimeType?.startsWith('video/')) return <div className="p-2.5 rounded-xl bg-purple-500/10 text-purple-400"><Film size={iconSize} /></div>;
 
         // Google Workspace Apps
         if (mimeType === 'application/vnd.google-apps.document')
-            return <div className="p-2.5 rounded-xl bg-blue-500/10 text-blue-500 border border-blue-500/20 shadow-[0_0_15px_rgba(59,130,246,0.1)]"><FileText size={24} /></div>;
+            return <div className="p-2.5 rounded-xl bg-blue-500/10 text-blue-500 border border-blue-500/20 shadow-[0_0_15px_rgba(59,130,246,0.1)]"><FileText size={iconSize} /></div>;
         if (mimeType === 'application/vnd.google-apps.spreadsheet')
-            return <div className="p-2.5 rounded-xl bg-green-500/10 text-green-500 border border-green-500/20 shadow-[0_0_15px_rgba(34,197,94,0.1)]"><Table size={24} /></div>;
+            return <div className="p-2.5 rounded-xl bg-green-500/10 text-green-500 border border-green-500/20 shadow-[0_0_15px_rgba(34,197,94,0.1)]"><Table size={iconSize} /></div>;
         if (mimeType === 'application/vnd.google-apps.presentation')
-            return <div className="p-2.5 rounded-xl bg-yellow-500/10 text-yellow-500 border border-yellow-500/20 shadow-[0_0_15px_rgba(234,179,8,0.1)]"><Presentation size={24} /></div>;
+            return <div className="p-2.5 rounded-xl bg-yellow-500/10 text-yellow-500 border border-yellow-500/20 shadow-[0_0_15px_rgba(234,179,8,0.1)]"><Presentation size={iconSize} /></div>;
         if (mimeType === 'application/vnd.google-apps.form')
-            return <div className="p-2.5 rounded-xl bg-purple-500/10 text-purple-500 border border-purple-500/20 shadow-[0_0_15px_rgba(168,85,247,0.1)]"><ClipboardList size={24} /></div>;
+            return <div className="p-2.5 rounded-xl bg-purple-500/10 text-purple-500 border border-purple-500/20 shadow-[0_0_15px_rgba(168,85,247,0.1)]"><ClipboardList size={iconSize} /></div>;
 
-        return <div className="p-2.5 rounded-xl bg-blue-500/10 text-blue-400"><FileIcon size={24} /></div>;
+        return <div className="p-2.5 rounded-xl bg-blue-500/10 text-blue-400"><FileIcon size={iconSize} /></div>;
     };
 
     const getFileTypeLabel = (mimeType: string) => {
@@ -764,105 +765,124 @@ export default function FilesClient({ initialRootId, initialDriveItems, initialD
                             ) : (
                                 <div className="animate-fade-in">
                                     {viewMode === 'grid' ? (
-                                        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-8 gap-6">
-                                            {filteredItems.map((item) => (
-                                                <div
-                                                    key={item.id}
-                                                    className="group relative flex flex-col items-center gap-4 p-6 rounded-3xl border border-shark/40 hover:border-[#279da6]/30 bg-[#09090B]/40 hover:bg-[#279da6]/5 transition-all cursor-pointer text-center overflow-hidden"
-                                                    onClick={() => item.isFolder ? navigateToSubfolder(item) : (setPreviewFile({ ...item, url: item.webViewLink, previewUrl: item.previewUrl, type: item.mimeType }), setIsPreviewOpen(true))}
-                                                >
-                                                    {/* Glow Background */}
-                                                    <div className="absolute inset-0 bg-gradient-to-b from-white/[0.02] to-transparent pointer-events-none" />
-
-                                                    <div className="relative z-10 group-hover:scale-110 transition-transform duration-300">
-                                                        {getFileIcon(item.mimeType, item.name)}
-                                                    </div>
-
-                                                    <div className="relative z-10 w-full min-w-0">
-                                                        <div className="space-y-1">
-                                                            <p className="text-[11px] font-black text-white truncate px-2 group-hover:text-[#279da6] transition-all uppercase tracking-tight">{item.name}</p>
-                                                            <div className="flex items-center justify-center gap-2">
-                                                                <span className="text-[9px] font-black text-storm-gray uppercase tracking-widest">{getFileTypeLabel(item.mimeType)}</span>
-                                                                {dbEnrichment.clients.some(c => (c.org || c.name) === item.name) && (
-                                                                    <>
-                                                                        <div className="w-1 h-1 rounded-full bg-cyan-500/40" />
-                                                                        <span className="text-[9px] font-black text-cyan-400 uppercase tracking-widest">CLIENT</span>
-                                                                    </>
-                                                                )}
-                                                                {dbEnrichment.requests.some(r => r.title === item.name) && (
-                                                                    <>
-                                                                        <div className="w-1 h-1 rounded-full bg-blue-500/40" />
-                                                                        <span className="text-[9px] font-black text-blue-400 uppercase tracking-widest">REQUEST</span>
-                                                                    </>
-                                                                )}
-                                                                {!item.isFolder && item.size && (
-                                                                    <>
-                                                                        <div className="w-1 h-1 rounded-full bg-shark" />
-                                                                        <span className="text-[9px] font-black text-storm-gray uppercase tracking-widest">{formatFileSize(item.size)}</span>
-                                                                    </>
-                                                                )}
-                                                            </div>
-                                                        </div>
-                                                    </div>
-
-                                                    {/* Floating Actions */}
-                                                    <div className="absolute top-3 right-3 flex flex-col gap-2 opacity-0 group-hover:opacity-100 transition-all translate-x-2 group-hover:translate-x-0">
-                                                        <button
-                                                            onClick={(e) => {
-                                                                e.stopPropagation();
-                                                                setNamingModal({
-                                                                    isOpen: true,
-                                                                    type: 'rename',
-                                                                    title: `Rename ${item.isFolder ? 'Folder' : 'File'}`,
-                                                                    initialValue: item.name,
-                                                                    onConfirm: async (newName) => {
-                                                                        if (!newName.trim()) return;
-                                                                        try {
-                                                                            const res = await fetch('/api/drive/browse', {
-                                                                                method: 'PATCH',
-                                                                                headers: { 'Content-Type': 'application/json' },
-                                                                                body: JSON.stringify({
-                                                                                    id: item.id,
-                                                                                    newName: newName.trim(),
-                                                                                    isFolder: item.isFolder
-                                                                                })
-                                                                            });
-                                                                            if (res.ok) {
-                                                                                refreshFolder();
-                                                                                router.refresh();
-                                                                            }
-                                                                        } catch (e) {
-                                                                            console.error('Rename error:', e);
-                                                                        } finally {
-                                                                            setNamingModal(prev => ({ ...prev, isOpen: false }));
-                                                                        }
-                                                                    }
-                                                                });
-                                                            }}
-                                                            className="p-2 rounded-xl bg-shark/80 hover:bg-[#279da6]/20 text-storm-gray hover:text-[#279da6] hover:scale-110 transition-all border border-shark"
-                                                        >
-                                                            <Pencil size={12} />
-                                                        </button>
-                                                        <button
-                                                            onClick={(e) => { e.stopPropagation(); setDeleteTarget(item); setIsDeleting(true); }}
-                                                            className="p-2 rounded-xl bg-shark/80 hover:bg-rose-500/20 text-storm-gray hover:text-rose-400 hover:scale-110 transition-all border border-shark"
-                                                        >
-                                                            <Trash2 size={12} />
-                                                        </button>
-                                                        {!item.isFolder && (
-                                                            <a
-                                                                href={item.webContentLink || item.webViewLink}
-                                                                target="_blank"
-                                                                rel="noopener noreferrer"
-                                                                onClick={(e) => e.stopPropagation()}
-                                                                className="p-2 rounded-xl bg-shark/80 hover:bg-white/10 text-storm-gray hover:text-white hover:scale-110 transition-all border border-shark"
+                                        <div className="space-y-12">
+                                            {/* Folders Section */}
+                                            {filteredItems.some(item => item.isFolder) && (
+                                                <div className="space-y-4">
+                                                    <h3 className="text-[10px] font-black text-storm-gray uppercase tracking-[0.2em] ml-1 opacity-60">Folders</h3>
+                                                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-4">
+                                                        {filteredItems.filter(item => item.isFolder).map((item) => (
+                                                            <div
+                                                                key={item.id}
+                                                                className="group relative flex items-center gap-3 p-3 rounded-2xl border border-shark/30 bg-[#09090B]/30 hover:bg-[#279da6]/5 hover:border-[#279da6]/40 transition-all cursor-pointer overflow-hidden"
+                                                                onClick={() => navigateToSubfolder(item)}
                                                             >
-                                                                <Download size={12} />
-                                                            </a>
-                                                        )}
+                                                                <div className="shrink-0">
+                                                                    {getFileIcon(item.mimeType, item.name, 20)}
+                                                                </div>
+                                                                <div className="flex-1 min-w-0">
+                                                                    <p className="text-[11px] font-bold text-iron truncate uppercase tracking-tight group-hover:text-[#279da6] transition-colors">{item.name}</p>
+                                                                </div>
+
+                                                                {/* Mini Actions */}
+                                                                <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                                    <button
+                                                                        onClick={(e) => {
+                                                                            e.stopPropagation();
+                                                                            setNamingModal({
+                                                                                isOpen: true,
+                                                                                type: 'rename',
+                                                                                title: 'Rename Folder',
+                                                                                initialValue: item.name,
+                                                                                onConfirm: async (newName) => {
+                                                                                    if (!newName.trim()) return;
+                                                                                    try {
+                                                                                        const res = await fetch('/api/drive/browse', {
+                                                                                            method: 'PATCH',
+                                                                                            headers: { 'Content-Type': 'application/json' },
+                                                                                            body: JSON.stringify({ id: item.id, newName: newName.trim(), isFolder: true })
+                                                                                        });
+                                                                                        if (res.ok) { refreshFolder(); router.refresh(); }
+                                                                                    } catch (e) { console.error(e); } finally { setNamingModal(prev => ({ ...prev, isOpen: false })); }
+                                                                                }
+                                                                            });
+                                                                        }}
+                                                                        className="p-1.5 hover:text-[#279da6] transition-colors"
+                                                                    >
+                                                                        <Pencil size={12} />
+                                                                    </button>
+                                                                    <button
+                                                                        onClick={(e) => { e.stopPropagation(); setDeleteTarget(item); setIsDeleting(true); }}
+                                                                        className="p-1.5 hover:text-rose-400 transition-colors"
+                                                                    >
+                                                                        <Trash2 size={12} />
+                                                                    </button>
+                                                                </div>
+                                                            </div>
+                                                        ))}
                                                     </div>
                                                 </div>
-                                            ))}
+                                            )}
+
+                                            {/* Files Section */}
+                                            {filteredItems.some(item => !item.isFolder) && (
+                                                <div className="space-y-4">
+                                                    <h3 className="text-[10px] font-black text-storm-gray uppercase tracking-[0.2em] ml-1 opacity-60">Files</h3>
+                                                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-8 gap-6">
+                                                        {filteredItems.filter(item => !item.isFolder).map((item) => (
+                                                            <div
+                                                                key={item.id}
+                                                                className="group relative flex flex-col rounded-3xl border border-shark/40 bg-[#09090B]/40 hover:bg-[#279da6]/5 hover:border-[#279da6]/30 transition-all cursor-pointer overflow-hidden aspect-[4/5]"
+                                                                onClick={() => (setPreviewFile({ ...item, url: item.webViewLink, previewUrl: item.previewUrl, type: item.mimeType }), setIsPreviewOpen(true))}
+                                                            >
+                                                                {/* Preview Area */}
+                                                                <div className="flex-1 bg-shark/20 flex items-center justify-center relative overflow-hidden">
+                                                                    <div className="transition-transform duration-500 group-hover:scale-110 opacity-40 group-hover:opacity-80">
+                                                                        {getFileIcon(item.mimeType, item.name, 48)}
+                                                                    </div>
+                                                                    {/* File Type Badge Overlay */}
+                                                                    <div className="absolute bottom-2 left-2 flex items-center gap-1.5 px-2 py-1 rounded-lg bg-[#09090B]/60 backdrop-blur-md border border-shark/40">
+                                                                        <div className="scale-75 origin-left">
+                                                                            {getFileIcon(item.mimeType, item.name, 12)}
+                                                                        </div>
+                                                                        <span className="text-[8px] font-black text-storm-gray uppercase tracking-[0.1em]">{getFileTypeLabel(item.mimeType)}</span>
+                                                                    </div>
+                                                                </div>
+
+                                                                {/* Footer Info */}
+                                                                <div className="p-4 bg-[#111114]/80 backdrop-blur-sm border-t border-shark/40">
+                                                                    <p className="text-[10px] font-bold text-iron truncate uppercase tracking-tight group-hover:text-[#279da6] transition-colors mb-1">{item.name}</p>
+                                                                    <div className="flex items-center justify-between">
+                                                                        <span className="text-[8px] font-black text-storm-gray uppercase tracking-widest">{item.size ? formatFileSize(item.size) : '--'}</span>
+                                                                        {dbEnrichment.clients.some(c => (c.org || c.name) === item.name) && (
+                                                                            <span className="text-[8px] font-black text-cyan-400 uppercase tracking-widest">CLIENT</span>
+                                                                        )}
+                                                                    </div>
+                                                                </div>
+
+                                                                {/* Hover Actions */}
+                                                                <div className="absolute top-2 right-2 flex flex-col gap-1.5 opacity-0 group-hover:opacity-100 transition-all translate-x-2 group-hover:translate-x-0">
+                                                                    <button
+                                                                        onClick={(e) => { e.stopPropagation(); setDeleteTarget(item); setIsDeleting(true); }}
+                                                                        className="p-2 rounded-xl bg-[#09090B]/80 backdrop-blur-md border border-shark hover:bg-rose-500/20 text-storm-gray hover:text-rose-400 transition-all"
+                                                                    >
+                                                                        <Trash2 size={12} />
+                                                                    </button>
+                                                                    <a
+                                                                        href={item.webContentLink || item.webViewLink}
+                                                                        target="_blank"
+                                                                        rel="noopener noreferrer"
+                                                                        onClick={(e) => e.stopPropagation()}
+                                                                        className="p-2 rounded-xl bg-[#09090B]/80 backdrop-blur-md border border-shark hover:bg-white/10 text-storm-gray hover:text-white transition-all"
+                                                                    >
+                                                                        <Download size={12} />
+                                                                    </a>
+                                                                </div>
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                </div>
+                                            )}
                                         </div>
                                     ) : (
                                         /* List View */
@@ -977,7 +997,7 @@ export default function FilesClient({ initialRootId, initialDriveItems, initialD
                             <div className="flex gap-3">
                                 <button
                                     onClick={() => { setIsDeleting(false); setDeleteTarget(null); }}
-                                    className="flex-1 px-6 py-3 rounded-2xl bg-shark/40 hover:bg-shark border border-shark text- iron text-xs font-black uppercase tracking-widest transition-all"
+                                    className="flex-1 px-6 py-3 rounded-2xl bg-shark/40 hover:bg-shark border border-shark text-iron text-xs font-black uppercase tracking-widest transition-all"
                                 >
                                     Cancel
                                 </button>
