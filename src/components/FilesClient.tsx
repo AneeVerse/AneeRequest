@@ -380,11 +380,26 @@ export default function FilesClient({ initialRootId, initialDriveItems, initialD
         if (mimeType?.startsWith('image/')) return <div className="p-2.5 rounded-xl bg-emerald-500/10 text-emerald-400"><ImageIcon size={24} /></div>;
         if (mimeType?.includes('pdf')) return <div className="p-2.5 rounded-xl bg-rose-500/10 text-rose-400"><FileText size={24} /></div>;
         if (mimeType?.startsWith('video/')) return <div className="p-2.5 rounded-xl bg-purple-500/10 text-purple-400"><Film size={24} /></div>;
+
+        // Google Workspace Apps
+        if (mimeType === 'application/vnd.google-apps.document')
+            return <div className="p-2.5 rounded-xl bg-blue-500/10 text-blue-500 border border-blue-500/20 shadow-[0_0_15px_rgba(59,130,246,0.1)]"><FileText size={24} /></div>;
+        if (mimeType === 'application/vnd.google-apps.spreadsheet')
+            return <div className="p-2.5 rounded-xl bg-green-500/10 text-green-500 border border-green-500/20 shadow-[0_0_15px_rgba(34,197,94,0.1)]"><Table size={24} /></div>;
+        if (mimeType === 'application/vnd.google-apps.presentation')
+            return <div className="p-2.5 rounded-xl bg-yellow-500/10 text-yellow-500 border border-yellow-500/20 shadow-[0_0_15px_rgba(234,179,8,0.1)]"><Presentation size={24} /></div>;
+        if (mimeType === 'application/vnd.google-apps.form')
+            return <div className="p-2.5 rounded-xl bg-purple-500/10 text-purple-500 border border-purple-500/20 shadow-[0_0_15px_rgba(168,85,247,0.1)]"><ClipboardList size={24} /></div>;
+
         return <div className="p-2.5 rounded-xl bg-blue-500/10 text-blue-400"><FileIcon size={24} /></div>;
     };
 
     const getFileTypeLabel = (mimeType: string) => {
         if (mimeType === 'application/vnd.google-apps.folder') return 'FOLDER';
+        if (mimeType === 'application/vnd.google-apps.document') return 'DOC';
+        if (mimeType === 'application/vnd.google-apps.spreadsheet') return 'SHEET';
+        if (mimeType === 'application/vnd.google-apps.presentation') return 'SLIDE';
+        if (mimeType === 'application/vnd.google-apps.form') return 'FORM';
         if (mimeType?.startsWith('image/')) return mimeType.replace('image/', '').toUpperCase();
         if (mimeType?.includes('pdf')) return 'PDF';
         const ext = mimeType?.split('/').pop()?.toUpperCase() || 'FILE';
