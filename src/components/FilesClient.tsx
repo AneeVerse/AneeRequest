@@ -32,6 +32,12 @@ import {
     Sun,
     Bell,
     Plus,
+    FileUp,
+    FolderUp,
+    Table,
+    Presentation,
+    ClipboardList,
+    MoreHorizontal,
 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 
@@ -104,16 +110,36 @@ export default function FilesClient({ initialRootId, initialDriveItems, initialD
 
     // CRUD state
     const [contextMenuFile, setContextMenuFile] = useState<DriveItem | null>(null);
-    const [isRenaming, setIsRenaming] = useState(false);
-    const [renameValue, setRenameValue] = useState('');
     const [isDeleting, setIsDeleting] = useState(false);
     const [deleteTarget, setDeleteTarget] = useState<DriveItem | null>(null);
     const [isCreatingFolder, setIsCreatingFolder] = useState(false);
     const [newFolderName, setNewFolderName] = useState('');
+    const [isNewMenuOpen, setIsNewMenuOpen] = useState(false);
+    const [namingModal, setNamingModal] = useState<{
+        isOpen: boolean;
+        type: string;
+        title: string;
+        initialValue: string;
+        onConfirm: (name: string) => void;
+    }>({ isOpen: false, type: '', title: '', initialValue: '', onConfirm: () => { } });
+    const newMenuRef = useRef<HTMLDivElement>(null);
+
+    // Close new menu on click outside
+    useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            if (newMenuRef.current && !newMenuRef.current.contains(event.target as Node)) {
+                setIsNewMenuOpen(false);
+            }
+        };
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, []);
 
     // Upload
     const [isUploading, setIsUploading] = useState(false);
+    const [uploadStatus, setUploadStatus] = useState<string>('');
     const fileInputRef = useRef<HTMLInputElement>(null);
+    const folderInputRef = useRef<HTMLInputElement>(null);
     const newFolderInputRef = useRef<HTMLInputElement>(null);
 
     // Focus input when creating folder
@@ -177,22 +203,127 @@ export default function FilesClient({ initialRootId, initialDriveItems, initialD
 
     // ─── CRUD Handlers ───
     const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-        const file = e.target.files?.[0];
-        if (!file || !currentDriveFolderId) return;
+        const files = e.target.files;
+        const isFolderInput = e.target === folderInputRef.current;
+
+        if (!currentDriveFolderId) return;
+
+        // Special handling for empty folder uploads 
+        // (Browsers don't provide the name of an empty directory, so we ask for it)
+        if (isFolderInput && (!files || files.length === 0)) {
+            setNamingModal({
+                isOpen: true,
+                type: 'folder',
+                title: 'Name your empty folder',
+                initialValue: 'New Folder',
+                onConfirm: async (name) => {
+                    setNamingModal(prev => ({ ...prev, isOpen: false }));
+                    setIsUploading(true);
+                    setUploadStatus(`Creating folder: ${name}...`);
+                    try {
+                        const res = await fetch('/api/drive/browse', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ parentId: currentDriveFolderId, folderName: name })
+                        });
+                        if (res.ok) router.refresh();
+                    } catch (err) {
+                        console.error('Empty folder upload error:', err);
+                    } finally {
+                        setIsUploading(false);
+                        setUploadStatus('');
+                        if (folderInputRef.current) folderInputRef.current.value = '';
+                    }
+                }
+            });
+            return;
+        }
+
+        if (!files || files.length === 0) return;
 
         setIsUploading(true);
         try {
-            const formData = new FormData();
-            formData.append('file', file);
-            formData.append('parentId', currentDriveFolderId);
-            const res = await fetch('/api/drive/browse', { method: 'POST', body: formData });
-            if (res.ok) router.refresh();
+            let targetFolderId = currentDriveFolderId;
+
+            // Check if it's a folder upload and create the parent folder first
+            const firstFile = files[0] as any;
+            if (firstFile.webkitRelativePath && firstFile.webkitRelativePath.includes('/')) {
+                const rootFolderName = firstFile.webkitRelativePath.split('/')[0];
+                setUploadStatus(`Preparing folder: ${rootFolderName}...`);
+
+                const res = await fetch('/api/drive/browse', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        parentId: currentDriveFolderId,
+                        folderName: rootFolderName
+                    })
+                });
+
+                if (res.ok) {
+                    const data = await res.json();
+                    targetFolderId = data.id;
+                }
+            }
+
+            for (let i = 0; i < files.length; i++) {
+                const file = files[i];
+                // Clean the filename (strip paths if browser includes them in .name)
+                const cleanName = file.name.split('/').pop() || file.name;
+
+                setUploadStatus(`Uploading ${i + 1}/${files.length}: ${cleanName}...`);
+                const formData = new FormData();
+                formData.append('file', file, cleanName); // Use the clean name
+                formData.append('parentId', targetFolderId);
+                await fetch('/api/drive/browse', { method: 'POST', body: formData });
+            }
+            router.refresh();
         } catch (e) {
             console.error('Upload error:', e);
         } finally {
             setIsUploading(false);
+            setUploadStatus('');
             if (fileInputRef.current) fileInputRef.current.value = '';
+            if (folderInputRef.current) folderInputRef.current.value = '';
         }
+    };
+
+    const handleCreateGoogleFile = async (type: 'document' | 'spreadsheet' | 'presentation' | 'form') => {
+        if (!currentDriveFolderId) return;
+
+        setNamingModal({
+            isOpen: true,
+            type,
+            title: `New ${type.charAt(0).toUpperCase() + type.slice(1)}`,
+            initialValue: `New ${type.charAt(0).toUpperCase() + type.slice(1)}`,
+            onConfirm: async (name) => {
+                setIsUploading(true);
+                setUploadStatus(`Creating ${type}...`);
+                try {
+                    const res = await fetch('/api/drive/browse', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            parentId: currentDriveFolderId,
+                            folderName: name.trim(),
+                            type
+                        })
+                    });
+                    if (res.ok) {
+                        const data = await res.json();
+                        if (data.webViewLink) {
+                            window.open(data.webViewLink, '_blank');
+                        }
+                        router.refresh();
+                    }
+                } catch (e) {
+                    console.error('Create Google file error:', e);
+                } finally {
+                    setIsUploading(false);
+                    setNamingModal(prev => ({ ...prev, isOpen: false }));
+                }
+            }
+        });
     };
 
     const handleCreateFolder = async () => {
@@ -216,27 +347,6 @@ export default function FilesClient({ initialRootId, initialDriveItems, initialD
         }
     };
 
-    const handleRename = async () => {
-        if (!contextMenuFile || !renameValue.trim()) return;
-        try {
-            const res = await fetch('/api/drive/browse', {
-                method: 'PATCH',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    id: contextMenuFile.id,
-                    newName: renameValue.trim(),
-                    isFolder: contextMenuFile.isFolder
-                })
-            });
-            if (res.ok) {
-                setIsRenaming(false);
-                setContextMenuFile(null);
-                router.refresh();
-            }
-        } catch (e) {
-            console.error('Rename error:', e);
-        }
-    };
 
     const handleDelete = async () => {
         if (!deleteTarget) return;
@@ -329,16 +439,149 @@ export default function FilesClient({ initialRootId, initialDriveItems, initialD
                             </div>
                         </div>
 
-                        <div className="flex items-center gap-4">
-
+                        <div className="flex items-center gap-2 relative" ref={newMenuRef}>
+                            {/* Consolidated Actions */}
                             <button
-                                onClick={() => setIsCreatingFolder(true)}
-                                className="flex items-center gap-1.5 px-2 py-1.5 text-xs font-bold text-santas-gray hover:text-white transition-colors group"
+                                onClick={refreshFolder}
+                                className="p-1.5 text-santas-gray hover:text-white transition-all shrink-0"
+                                title="Refresh"
                             >
-                                <Plus size={16} className="group-hover:text-white" />
-                                <span>new</span>
+                                <RefreshCw size={14} className={isDriveLoading ? 'animate-spin' : ''} />
                             </button>
+
+                            {isUploading && uploadStatus && (
+                                <div className="flex items-center gap-2 px-3 py-1.5 bg-[#279da6]/10 border border-[#279da6]/20 rounded-lg animate-pulse">
+                                    <Loader2 size={14} className="text-[#279da6] animate-spin" />
+                                    <span className="text-[10px] font-bold text-[#279da6] uppercase tracking-wider truncate max-w-[200px]">
+                                        {uploadStatus}
+                                    </span>
+                                </div>
+                            )}
+
+                            <div className="h-4 w-[1px] bg-shark mx-1" />
+
+                            {isCreatingFolder ? (
+                                <div className="flex items-center gap-2 animate-zoom-in">
+                                    <button
+                                        onClick={handleCreateFolder}
+                                        className="flex items-center gap-1.5 px-3 py-1.5 bg-[#279da6] text-white rounded-lg hover:bg-[#279da6]/90 transition-all font-bold text-xs shadow-lg shadow-[#279da6]/20 active:scale-95"
+                                    >
+                                        <Check size={14} />
+                                        <span>Create</span>
+                                    </button>
+                                    <button
+                                        onClick={() => { setIsCreatingFolder(false); setNewFolderName(''); }}
+                                        className="p-1.5 bg-white/5 text-storm-gray rounded-lg hover:text-white hover:bg-white/10 transition-all active:scale-95"
+                                    >
+                                        <X size={14} />
+                                    </button>
+                                </div>
+                            ) : (
+                                <div className="relative">
+                                    <button
+                                        onClick={() => setIsNewMenuOpen(!isNewMenuOpen)}
+                                        className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold transition-all group rounded-lg ${isNewMenuOpen ? 'bg-[#279da6] text-white shadow-lg shadow-[#279da6]/20' : 'text-santas-gray hover:text-white hover:bg-white/5'}`}
+                                    >
+                                        <Plus size={16} className={isNewMenuOpen ? 'text-white' : 'group-hover:text-white'} />
+                                        <span>new</span>
+                                    </button>
+
+                                    {/* Google Drive Style "New" Menu */}
+                                    {isNewMenuOpen && (
+                                        <div className="absolute top-full right-0 mt-2 w-64 bg-[#18181B] border border-shark/60 rounded-xl shadow-2xl py-2 z-[100] animate-zoom-in backdrop-blur-xl bg-opacity-95 overflow-hidden">
+                                            {/* Folder Item */}
+                                            <button
+                                                onClick={() => { setIsCreatingFolder(true); setIsNewMenuOpen(false); }}
+                                                className="w-full flex items-center justify-between px-4 py-2 hover:bg-white/5 text-iron transition-colors group"
+                                            >
+                                                <div className="flex items-center gap-3">
+                                                    <FolderPlus size={16} className="text-storm-gray group-hover:text-[#279da6] transition-colors" />
+                                                    <span className="text-xs font-medium">New folder</span>
+                                                </div>
+                                                <span className="text-[10px] text-storm-gray opacity-40 group-hover:opacity-100 transition-opacity uppercase tracking-widest px-1.5 border border-shark/40 rounded bg-shark/20">⌘F</span>
+                                            </button>
+
+                                            <div className="h-[1px] bg-shark/40 my-1" />
+
+                                            {/* Upload Items */}
+                                            <button
+                                                onClick={() => { fileInputRef.current?.click(); setIsNewMenuOpen(false); }}
+                                                className="w-full flex items-center justify-between px-4 py-2 hover:bg-white/5 text-iron transition-colors group"
+                                            >
+                                                <div className="flex items-center gap-3">
+                                                    <FileUp size={16} className="text-storm-gray group-hover:text-[#279da6] transition-colors" />
+                                                    <span className="text-xs font-medium">File upload</span>
+                                                </div>
+                                                <span className="text-[10px] text-storm-gray opacity-40 group-hover:opacity-100 transition-opacity uppercase tracking-widest px-1.5 border border-shark/40 rounded bg-shark/20">⌘U</span>
+                                            </button>
+                                            <button
+                                                onClick={() => { folderInputRef.current?.click(); setIsNewMenuOpen(false); }}
+                                                className="w-full flex items-center justify-between px-4 py-2 hover:bg-white/5 text-iron transition-colors group"
+                                            >
+                                                <div className="flex items-center gap-3">
+                                                    <FolderUp size={16} className="text-storm-gray group-hover:text-[#279da6] transition-colors" />
+                                                    <span className="text-xs font-medium">Folder upload</span>
+                                                </div>
+                                                <span className="text-[10px] text-storm-gray opacity-40 group-hover:opacity-100 transition-opacity uppercase tracking-widest px-1.5 border border-shark/40 rounded bg-shark/20">⌘I</span>
+                                            </button>
+
+                                            <div className="h-[1px] bg-shark/40 my-1" />
+
+                                            {/* Google Workspace Apps */}
+                                            <button
+                                                onClick={() => { handleCreateGoogleFile('document'); setIsNewMenuOpen(false); }}
+                                                className="w-full flex items-center justify-between px-4 py-2 hover:bg-white/5 text-iron transition-colors group"
+                                            >
+                                                <div className="flex items-center gap-3">
+                                                    <div className="w-5 h-5 rounded bg-blue-500/10 border border-blue-500/20 flex items-center justify-center text-[10px] font-black text-blue-500 shadow-sm">
+                                                        <FileText size={12} />
+                                                    </div>
+                                                    <span className="text-xs font-medium">Google Docs</span>
+                                                </div>
+                                                <ChevronRight size={12} className="text-storm-gray opacity-40 group-hover:opacity-100" />
+                                            </button>
+                                            <button
+                                                onClick={() => { handleCreateGoogleFile('spreadsheet'); setIsNewMenuOpen(false); }}
+                                                className="w-full flex items-center justify-between px-4 py-2 hover:bg-white/5 text-iron transition-colors group"
+                                            >
+                                                <div className="flex items-center gap-3">
+                                                    <div className="w-5 h-5 rounded bg-green-500/10 border border-green-500/20 flex items-center justify-center text-[10px] font-black text-green-500 shadow-sm">
+                                                        <Table className="size-3" />
+                                                    </div>
+                                                    <span className="text-xs font-medium">Google Sheets</span>
+                                                </div>
+                                                <ChevronRight size={12} className="text-storm-gray opacity-40 group-hover:opacity-100" />
+                                            </button>
+                                            <button
+                                                onClick={() => { handleCreateGoogleFile('presentation'); setIsNewMenuOpen(false); }}
+                                                className="w-full flex items-center justify-between px-4 py-2 hover:bg-white/5 text-iron transition-colors group"
+                                            >
+                                                <div className="flex items-center gap-3">
+                                                    <div className="w-5 h-5 rounded bg-yellow-500/10 border border-yellow-500/20 flex items-center justify-center text-[10px] font-black text-yellow-500 shadow-sm">
+                                                        <Presentation className="size-3" />
+                                                    </div>
+                                                    <span className="text-xs font-medium">Google Slides</span>
+                                                </div>
+                                                <ChevronRight size={12} className="text-storm-gray opacity-40 group-hover:opacity-100" />
+                                            </button>
+                                            <button
+                                                onClick={() => { handleCreateGoogleFile('form'); setIsNewMenuOpen(false); }}
+                                                className="w-full flex items-center justify-between px-4 py-2 hover:bg-white/5 text-iron transition-colors group"
+                                            >
+                                                <div className="flex items-center gap-3">
+                                                    <div className="w-5 h-5 rounded bg-purple-500/10 border border-purple-500/20 flex items-center justify-center text-[10px] font-black text-purple-500 shadow-sm">
+                                                        <ClipboardList size={12} />
+                                                    </div>
+                                                    <span className="text-xs font-medium">Google Forms</span>
+                                                </div>
+                                                <ChevronRight size={12} className="text-storm-gray opacity-40 group-hover:opacity-100" />
+                                            </button>
+                                        </div>
+                                    )}
+                                </div>
+                            )}
                             <input type="file" ref={fileInputRef} className="hidden" onChange={handleUpload} />
+                            <input type="file" ref={folderInputRef} className="hidden" onChange={handleUpload} {...{ webkitdirectory: "", directory: "" } as any} />
                         </div>
 
                         {/* Right side global elements */}
@@ -371,29 +614,7 @@ export default function FilesClient({ initialRootId, initialDriveItems, initialD
                                         className="w-full bg-[#09090B] border border-shark/50 rounded-lg py-2 pl-10 pr-4 text-xs text-iron placeholder:text-storm-gray focus:outline-none focus:border-[#279da6]/40 transition-all"
                                     />
                                 </div>
-                                <div className="flex items-center gap-2">
-                                    <button
-                                        onClick={refreshFolder}
-                                        className="p-2 bg-shark/20 border border-shark rounded-lg text-storm-gray hover:text-white transition-all shrink-0 mr-1"
-                                    >
-                                        <RefreshCw size={14} className={isDriveLoading ? 'animate-spin' : ''} />
-                                    </button>
-                                    <button
-                                        onClick={() => fileInputRef.current?.click()}
-                                        disabled={isUploading}
-                                        className="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-shark hover:bg-shark/40 text-iron text-xs font-bold transition-all disabled:opacity-50"
-                                    >
-                                        {isUploading ? <Loader2 size={14} className="animate-spin" /> : <Upload size={14} />}
-                                        <span>Upload File</span>
-                                    </button>
-                                    <button
-                                        onClick={() => setIsCreatingFolder(true)}
-                                        className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-[#279da6] text-white text-xs font-bold hover:bg-[#279da6]/90 transition-all shadow-lg hover:shadow-[#279da6]/20"
-                                    >
-                                        <Plus size={14} />
-                                        <span>New Folder</span>
-                                    </button>
-                                </div>
+                                {/* Toolbar actions moved to header */}
                             </div>
 
                             {/* New Folder Creation Input */}
@@ -422,21 +643,7 @@ export default function FilesClient({ initialRootId, initialDriveItems, initialD
                                         />
                                     </div>
 
-                                    <div className={`flex items-center gap-2 transition-all duration-500 ease-out ${isCreatingFolder ? 'opacity-100 translate-x-0 delay-400' : 'opacity-0 translate-x-4'}`}>
-                                        <button
-                                            onClick={handleCreateFolder}
-                                            className="flex items-center gap-2 px-4 py-2 bg-[#279da6] text-white rounded-xl hover:bg-[#279da6]/90 transition-all font-bold text-xs shadow-lg shadow-[#279da6]/20 active:scale-95"
-                                        >
-                                            <Check size={18} />
-                                            <span className="hidden sm:inline">Create</span>
-                                        </button>
-                                        <button
-                                            onClick={() => { setIsCreatingFolder(false); setNewFolderName(''); }}
-                                            className="p-2.5 bg-white/5 text-storm-gray rounded-xl hover:text-white hover:bg-white/10 transition-all active:scale-95"
-                                        >
-                                            <X size={18} />
-                                        </button>
-                                    </div>
+                                    {/* Action buttons moved to top header for cleaner transition */}
                                 </div>
                             </div>
 
@@ -467,53 +674,65 @@ export default function FilesClient({ initialRootId, initialDriveItems, initialD
                                             </div>
 
                                             <div className="relative z-10 w-full min-w-0">
-                                                {isRenaming && contextMenuFile?.id === item.id ? (
-                                                    <div className="flex flex-col items-center gap-2" onClick={e => e.stopPropagation()}>
-                                                        <input
-                                                            type="text"
-                                                            value={renameValue}
-                                                            onChange={e => setRenameValue(e.target.value)}
-                                                            onKeyDown={e => { if (e.key === 'Enter') handleRename(); if (e.key === 'Escape') setIsRenaming(false); }}
-                                                            autoFocus
-                                                            className="w-full bg-[#09090B] border border-[#279da6]/60 rounded-xl px-3 py-1.5 text-xs font-bold text-iron focus:outline-none text-center"
-                                                        />
-                                                        <div className="flex gap-1.5">
-                                                            <button onClick={handleRename} className="p-1 px-3 bg-[#279da6] text-white rounded-lg text-[10px] font-black uppercase">Save</button>
-                                                            <button onClick={() => setIsRenaming(false)} className="p-1 px-3 bg-shark/60 text-storm-gray rounded-lg text-[10px] font-black uppercase">Cancel</button>
-                                                        </div>
+                                                <div className="space-y-1">
+                                                    <p className="text-[11px] font-black text-white truncate px-2 group-hover:text-[#279da6] transition-all uppercase tracking-tight">{item.name}</p>
+                                                    <div className="flex items-center justify-center gap-2">
+                                                        <span className="text-[9px] font-black text-storm-gray uppercase tracking-widest">{getFileTypeLabel(item.mimeType)}</span>
+                                                        {dbEnrichment.clients.some(c => (c.org || c.name) === item.name) && (
+                                                            <>
+                                                                <div className="w-1 h-1 rounded-full bg-cyan-500/40" />
+                                                                <span className="text-[9px] font-black text-cyan-400 uppercase tracking-widest">CLIENT</span>
+                                                            </>
+                                                        )}
+                                                        {dbEnrichment.requests.some(r => r.title === item.name) && (
+                                                            <>
+                                                                <div className="w-1 h-1 rounded-full bg-blue-500/40" />
+                                                                <span className="text-[9px] font-black text-blue-400 uppercase tracking-widest">REQUEST</span>
+                                                            </>
+                                                        )}
+                                                        {!item.isFolder && item.size && (
+                                                            <>
+                                                                <div className="w-1 h-1 rounded-full bg-shark" />
+                                                                <span className="text-[9px] font-black text-storm-gray uppercase tracking-widest">{formatFileSize(item.size)}</span>
+                                                            </>
+                                                        )}
                                                     </div>
-                                                ) : (
-                                                    <div className="space-y-1">
-                                                        <p className="text-[11px] font-black text-white truncate px-2 group-hover:text-[#279da6] transition-colors uppercase tracking-tight">{item.name}</p>
-                                                        <div className="flex items-center justify-center gap-2">
-                                                            <span className="text-[9px] font-black text-storm-gray uppercase tracking-widest">{getFileTypeLabel(item.mimeType)}</span>
-                                                            {dbEnrichment.clients.some(c => (c.org || c.name) === item.name) && (
-                                                                <>
-                                                                    <div className="w-1 h-1 rounded-full bg-cyan-500/40" />
-                                                                    <span className="text-[9px] font-black text-cyan-400 uppercase tracking-widest">CLIENT</span>
-                                                                </>
-                                                            )}
-                                                            {dbEnrichment.requests.some(r => r.title === item.name) && (
-                                                                <>
-                                                                    <div className="w-1 h-1 rounded-full bg-blue-500/40" />
-                                                                    <span className="text-[9px] font-black text-blue-400 uppercase tracking-widest">REQUEST</span>
-                                                                </>
-                                                            )}
-                                                            {!item.isFolder && item.size && (
-                                                                <>
-                                                                    <div className="w-1 h-1 rounded-full bg-shark" />
-                                                                    <span className="text-[9px] font-black text-storm-gray uppercase tracking-widest">{formatFileSize(item.size)}</span>
-                                                                </>
-                                                            )}
-                                                        </div>
-                                                    </div>
-                                                )}
+                                                </div>
                                             </div>
 
                                             {/* Floating Actions */}
                                             <div className="absolute top-3 right-3 flex flex-col gap-2 opacity-0 group-hover:opacity-100 transition-all translate-x-2 group-hover:translate-x-0">
                                                 <button
-                                                    onClick={(e) => { e.stopPropagation(); setContextMenuFile(item); setRenameValue(item.name); setIsRenaming(true); }}
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        setNamingModal({
+                                                            isOpen: true,
+                                                            type: 'rename',
+                                                            title: `Rename ${item.isFolder ? 'Folder' : 'File'}`,
+                                                            initialValue: item.name,
+                                                            onConfirm: async (newName) => {
+                                                                if (!newName.trim()) return;
+                                                                try {
+                                                                    const res = await fetch('/api/drive/browse', {
+                                                                        method: 'PATCH',
+                                                                        headers: { 'Content-Type': 'application/json' },
+                                                                        body: JSON.stringify({
+                                                                            id: item.id,
+                                                                            newName: newName.trim(),
+                                                                            isFolder: item.isFolder
+                                                                        })
+                                                                    });
+                                                                    if (res.ok) {
+                                                                        router.refresh();
+                                                                    }
+                                                                } catch (e) {
+                                                                    console.error('Rename error:', e);
+                                                                } finally {
+                                                                    setNamingModal(prev => ({ ...prev, isOpen: false }));
+                                                                }
+                                                            }
+                                                        });
+                                                    }}
                                                     className="p-2 rounded-xl bg-shark/80 hover:bg-[#279da6]/20 text-storm-gray hover:text-[#279da6] hover:scale-110 transition-all border border-shark"
                                                 >
                                                     <Pencil size={12} />
@@ -582,6 +801,67 @@ export default function FilesClient({ initialRootId, initialDriveItems, initialD
                 onClose={() => { setIsPreviewOpen(false); setPreviewFile(null); }}
                 file={previewFile}
             />
+
+            {/* Name Input Modal */}
+            {namingModal.isOpen && (
+                <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
+                    <div
+                        className="absolute inset-0 bg-black/60 backdrop-blur-sm animate-fade-in"
+                        onClick={() => setNamingModal(prev => ({ ...prev, isOpen: false }))}
+                    />
+                    <div className="bg-[#18181B] border border-shark/60 w-full max-w-md rounded-2xl shadow-2xl relative z-10 overflow-hidden animate-zoom-in">
+                        <div className="px-6 py-5 border-b border-shark">
+                            <h3 className="text-lg font-black text-iron tracking-tight uppercase">
+                                {namingModal.title}
+                            </h3>
+                            <button
+                                onClick={() => setNamingModal(prev => ({ ...prev, isOpen: false }))}
+                                className="absolute top-5 right-5 p-1 text-storm-gray hover:text-white transition-colors"
+                            >
+                                <X size={20} />
+                            </button>
+                        </div>
+
+                        <div className="p-6">
+                            <label className="block text-[10px] font-black text-storm-gray uppercase tracking-widest mb-2 ml-1">
+                                Enter Name
+                            </label>
+                            <input
+                                autoFocus
+                                type="text"
+                                defaultValue={namingModal.initialValue}
+                                onKeyDown={(e) => {
+                                    if (e.key === 'Enter') {
+                                        namingModal.onConfirm(e.currentTarget.value);
+                                    } else if (e.key === 'Escape') {
+                                        setNamingModal(prev => ({ ...prev, isOpen: false }));
+                                    }
+                                }}
+                                className="w-full bg-shark/40 border border-shark rounded-xl px-4 py-3 text-iron focus:outline-none focus:border-[#279da6] transition-all placeholder:text-storm-gray/40 font-medium"
+                                placeholder="e.g. Project Proposal"
+                            />
+                        </div>
+
+                        <div className="px-6 py-4 bg-shark/20 flex items-center justify-end gap-3">
+                            <button
+                                onClick={() => setNamingModal(prev => ({ ...prev, isOpen: false }))}
+                                className="px-5 py-2 text-xs font-black text-storm-gray hover:text-white transition-colors uppercase tracking-widest"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                onClick={(e) => {
+                                    const input = (e.currentTarget.parentElement?.previousElementSibling?.querySelector('input') as HTMLInputElement);
+                                    if (input) namingModal.onConfirm(input.value);
+                                }}
+                                className="px-6 py-2 bg-[#279da6] text-white rounded-xl text-xs font-black hover:bg-[#279da6]/90 transition-all shadow-lg shadow-[#279da6]/20 uppercase tracking-widest active:scale-95"
+                            >
+                                Create
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div >
     );
 }

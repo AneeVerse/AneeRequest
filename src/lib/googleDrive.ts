@@ -159,6 +159,43 @@ export async function createFolder(parentId: string, folderName: string): Promis
 }
 
 /**
+ * Create a specialized Google Workspace file (Doc, Sheet, Slide, Form).
+ */
+export async function createGoogleFile(parentId: string, fileName: string, type: 'document' | 'spreadsheet' | 'presentation' | 'form'): Promise<{ id: string; webViewLink: string }> {
+    const drive = getDrive();
+    const mimeTypes = {
+        document: 'application/vnd.google-apps.document',
+        spreadsheet: 'application/vnd.google-apps.spreadsheet',
+        presentation: 'application/vnd.google-apps.presentation',
+        form: 'application/vnd.google-apps.form',
+    };
+
+    const res = await drive.files.create({
+        requestBody: {
+            name: fileName,
+            mimeType: mimeTypes[type],
+            parents: [parentId],
+        },
+        fields: 'id, webViewLink',
+    });
+
+    // Make it viewable/editable by anyone with the link (optional, depends on security needs)
+    await drive.permissions.create({
+        fileId: res.data.id!,
+        requestBody: {
+            role: 'writer',
+            type: 'anyone',
+        },
+    });
+
+    driveCache.clear();
+    return {
+        id: res.data.id!,
+        webViewLink: res.data.webViewLink!,
+    };
+}
+
+/**
  * Get or create a folder. Returns its ID.
  */
 export async function getOrCreateFolder(parentId: string, folderName: string): Promise<string> {

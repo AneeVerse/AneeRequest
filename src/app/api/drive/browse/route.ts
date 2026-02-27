@@ -10,7 +10,8 @@ import {
     renameFileInDrive,
     deleteFileFromDrive,
     uploadFileToDrive,
-    validateFolderAccess
+    validateFolderAccess,
+    createGoogleFile
 } from '@/lib/googleDrive';
 
 async function checkSuperAdmin() {
@@ -89,11 +90,19 @@ export async function POST(request: Request) {
         const contentType = request.headers.get('content-type') || '';
 
         if (contentType.includes('application/json')) {
-            // Create folder
-            const { parentId, folderName } = await request.json();
+            // Create folder or Google Workspace file
+            const { parentId, folderName, type } = await request.json();
             if (!parentId || !folderName) {
                 return NextResponse.json({ error: 'Missing parentId or folderName' }, { status: 400 });
             }
+
+            if (type && ['document', 'spreadsheet', 'presentation', 'form'].includes(type)) {
+                // Create Google Workspace file
+                const result = await createGoogleFile(parentId, folderName, type as any);
+                return NextResponse.json({ success: true, ...result, name: folderName });
+            }
+
+            // Standard folder creation
             const id = await createFolder(parentId, folderName);
             return NextResponse.json({ success: true, id, name: folderName });
         }

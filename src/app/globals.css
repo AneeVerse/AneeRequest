@@ -47,6 +47,18 @@ body {
   border-color: var(--color-shark);
 }
 
+button,
+a,
+select,
+input[type="button"],
+input[type="submit"],
+input[type="reset"],
+[role="button"],
+.cursor-pointer,
+[onclick] {
+  cursor: pointer !important;
+}
+
 .no-scrollbar::-webkit-scrollbar {
   display: none;
 }
