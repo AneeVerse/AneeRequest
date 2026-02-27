@@ -15,7 +15,7 @@ export async function GET(request: Request) {
                 assignee:assigned_to (id, full_name),
                 creator:created_by (id, full_name),
                 request_links:task_request_links (
-                    request:request_id (id, title)
+                    request:request_id (id, slug, title)
                 )
             `)
             .order('created_at', { ascending: false });

@@ -62,6 +62,7 @@ interface TaskDetails {
     request_links?: {
         request: {
             id: string;
+            slug: string | null;
             title: string;
         } | null;
     }[] | null;
@@ -727,7 +728,7 @@ export default function TaskDetailsPage() {
                                                 {task.request_links?.map((link, idx) => (
                                                     <div key={idx} className="flex items-center gap-2 bg-[#279da6]/10 border border-[#279da6]/30 rounded-lg px-2 py-1 group/pill">
                                                         <span
-                                                            onClick={() => router.push(`/requests/${link.request?.id}`)}
+                                                            onClick={() => router.push(`/requests/${link.request?.slug || link.request?.id}`)}
                                                             className="text-[9px] font-bold text-[#279da6] truncate max-w-[200px] cursor-pointer hover:underline"
                                                         >
                                                             {link.request ? link.request.title : 'Unknown'}

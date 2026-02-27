@@ -114,6 +114,14 @@ export default function FilesClient({ initialRootId, initialDriveItems, initialD
     // Upload
     const [isUploading, setIsUploading] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
+    const newFolderInputRef = useRef<HTMLInputElement>(null);
+
+    // Focus input when creating folder
+    useEffect(() => {
+        if (isCreatingFolder) {
+            setTimeout(() => newFolderInputRef.current?.focus(), 100);
+        }
+    }, [isCreatingFolder]);
     const [theme, setTheme] = useState<'dark' | 'light'>('dark');
 
     // Theme toggle effect
@@ -349,7 +357,7 @@ export default function FilesClient({ initialRootId, initialDriveItems, initialD
                         </div>
                     </div>
 
-                    <main className="flex-1 overflow-y-auto custom-scrollbar relative bg-[#09090B]/30">
+                    <main className="flex-1 overflow-y-auto custom-scrollbar relative bg-[#18181B]">
                         <div className="p-6">
                             {/* Toolbar */}
                             <div className="flex items-center justify-between mb-6">
@@ -389,26 +397,48 @@ export default function FilesClient({ initialRootId, initialDriveItems, initialD
                             </div>
 
                             {/* New Folder Creation Input */}
-                            {isCreatingFolder && (
-                                <div className="flex items-center gap-3 p-4 bg-shark/20 border border-[#279da6]/30 rounded-2xl mb-6 animate-slide-up">
-                                    <FolderPlus size={20} className="text-[#279da6] shrink-0" />
-                                    <input
-                                        type="text"
-                                        value={newFolderName}
-                                        onChange={(e) => setNewFolderName(e.target.value)}
-                                        onKeyDown={(e) => e.key === 'Enter' && handleCreateFolder()}
-                                        className="flex-1 bg-transparent border-none text-sm text-iron focus:outline-none font-bold"
-                                        placeholder="Enter folder name..."
-                                        autoFocus
-                                    />
-                                    <button onClick={handleCreateFolder} className="p-2 bg-[#279da6]/10 text-[#279da6] rounded-xl hover:bg-[#279da6]/20 transition-all">
-                                        <Check size={18} />
-                                    </button>
-                                    <button onClick={() => { setIsCreatingFolder(false); setNewFolderName(''); }} className="p-2 bg-shark/40 text-storm-gray rounded-xl hover:text-white transition-all">
-                                        <X size={18} />
-                                    </button>
+                            <div
+                                className={`overflow-hidden transition-all duration-700 ease-[cubic-bezier(0.16,1,0.3,1)] ${isCreatingFolder
+                                    ? 'max-h-40 opacity-100 mb-8 translate-y-0 scale-100 blur-0'
+                                    : 'max-h-0 opacity-0 mb-0 -translate-y-4 scale-95 blur-md pointer-events-none'
+                                    }`}
+                            >
+                                <div className="flex items-center gap-4 p-5 bg-[#18181B]/40 backdrop-blur-xl border border-[#279da6]/30 rounded-[1.5rem] shadow-[0_20px_50px_rgba(0,0,0,0.3),0_0_30px_rgba(39,157,166,0.05)] ring-1 ring-white/5">
+                                    <div className={`transition-all duration-500 ease-out ${isCreatingFolder ? 'opacity-100 translate-x-0 delay-200' : 'opacity-0 -translate-x-4'}`}>
+                                        <div className="p-2.5 rounded-xl bg-[#279da6]/10 text-[#279da6]">
+                                            <FolderPlus size={22} className="shrink-0" />
+                                        </div>
+                                    </div>
+
+                                    <div className={`flex-1 transition-all duration-500 ease-out ${isCreatingFolder ? 'opacity-100 delay-300' : 'opacity-0'}`}>
+                                        <input
+                                            ref={newFolderInputRef}
+                                            type="text"
+                                            value={newFolderName}
+                                            onChange={(e) => setNewFolderName(e.target.value)}
+                                            onKeyDown={(e) => e.key === 'Enter' && handleCreateFolder()}
+                                            className="w-full bg-transparent border-none text-base text-iron focus:outline-none font-bold placeholder:text-storm-gray/50"
+                                            placeholder="Enter folder name..."
+                                        />
+                                    </div>
+
+                                    <div className={`flex items-center gap-2 transition-all duration-500 ease-out ${isCreatingFolder ? 'opacity-100 translate-x-0 delay-400' : 'opacity-0 translate-x-4'}`}>
+                                        <button
+                                            onClick={handleCreateFolder}
+                                            className="flex items-center gap-2 px-4 py-2 bg-[#279da6] text-white rounded-xl hover:bg-[#279da6]/90 transition-all font-bold text-xs shadow-lg shadow-[#279da6]/20 active:scale-95"
+                                        >
+                                            <Check size={18} />
+                                            <span className="hidden sm:inline">Create</span>
+                                        </button>
+                                        <button
+                                            onClick={() => { setIsCreatingFolder(false); setNewFolderName(''); }}
+                                            className="p-2.5 bg-white/5 text-storm-gray rounded-xl hover:text-white hover:bg-white/10 transition-all active:scale-95"
+                                        >
+                                            <X size={18} />
+                                        </button>
+                                    </div>
                                 </div>
-                            )}
+                            </div>
 
                             {isDriveLoading && driveItems.length === 0 ? (
                                 <div className="flex flex-col items-center justify-center py-32 gap-4">
@@ -426,7 +456,7 @@ export default function FilesClient({ initialRootId, initialDriveItems, initialD
                                     {filteredItems.map((item) => (
                                         <div
                                             key={item.id}
-                                            className="group relative flex flex-col items-center gap-4 p-6 rounded-3xl border border-shark/40 hover:border-[#279da6]/30 bg-[#18181B]/40 hover:bg-[#279da6]/5 transition-all cursor-pointer text-center overflow-hidden"
+                                            className="group relative flex flex-col items-center gap-4 p-6 rounded-3xl border border-shark/40 hover:border-[#279da6]/30 bg-[#09090B]/40 hover:bg-[#279da6]/5 transition-all cursor-pointer text-center overflow-hidden"
                                             onClick={() => item.isFolder ? navigateToSubfolder(item) : (setPreviewFile({ ...item, url: item.webViewLink, previewUrl: item.previewUrl, type: item.mimeType }), setIsPreviewOpen(true))}
                                         >
                                             {/* Glow Background */}
@@ -513,36 +543,38 @@ export default function FilesClient({ initialRootId, initialDriveItems, initialD
                         </div>
                     </main>
                 </div>
-            </div>
+            </div >
 
             {/* Delete Confirmation */}
-            {isDeleting && deleteTarget && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center px-4 bg-black/80 backdrop-blur-sm animate-fade-in">
-                    <div className="bg-[#18181B] border border-shark rounded-3xl p-8 max-w-md w-full shadow-2xl animate-scale-in">
-                        <div className="w-16 h-16 rounded-2xl bg-rose-500/10 flex items-center justify-center text-rose-500 mb-6 mx-auto">
-                            <Trash2 size={32} />
-                        </div>
-                        <h3 className="text-xl font-black text-white text-center mb-2 uppercase tracking-tight">Confirm Deletion</h3>
-                        <p className="text-sm font-bold text-storm-gray text-center mb-8 uppercase tracking-widest text-[10px]">
-                            Are you sure you want to delete <span className="text-iron">"{deleteTarget.name}"</span>? This action cannot be undone.
-                        </p>
-                        <div className="flex gap-3">
-                            <button
-                                onClick={() => { setIsDeleting(false); setDeleteTarget(null); }}
-                                className="flex-1 px-6 py-3 rounded-2xl bg-shark/40 hover:bg-shark border border-shark text- iron text-xs font-black uppercase tracking-widest transition-all"
-                            >
-                                Cancel
-                            </button>
-                            <button
-                                onClick={handleDelete}
-                                className="flex-1 px-6 py-3 rounded-2xl bg-rose-500 hover:bg-rose-600 text-white text-xs font-black uppercase tracking-widest transition-all shadow-lg shadow-rose-500/20"
-                            >
-                                Delete Now
-                            </button>
+            {
+                isDeleting && deleteTarget && (
+                    <div className="fixed inset-0 z-50 flex items-center justify-center px-4 bg-black/80 backdrop-blur-sm animate-fade-in">
+                        <div className="bg-[#18181B] border border-shark rounded-3xl p-8 max-w-md w-full shadow-2xl animate-scale-in">
+                            <div className="w-16 h-16 rounded-2xl bg-rose-500/10 flex items-center justify-center text-rose-500 mb-6 mx-auto">
+                                <Trash2 size={32} />
+                            </div>
+                            <h3 className="text-xl font-black text-white text-center mb-2 uppercase tracking-tight">Confirm Deletion</h3>
+                            <p className="text-sm font-bold text-storm-gray text-center mb-8 uppercase tracking-widest text-[10px]">
+                                Are you sure you want to delete <span className="text-iron">"{deleteTarget.name}"</span>? This action cannot be undone.
+                            </p>
+                            <div className="flex gap-3">
+                                <button
+                                    onClick={() => { setIsDeleting(false); setDeleteTarget(null); }}
+                                    className="flex-1 px-6 py-3 rounded-2xl bg-shark/40 hover:bg-shark border border-shark text- iron text-xs font-black uppercase tracking-widest transition-all"
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    onClick={handleDelete}
+                                    className="flex-1 px-6 py-3 rounded-2xl bg-rose-500 hover:bg-rose-600 text-white text-xs font-black uppercase tracking-widest transition-all shadow-lg shadow-rose-500/20"
+                                >
+                                    Delete Now
+                                </button>
+                            </div>
                         </div>
                     </div>
-                </div>
-            )}
+                )
+            }
 
             {/* File Preview Modal */}
             <FilePreviewModal
@@ -550,6 +582,6 @@ export default function FilesClient({ initialRootId, initialDriveItems, initialD
                 onClose={() => { setIsPreviewOpen(false); setPreviewFile(null); }}
                 file={previewFile}
             />
-        </div>
+        </div >
     );
 }

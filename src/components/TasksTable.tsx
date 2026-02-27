@@ -260,7 +260,7 @@ export default function TasksTable({
                                                             key={idx}
                                                             onClick={(e) => {
                                                                 e.stopPropagation();
-                                                                router.push(`/requests/${link.request?.id}`);
+                                                                router.push(`/requests/${link.request?.slug || link.request?.id}`);
                                                             }}
                                                             className="flex flex-col cursor-pointer hover:text-[#279da6] transition-colors leading-tight"
                                                         >

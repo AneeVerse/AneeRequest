@@ -14,6 +14,7 @@ export interface TaskItem {
     request_links?: {
         request: {
             id: string;
+            slug: string | null;
             title: string;
         } | null;
     }[] | null;
@@ -43,7 +44,7 @@ export async function getTasksData() {
                     team_members!team_members_profile_id_fkey (name)
                 ),
                 request_links:task_request_links (
-                    request:request_id (id, title)
+                    request:request_id (id, slug, title)
                 )
             `)
         .order('created_at', { ascending: false });
