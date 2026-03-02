@@ -780,7 +780,7 @@ export default function RequestDetailsPage() {
                                 label={request.title || 'Request Details'}
                                 labelIcon={
                                     <div className="flex items-center gap-2">
-                                        <FileText size={16} className="text-[#279da6]" />
+                                        <MessageSquare size={16} className="text-[#279da6]" />
                                         <span className="text-[10px] font-black text-[#279da6] bg-shark/40 py-0.5 px-1.5 rounded border border-[#279da6]/20">
                                             #{request.request_number || 1}
                                         </span>
@@ -1070,7 +1070,7 @@ export default function RequestDetailsPage() {
                                                     <div className="p-6 space-y-6">
                                                         <div className="flex items-start gap-6">
                                                             <div className="flex flex-col items-center gap-3 shrink-0">
-                                                                <div className="w-14 h-14 rounded-2xl bg-[#279da6]/10 flex items-center justify-center text-[#279da6] shadow-inner ring-1 ring-[#279da6]/20">
+                                                                <div className="w-14 h-14 rounded-2xl bg-amber-400/10 flex items-center justify-center text-amber-400 shadow-inner ring-1 ring-amber-400/20">
                                                                     <CheckSquare size={28} />
                                                                 </div>
                                                                 <p className="text-[10px] font-black text-storm-gray uppercase tracking-widest">Task</p>

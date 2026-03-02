@@ -28,23 +28,37 @@ export async function getTeamMembers(): Promise<TeamMember[]> {
         supabase.auth.admin.listUsers()
     ]);
 
-    if (teamRes.error) {
-        console.error('Error fetching team members:', teamRes.error);
-        return [];
-    }
+    if (teamRes.error) console.error('Error fetching team members:', teamRes.error);
+    if (profilesRes.error) console.error('Error fetching profiles:', profilesRes.error);
+    if (authRes.error) console.error('Error listing auth users:', authRes.error);
 
+    const membersData = teamRes.data || [];
     const profiles = profilesRes.data || [];
     const authUsers = authRes.data?.users || [];
 
-    // Merge by email as per api/team/route.ts
-    return teamRes.data.map(member => {
-        const profile = profiles.find(p => p.email.toLowerCase() === member.email.toLowerCase());
-        const authUser = authUsers.find(u => u.email?.toLowerCase() === member.email.toLowerCase());
+    // Merge by profile_id first, then email (case-insensitive)
+    return membersData.map(member => {
+        const matchedProfiles = profiles.filter(p =>
+            (member.profile_id && p.id === member.profile_id) ||
+            (p.email.toLowerCase() === member.email.toLowerCase())
+        );
+
+        // Prioritize the profile that has an avatar if there are multiple matches
+        const profile = matchedProfiles.find(p => p.avatar_url) || matchedProfiles[0];
+
+        const matchedAuthUsers = authUsers.filter(u =>
+            (member.profile_id && u.id === member.profile_id) ||
+            u.email?.toLowerCase() === member.email.toLowerCase()
+        );
+        const authUser = matchedAuthUsers.find(u => u.last_sign_in_at) || matchedAuthUsers[0];
+
+        // Fallback for avatar: Profile URL > Auth Metadata URL > null
+        const avatarUrl = profile?.avatar_url || authUser?.user_metadata?.avatar_url || null;
 
         return {
             ...member,
             profile_id: profile?.id || member.profile_id || null,
-            avatar_url: profile?.avatar_url || null,
+            avatar_url: avatarUrl,
             role: profile?.role || member.role || null,
             last_login: authUser?.last_sign_in_at || member.last_login || null
         };

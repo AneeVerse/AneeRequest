@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
+import { slugify } from '@/lib/utils';
 import Sidebar from '@/components/Sidebar';
 import Header from '@/components/Header';
 import {
@@ -68,6 +69,7 @@ interface Client {
     status: string;
     created_at: string;
     drive_folder_id?: string | null;
+    avatar_url?: string | null;
 }
 
 export default function ClientDetailPage() {
@@ -80,7 +82,7 @@ export default function ClientDetailPage() {
         return true;
     });
 
-    const { id } = useParams();
+    const { slug } = useParams();
     const router = useRouter();
     const searchParams = useSearchParams();
     const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
@@ -104,10 +106,14 @@ export default function ClientDetailPage() {
     useEffect(() => {
         const fetchClient = async () => {
             try {
-                // In a real app, this would be an API call to fetch by ID
                 const response = await fetch('/api/clients');
                 const allClients = await response.json();
-                const foundClient = allClients.find((c: any) => c.id === id);
+
+                // Helper to match slug or ID
+                const foundClient = allClients.find((c: any) => {
+                    const clientSlug = slugify(c.organization || c.name);
+                    return clientSlug === slug || c.id === slug;
+                });
 
                 if (foundClient) {
                     setClient(foundClient);
@@ -119,8 +125,8 @@ export default function ClientDetailPage() {
             }
         };
 
-        if (id) fetchClient();
-    }, [id]);
+        if (slug) fetchClient();
+    }, [slug]);
 
     useEffect(() => {
         const fetchData = async () => {
@@ -232,8 +238,8 @@ export default function ClientDetailPage() {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     title: requestFormData.title,
-                    description: requestFormData.description || `New request for ${client.name}`,
-                    client_id: client.profile_id,
+                    description: requestFormData.description || `New request for ${client?.name}`,
+                    client_id: client?.profile_id,
                     priority: requestFormData.priority,
                     due_date: requestFormData.due_date,
                     status: 'Todo',
@@ -717,15 +723,24 @@ export default function ClientDetailPage() {
                     <div className="border-b border-shark">
                         <Header
                             onToggleSidebar={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
-                            label={client.name}
-                            labelIcon={<Users size={16} className="text-[#279da6]" />}
+                            label={client?.organization || client?.name || 'Loading...'}
+                            labelIcon={
+                                <div className="w-7 h-7 rounded-full bg-shark/80 border border-white/5 overflow-hidden flex items-center justify-center text-[10px] text-white font-black bg-gradient-to-br from-[#279da6]/20 to-transparent shrink-0">
+                                    {client?.avatar_url ? (
+                                        <img src={client.avatar_url} alt={client.organization} className="w-full h-full object-cover" />
+                                    ) : (
+                                        (client?.organization || client?.name || '').split(' ').map((n: string) => n[0]).join('').slice(0, 2).toUpperCase()
+                                    )}
+                                </div>
+                            }
                             tabs={tabs}
                             activeTab={activeTab}
                             setActiveTab={(tab) => {
                                 setActiveTab(tab);
                                 const params = new URLSearchParams(searchParams.toString());
                                 params.set('tab', tab);
-                                router.replace(`/clients/${id}?${params.toString()}`);
+                                const currentSlug = client ? slugify(client.organization || client.name) : slug;
+                                router.replace(`/clients/${currentSlug}?${params.toString()}`);
                             }}
                             onCreate={(activeTab === 'Requests' || activeTab === 'Tasks') ? handleCreateNew : undefined}
                             isCreating={isCreatingRequest || isCreatingTask}
@@ -741,7 +756,6 @@ export default function ClientDetailPage() {
                                 Requests: requests.length,
                                 Tasks: tasks.length
                             }}
-                            onEdit={() => setActiveTab('Settings')}
                         />
                     </div>
 
@@ -1092,7 +1106,7 @@ export default function ClientDetailPage() {
 
                                                 <h2 className="text-2xl font-black text-white tracking-tight uppercase mb-4">No Drive Linked</h2>
                                                 <p className="text-storm-gray text-sm font-bold leading-relaxed mb-10 uppercase tracking-widest opacity-60">
-                                                    Connect a Google Drive folder to manage {client.name}'s project files directly from this dashboard.
+                                                    Connect a Google Drive folder to manage {client?.name || 'this client'}'s project files directly from this dashboard.
                                                 </p>
 
                                                 <div className="flex flex-col gap-4 w-full">
@@ -1334,7 +1348,7 @@ export default function ClientDetailPage() {
                                             </div>
                                             <div>
                                                 <h2 className="text-xl font-black text-iron tracking-tight uppercase">Account Security</h2>
-                                                <p className="text-xs font-bold text-santas-gray uppercase tracking-widest">Update credentials for {client.name}</p>
+                                                <p className="text-xs font-bold text-santas-gray uppercase tracking-widest">Update credentials for {client?.name || 'this account'}</p>
                                             </div>
                                         </div>
 
@@ -1511,7 +1525,7 @@ export default function ClientDetailPage() {
                 isOpen={isCreateRequestModalOpen}
                 onClose={() => setIsCreateRequestModalOpen(false)}
                 onSuccess={handleDataRefresh}
-                initialClientId={client.profile_id || undefined}
+                initialClientId={client?.profile_id || undefined}
             />
 
             <CreateTaskModal

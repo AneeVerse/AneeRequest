@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import Sidebar from '@/components/Sidebar';
 import Header from '@/components/Header';
 import {
@@ -10,7 +10,7 @@ import {
     Filter,
     SlidersHorizontal,
     LayoutList,
-    Box,
+    CheckSquare,
     SortAsc,
     SortDesc,
     Loader2,
@@ -27,6 +27,7 @@ import {
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import CustomDropdown from '@/components/CustomDropdown';
+import CustomDateRangePicker from '@/components/CustomDateRangePicker';
 import TasksTable from '@/components/TasksTable';
 import { TaskItem } from '@/lib/data/tasks';
 
@@ -43,17 +44,20 @@ export default function TasksClient({ initialTasks, profiles, teamMembers, reque
     const displayProfile = viewAsProfile || profile;
 
     const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
-    const [activeTab, setActiveTab] = useState('All Tasks');
+    const [activeTab, setActiveTab] = useState('UNASSIGNED');
     const [tasks, setTasks] = useState<TaskItem[]>(initialTasks);
     const [searchQuery, setSearchQuery] = useState('');
     const [isCreating, setIsCreating] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [isFilterOpen, setIsFilterOpen] = useState(false);
     const [filters, setFilters] = useState({
+        title: '',
+        request: '',
         assigned_to: '',
         status: '',
         priority: '',
-        due_date: ''
+        due_date_from: '',
+        due_date_to: ''
     });
 
     const [taskFormData, setTaskFormData] = useState({
@@ -73,7 +77,7 @@ export default function TasksClient({ initialTasks, profiles, teamMembers, reque
     const [activeFilterHeader, setActiveFilterHeader] = useState<string | null>(null);
     const dateInputRefs = React.useRef<{ [key: string]: HTMLInputElement | null }>({});
 
-    const taskTabs = ['All Tasks', 'My Tasks', 'In Progress', 'Done'];
+    const taskTabs = ['UNASSIGNED', 'TODO', 'IN PROGRESS', 'REVIEW', 'LOW', 'MEDIUM', 'HIGH', 'CRITICAL', 'DONE', 'All'];
 
     // Update state when initial props change (from SSR refresh)
     React.useEffect(() => {
@@ -175,17 +179,32 @@ export default function TasksClient({ initialTasks, profiles, teamMembers, reque
 
         // Tab filters
         let matchesTab = true;
-        if (activeTab === 'My Tasks') matchesTab = task.assigned_to === displayProfile?.id;
-        else if (activeTab === 'In Progress') matchesTab = task.status === 'In Progress';
-        else if (activeTab === 'Done') matchesTab = task.status === 'Done';
+        if (activeTab === 'UNASSIGNED') matchesTab = !task.assigned_to;
+        else if (activeTab === 'TODO') matchesTab = task.status === 'Todo';
+        else if (activeTab === 'IN PROGRESS') matchesTab = task.status === 'In Progress';
+        else if (activeTab === 'REVIEW') matchesTab = task.status === 'Review';
+        else if (activeTab === 'LOW') matchesTab = task.priority === 'Low';
+        else if (activeTab === 'MEDIUM') matchesTab = task.priority === 'Medium';
+        else if (activeTab === 'HIGH') matchesTab = task.priority === 'High';
+        else if (activeTab === 'CRITICAL') matchesTab = task.priority === 'Critical';
+        else if (activeTab === 'DONE') matchesTab = task.status === 'Done';
 
         // Advanced filters
+        const matchesTitle = !filters.title || task.title?.toLowerCase().includes(filters.title.toLowerCase());
+        const matchesRequest = !filters.request || task.request_links?.some(link => link.request?.title?.toLowerCase().includes(filters.request.toLowerCase()));
         const matchesAssignee = !filters.assigned_to || task.assigned_to === filters.assigned_to;
         const matchesStatus = !filters.status || task.status === filters.status;
         const matchesPriority = !filters.priority || task.priority === filters.priority;
-        const matchesDate = !filters.due_date || (task.due_date && task.due_date.startsWith(filters.due_date));
 
-        return (matchesSearch || false) && matchesTab && matchesAssignee && matchesStatus && matchesPriority && matchesDate;
+        let matchesDate = true;
+        if (filters.due_date_from) {
+            matchesDate = matchesDate && !!task.due_date && task.due_date >= filters.due_date_from;
+        }
+        if (filters.due_date_to) {
+            matchesDate = matchesDate && !!task.due_date && task.due_date <= filters.due_date_to;
+        }
+
+        return (matchesSearch || false) && matchesTab && matchesTitle && matchesRequest && matchesAssignee && matchesStatus && matchesPriority && matchesDate;
     });
 
     const handleSort = (key: string) => {
@@ -235,15 +254,168 @@ export default function TasksClient({ initialTasks, profiles, teamMembers, reque
         const counts: Record<string, number> = {};
         taskTabs.forEach(tab => {
             counts[tab] = visibleTasks.filter(task => {
-                if (tab === 'All Tasks') return true;
-                if (tab === 'My Tasks') return task.assigned_to === displayProfile?.id;
-                if (tab === 'In Progress') return task.status === 'In Progress';
-                if (tab === 'Done') return task.status === 'Done';
+                if (tab === 'All') return true;
+                if (tab === 'UNASSIGNED') return !task.assigned_to;
+                if (tab === 'TODO') return task.status === 'Todo';
+                if (tab === 'IN PROGRESS') return task.status === 'In Progress';
+                if (tab === 'REVIEW') return task.status === 'Review';
+                if (tab === 'LOW') return task.priority === 'Low';
+                if (tab === 'MEDIUM') return task.priority === 'Medium';
+                if (tab === 'HIGH') return task.priority === 'High';
+                if (tab === 'CRITICAL') return task.priority === 'Critical';
+                if (tab === 'DONE') return task.status === 'Done';
                 return true;
             }).length;
         });
         return counts;
     }, [visibleTasks, taskTabs, user?.id]);
+
+    const filtersElement = (
+        <div className="relative">
+            <button
+                onClick={() => setIsFilterOpen(!isFilterOpen)}
+                className={`relative flex items-center gap-2 px-3 py-1.5 rounded-lg border transition-all text-xs font-bold z-10 ${Object.values(filters).some(v => v !== '') || searchQuery !== '' || (sortConfig.key !== '' && !(sortConfig.key === 'created_at' && sortConfig.direction === 'desc')) ? 'bg-[#279da6]/20 border-[#279da6]/60 text-[#279da6] active:scale-95' : 'border-shark bg-[#121214] text-santas-gray hover:text-white hover:bg-shark/40'}`}
+            >
+                <Filter size={14} className={Object.values(filters).some(v => v !== '') || searchQuery !== '' || (sortConfig.key !== '' && !(sortConfig.key === 'created_at' && sortConfig.direction === 'desc')) ? 'fill-[#279da6]/20' : ''} />
+                <span>Filters</span>
+                <ChevronDown size={14} className={isFilterOpen ? 'rotate-180 transition-transform' : 'transition-transform'} />
+            </button>
+
+            {isFilterOpen && (
+                <div className="absolute right-0 mt-2 w-[450px] bg-[#121214] border border-shark rounded-xl shadow-2xl p-5 z-50 space-y-4 animate-in fade-in slide-in-from-top-2 duration-200">
+                    <div className="flex items-center justify-between mb-1">
+                        <h4 className="text-[12px] font-black uppercase tracking-widest text-[#279da6]">Advanced Filters</h4>
+                        <button
+                            onClick={() => {
+                                setFilters({
+                                    title: '',
+                                    request: '',
+                                    assigned_to: '',
+                                    status: '',
+                                    priority: '',
+                                    due_date_from: '',
+                                    due_date_to: ''
+                                });
+                                setSearchQuery('');
+                                setSortConfig({ key: '', direction: null });
+                                setIsFilterOpen(false);
+                            }}
+                            className="text-[10px] font-bold text-storm-gray hover:text-white underline underline-offset-4"
+                        >
+                            Reset all
+                        </button>
+                    </div>
+
+                    <div className="space-y-4">
+                        <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-1.5">
+                                <label className="text-[10px] font-black text-storm-gray uppercase tracking-widest ml-1">Title</label>
+                                <div className="relative group">
+                                    <Search size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-storm-gray group-focus-within:text-[#279da6] transition-colors" />
+                                    <input
+                                        type="text"
+                                        value={filters.title}
+                                        onChange={(e) => setFilters(f => ({ ...f, title: e.target.value }))}
+                                        placeholder="Search tit..."
+                                        className="w-full bg-black/40 border border-shark/50 rounded-xl py-2.5 pl-10 pr-10 text-[12px] font-black uppercase tracking-widest text-iron placeholder:text-storm-gray focus:outline-none focus:border-[#279da6]/40 transition-all font-bold"
+                                    />
+                                    {filters.title && (
+                                        <button
+                                            onClick={() => setFilters(f => ({ ...f, title: '' }))}
+                                            className="absolute right-3.5 top-1/2 -translate-y-1/2 p-1 hover:bg-shark rounded-md text-storm-gray hover:text-white transition-colors"
+                                        >
+                                            <X size={12} />
+                                        </button>
+                                    )}
+                                </div>
+                            </div>
+                            <div className="space-y-1.5">
+                                <label className="text-[10px] font-black text-storm-gray uppercase tracking-widest ml-1">Request</label>
+                                <div className="relative group">
+                                    <Search size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-storm-gray group-focus-within:text-[#279da6] transition-colors" />
+                                    <input
+                                        type="text"
+                                        value={filters.request}
+                                        onChange={(e) => setFilters(f => ({ ...f, request: e.target.value }))}
+                                        placeholder="Search req..."
+                                        className="w-full bg-black/40 border border-shark/50 rounded-xl py-2.5 pl-10 pr-10 text-[12px] font-black uppercase tracking-widest text-iron placeholder:text-storm-gray focus:outline-none focus:border-[#279da6]/40 transition-all font-bold"
+                                    />
+                                    {filters.request && (
+                                        <button
+                                            onClick={() => setFilters(f => ({ ...f, request: '' }))}
+                                            className="absolute right-3.5 top-1/2 -translate-y-1/2 p-1 hover:bg-shark rounded-md text-storm-gray hover:text-white transition-colors"
+                                        >
+                                            <X size={12} />
+                                        </button>
+                                    )}
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-1.5">
+                                <label className="text-[10px] font-black text-storm-gray uppercase tracking-widest ml-1">Status</label>
+                                <CustomDropdown
+                                    value={filters.status}
+                                    onChange={(val) => setFilters(f => ({ ...f, status: val }))}
+                                    options={[
+                                        { label: 'All Statuses', value: '' },
+                                        { label: 'Todo', value: 'Todo', icon: <Circle size={12} className="text-[#279da6]" />, color: 'text-[#279da6]' },
+                                        { label: 'In Progress', value: 'In Progress', icon: <Loader2 size={12} className="text-amber-500 animate-spin" />, color: 'text-amber-500' },
+                                        { label: 'Review', value: 'Review', icon: <Eye size={12} className="text-blue-400" />, color: 'text-blue-400' },
+                                        { label: 'Done', value: 'Done', icon: <Check size={12} className="text-emerald-500" />, color: 'text-emerald-500' },
+                                    ]}
+                                    showClear={true}
+                                />
+                            </div>
+                            <div className="space-y-1.5">
+                                <label className="text-[10px] font-black text-storm-gray uppercase tracking-widest ml-1">Assigned</label>
+                                <CustomDropdown
+                                    value={filters.assigned_to}
+                                    onChange={(val) => setFilters(f => ({ ...f, assigned_to: val }))}
+                                    options={[
+                                        { label: 'All Members', value: '' },
+                                        ...teamMembers.map((m: any) => ({
+                                            label: m.full_name || (m as any).name,
+                                            value: m.profile_id || m.id,
+                                            icon: <UserIcon size={12} className="text-storm-gray" />
+                                        }))
+                                    ]}
+                                    showClear={true}
+                                />
+                            </div>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-1.5">
+                                <label className="text-[10px] font-black text-storm-gray uppercase tracking-widest ml-1">Priority</label>
+                                <CustomDropdown
+                                    value={filters.priority}
+                                    onChange={(val) => setFilters(f => ({ ...f, priority: val }))}
+                                    options={[
+                                        { label: 'All Priorities', value: '' },
+                                        { label: 'Low', value: 'Low', icon: <Flag size={12} className="text-storm-gray" />, color: 'text-storm-gray' },
+                                        { label: 'Medium', value: 'Medium', icon: <Flag size={12} className="text-blue-400" />, color: 'text-blue-400' },
+                                        { label: 'High', value: 'High', icon: <Flag size={12} className="text-amber-500" />, color: 'text-amber-500' },
+                                        { label: 'Critical', value: 'Critical', icon: <Flag size={12} className="text-rose-500" />, color: 'text-rose-500' },
+                                    ]}
+                                    showClear={true}
+                                />
+                            </div>
+                            <div className="space-y-1.5">
+                                <label className="text-[10px] font-black text-storm-gray uppercase tracking-widest ml-1">Time Period</label>
+                                <CustomDateRangePicker
+                                    from={filters.due_date_from}
+                                    to={filters.due_date_to}
+                                    onChange={(from, to) => setFilters(f => ({ ...f, due_date_from: from, due_date_to: to }))}
+                                />
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+        </div>
+    );
 
     return (
         <div className={`flex h-screen bg-[#09090B] text-iron font-sans overflow-hidden transition-all duration-500 ${isImpersonating ? 'p-1.5' : ''}`} style={isImpersonating ? { backgroundColor: '#0f2b1a' } : undefined}>
@@ -255,7 +427,7 @@ export default function TasksClient({ initialTasks, profiles, teamMembers, reque
                         <Header
                             onToggleSidebar={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
                             label="Team Tasks"
-                            labelIcon={<Box size={16} className="text-[#279da6]" />}
+                            labelIcon={<CheckSquare size={16} className="text-[#279da6]" />}
                             tabs={taskTabs}
                             activeTab={activeTab}
                             setActiveTab={setActiveTab}
@@ -268,6 +440,7 @@ export default function TasksClient({ initialTasks, profiles, teamMembers, reque
                                 setTaskFormData({ title: '', priority: 'Medium', description: '', assigned_to: '', due_date: '', request_ids: [] });
                             }}
                             isSubmitting={isSubmitting}
+                            rightToolbar={filtersElement}
                         />
                     </div>
 
@@ -285,8 +458,8 @@ export default function TasksClient({ initialTasks, profiles, teamMembers, reque
                                     <div className="p-6 space-y-6">
                                         <div className="flex items-start gap-6">
                                             <div className="flex flex-col items-center gap-3 shrink-0">
-                                                <div className="w-14 h-14 rounded-2xl bg-[#279da6]/10 flex items-center justify-center text-[#279da6] shadow-inner ring-1 ring-[#279da6]/20">
-                                                    <Box size={28} />
+                                                <div className="w-14 h-14 rounded-2xl bg-amber-400/10 flex items-center justify-center text-amber-400 shadow-inner ring-1 ring-amber-400/20">
+                                                    <CheckSquare size={28} />
                                                 </div>
                                                 <p className="text-[10px] font-black text-storm-gray uppercase tracking-widest">Task</p>
                                             </div>
@@ -405,144 +578,18 @@ export default function TasksClient({ initialTasks, profiles, teamMembers, reque
                                 </div>
                             </div>
 
-                            {/* Toolbar */}
-                            <div className="flex items-center justify-between mb-6">
-                                <div className="flex items-center gap-2">
-                                    <div className="relative w-80">
-                                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-santas-gray" size={14} />
-                                        <input
-                                            type="text"
-                                            value={searchQuery}
-                                            onChange={(e) => setSearchQuery(e.target.value)}
-                                            placeholder="Search tasks..."
-                                            className="w-full bg-[#09090B] border border-shark/50 rounded-lg py-2 pl-9 pr-4 text-xs text-iron placeholder:text-storm-gray focus:outline-none focus:border-[#279da6]/40 transition-all font-bold"
-                                        />
-                                    </div>
-                                </div>
-                                <div className="flex items-center gap-1">
-                                    <div className="relative">
-                                        <button
-                                            onClick={() => setIsFilterOpen(!isFilterOpen)}
-                                            className={`relative flex items-center gap-2 px-3 py-1.5 rounded-lg border transition-all text-xs font-bold z-10 ${Object.values(filters).some(v => v !== '') || searchQuery !== '' || (sortConfig.key !== '' && !(sortConfig.key === 'created_at' && sortConfig.direction === 'desc')) ? 'bg-[#279da6]/20 border-[#279da6]/60 text-[#279da6] active:scale-95' : 'border-shark bg-[#121214] text-santas-gray hover:text-white hover:bg-shark/40'}`}
-                                        >
-                                            <Filter size={14} className={Object.values(filters).some(v => v !== '') || searchQuery !== '' || (sortConfig.key !== '' && !(sortConfig.key === 'created_at' && sortConfig.direction === 'desc')) ? 'fill-[#279da6]/20' : ''} />
-                                            <span>Filters</span>
-                                            <ChevronDown size={14} className={isFilterOpen ? 'rotate-180 transition-transform' : 'transition-transform'} />
-                                        </button>
-
-                                        {isFilterOpen && (
-                                            <div className="absolute right-0 mt-2 w-72 bg-[#121214] border border-shark rounded-xl shadow-2xl p-5 z-50 space-y-4 animate-in fade-in slide-in-from-top-2 duration-200">
-                                                <div className="flex items-center justify-between mb-1">
-                                                    <h4 className="text-[12px] font-black uppercase tracking-widest text-[#279da6]">Advanced Filters</h4>
-                                                    <button
-                                                        onClick={() => {
-                                                            setFilters({
-                                                                assigned_to: '',
-                                                                status: '',
-                                                                priority: '',
-                                                                due_date: ''
-                                                            });
-                                                            setSearchQuery('');
-                                                            setSortConfig({ key: '', direction: null });
-                                                            setIsFilterOpen(false);
-                                                        }}
-                                                        className="text-[10px] font-bold text-storm-gray hover:text-white underline underline-offset-4"
-                                                    >
-                                                        Reset all
-                                                    </button>
-                                                </div>
-
-                                                <div className="space-y-3">
-                                                    <div className="grid grid-cols-2 gap-3">
-                                                        <div className="space-y-1.5">
-                                                            <label className="text-[10px] font-bold text-storm-gray uppercase">Assigned To</label>
-                                                            <CustomDropdown
-                                                                value={filters.assigned_to}
-                                                                onChange={(val) => setFilters(f => ({ ...f, assigned_to: val }))}
-                                                                options={[
-                                                                    { label: 'All Members', value: '' },
-                                                                    ...teamMembers.map((m: any) => ({
-                                                                        label: m.full_name || (m as any).name,
-                                                                        value: m.profile_id || m.id,
-                                                                        icon: <UserIcon size={12} className="text-storm-gray" />
-                                                                    }))
-                                                                ]}
-                                                            />
-                                                        </div>
-                                                        <div className="space-y-1.5">
-                                                            <label className="text-[10px] font-bold text-storm-gray uppercase">Status</label>
-                                                            <CustomDropdown
-                                                                value={filters.status}
-                                                                onChange={(val) => setFilters(f => ({ ...f, status: val }))}
-                                                                options={[
-                                                                    { label: 'All Statuses', value: '' },
-                                                                    { label: 'Todo', value: 'Todo', icon: <Circle size={12} className="text-[#279da6]" />, color: 'text-[#279da6]' },
-                                                                    { label: 'In Progress', value: 'In Progress', icon: <Loader2 size={12} className="text-amber-500 animate-spin" />, color: 'text-amber-500' },
-                                                                    { label: 'Review', value: 'Review', icon: <Eye size={12} className="text-blue-400" />, color: 'text-blue-400' },
-                                                                    { label: 'Done', value: 'Done', icon: <Check size={12} className="text-emerald-500" />, color: 'text-emerald-500' },
-                                                                ]}
-                                                            />
-                                                        </div>
-                                                    </div>
-
-                                                    <div className="grid grid-cols-2 gap-3">
-                                                        <div className="space-y-1.5">
-                                                            <label className="text-[10px] font-bold text-storm-gray uppercase">Priority</label>
-                                                            <CustomDropdown
-                                                                value={filters.priority}
-                                                                onChange={(val) => setFilters(f => ({ ...f, priority: val }))}
-                                                                options={[
-                                                                    { label: 'All Priorities', value: '' },
-                                                                    { label: 'Low', value: 'Low', icon: <Flag size={12} className="text-storm-gray" />, color: 'text-storm-gray' },
-                                                                    { label: 'Medium', value: 'Medium', icon: <Flag size={12} className="text-blue-400" />, color: 'text-blue-400' },
-                                                                    { label: 'High', value: 'High', icon: <Flag size={12} className="text-amber-500" />, color: 'text-amber-500' },
-                                                                    { label: 'Critical', value: 'Critical', icon: <Flag size={12} className="text-rose-500" />, color: 'text-rose-500' },
-                                                                ]}
-                                                            />
-                                                        </div>
-                                                        <div className="space-y-1.5">
-                                                            <label className="text-[10px] font-bold text-storm-gray uppercase">Due Date</label>
-                                                            <input
-                                                                type="date"
-                                                                value={filters.due_date}
-                                                                onChange={(e) => setFilters(f => ({ ...f, due_date: e.target.value }))}
-                                                                className="w-full bg-[#09090B] border border-shark rounded-lg px-2 py-1.5 text-[11px] font-bold focus:outline-none focus:border-[#279da6]/40 text-iron [color-scheme:dark]"
-                                                            />
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        )}
-                                    </div>
-
-                                    <div className="w-[1px] h-4 bg-shark/60 mx-1" />
-
-                                    <button className="p-2 rounded-lg border border-shark bg-[#121214] text-santas-gray hover:text-white transition-all hover:bg-shark/40">
-                                        <SlidersHorizontal size={14} />
-                                    </button>
-
-                                    <div className="w-[1px] h-4 bg-shark/60 mx-1" />
-
-                                    <button className="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-shark bg-[#121214] text-[11px] font-bold text-santas-gray hover:text-white transition-all hover:bg-shark/40">
-                                        <LayoutList size={14} />
-                                        <span>List</span>
-                                        <ChevronDown size={14} />
-                                    </button>
-                                </div>
-                            </div>
-
-                            {/* Table */}
-                            <TasksTable
-                                tasks={sortedTasks}
-                                profiles={profiles}
-                                teamMembers={teamMembers}
-                                searchQuery={searchQuery}
-                            />
                         </div>
+
+                        {/* Table */}
+                        <TasksTable
+                            tasks={sortedTasks}
+                            profiles={profiles}
+                            teamMembers={teamMembers}
+                            searchQuery={searchQuery}
+                        />
                     </main>
                 </div>
             </div>
-
-        </div >
+        </div>
     );
 }

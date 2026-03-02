@@ -8,7 +8,6 @@ import {
     Home,
     MessageSquare,
     Calendar,
-    Box,
     Clock,
     Users,
     UserPlus,
@@ -109,7 +108,7 @@ export default function Sidebar({ isCollapsed }: SidebarProps) {
     const isAdmin = isSuperAdmin || isAdminRole || (isTeamMember && displayProfile?.team_role === 'admin');
 
     const menuItems = [
-        { name: 'Overview', icon: Home, path: '/', id: 'overview' },
+        { name: 'Overview', icon: Home, path: '/', id: 'dashboard' },
         { name: 'Requests', icon: MessageSquare, path: '/requests', id: 'requests' },
         { name: 'Tasks', icon: CheckSquare, path: '/tasks', isInternalOnly: true, id: 'tasks' },
         { name: 'Files', icon: FolderOpen, path: '/files', id: 'files' },
@@ -120,18 +119,19 @@ export default function Sidebar({ isCollapsed }: SidebarProps) {
         // 1. Super Admin/Admin (Global) bypasses all restrictions
         if (isSuperAdmin || isAdminRole) return true;
 
-        // 2. Platform restrictions
-        if (item.id === 'files' && !isSuperAdmin) {
-            // Check if team member has specific 'files' permission
-            if (!displayProfile?.accessible_sections?.includes('files')) return false;
-        }
+        // 2. Section Access Enforcement
+        const sections = displayProfile?.accessible_sections || [];
+
+        if (item.id === 'dashboard' && !sections.includes('dashboard')) return false;
+        if (item.id === 'requests' && !sections.includes('requests')) return false;
+        if (item.id === 'tasks' && !sections.includes('tasks')) return false;
+        if (item.id === 'files' && !sections.includes('files')) return false;
 
         // 3. User section (Clients/Team)
         if (item.id === 'users') {
             // Internal check
             if (!isInternal) return false;
             // Check if team member has either 'clients' or 'team' permission
-            const sections = displayProfile?.accessible_sections || [];
             if (!sections.includes('clients') && !sections.includes('team')) return false;
         }
 
@@ -157,7 +157,7 @@ export default function Sidebar({ isCollapsed }: SidebarProps) {
                     {!isCollapsed && (
                         <div className="flex flex-col -mt-1">
                             <h1 className="text-xl font-black tracking-tighter text-[#279da6] select-none uppercase">aneeverse</h1>
-                            <p className="text-[10px] text-storm-gray -mt-1 font-black tracking-widest uppercase opacity-80">Request hub</p>
+                            <p className="text-[12px] text-storm-gray -mt-1 font-black tracking-widest uppercase opacity-80">Request hub</p>
                         </div>
                     )}
                 </div>
@@ -208,14 +208,7 @@ export default function Sidebar({ isCollapsed }: SidebarProps) {
                                     <BadgeCheck size={18} className="text-storm-gray group-hover:text-[#279da6]" />
                                     <span>Account</span>
                                 </button>
-                                <button className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-bold text-iron hover:bg-shark transition-all text-left group cursor-pointer">
-                                    <CreditCard size={18} className="text-storm-gray group-hover:text-[#279da6]" />
-                                    <span>Billing</span>
-                                </button>
-                                <button className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-bold text-iron hover:bg-shark transition-all text-left group cursor-pointer">
-                                    <Bell size={18} className="text-storm-gray group-hover:text-[#279da6]" />
-                                    <span>Notifications</span>
-                                </button>
+
                                 <div className="h-px bg-shark/40 mx-2 my-1" />
                                 {isImpersonating ? (
                                     <button
@@ -276,13 +269,10 @@ export default function Sidebar({ isCollapsed }: SidebarProps) {
                                             {displayProfile?.organization || displayProfile?.full_name || (displayProfile?.role === 'super_admin' ? 'Super Admin' : 'User Account')}
                                         </p>
                                         <div className="flex items-center gap-1.5 overflow-hidden">
-                                            <p className="text-[10px] text-[#279da6] font-black uppercase tracking-tighter shrink-0">
+                                            <p className="text-[12px] text-[#279da6] font-black uppercase tracking-tighter shrink-0">
                                                 {displayProfile?.team_role ? `${displayProfile.team_role} · ` : ''}
                                                 {displayProfile?.role?.replace('_', ' ') || 'User'}
                                             </p>
-                                            <span className="text-[10px] text-storm-gray font-bold truncate tracking-tight opacity-50">
-                                                {displayProfile?.email}
-                                            </span>
                                         </div>
                                     </>
                                 )}

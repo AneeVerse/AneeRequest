@@ -15,6 +15,7 @@ import {
     User,
     Eye,
     Search,
+    X,
     Download,
     LayoutList
 } from 'lucide-react';
@@ -29,8 +30,6 @@ interface RequestsTableProps {
     teamMembers?: TeamMember[];
     showClientColumn?: boolean;
     onUpdateField?: (requestId: string, field: string, value: any) => Promise<void>;
-    searchQuery?: string;
-    onSearchChange?: (query: string) => void;
 }
 
 export default function RequestsTable({
@@ -39,23 +38,20 @@ export default function RequestsTable({
     teamMembers = [],
     showClientColumn = false,
     onUpdateField,
-    searchQuery = '',
-    onSearchChange
 }: RequestsTableProps) {
     const router = useRouter();
     const [activeFilterHeader, setActiveFilterHeader] = useState<string | null>(null);
-    const [filters, setFilters] = useState({
-        client: '',
-        organization: '',
-        assigned_to: '',
-        status: '',
-        priority: '',
-        request_number: '',
-        due_date: ''
-    });
     const [sortConfig, setSortConfig] = useState<{ key: string; direction: 'asc' | 'desc' | null }>({
         key: 'created_at',
         direction: 'desc'
+    });
+    const [filters, setFilters] = useState({
+        title: '',
+        client: '',
+        status: '',
+        assigned_to: '',
+        priority: '',
+        due_date: ''
     });
     const dateInputRefs = React.useRef<{ [key: string]: HTMLInputElement | null }>({});
 
@@ -82,23 +78,16 @@ export default function RequestsTable({
     };
 
     const filteredRequests = requests.filter((req: RequestItem) => {
-        // Search query
-        const searchLower = searchQuery.toLowerCase();
-        const matchesSearch = !searchQuery ||
-            req.title?.toLowerCase().includes(searchLower) ||
-            req.client?.full_name?.toLowerCase().includes(searchLower) ||
-            (req.client as any)?.organization?.toLowerCase().includes(searchLower);
-
-        // Advanced filters
-        const matchesClient = !filters.client || req.client?.full_name?.toLowerCase().includes(filters.client.toLowerCase());
-        const matchesOrg = !filters.organization || (req.client as any)?.organization?.toLowerCase().includes(filters.organization.toLowerCase());
-        const matchesAssignee = !filters.assigned_to || req.assigned_to === filters.assigned_to;
+        const matchesTitle = !filters.title || req.title?.toLowerCase().includes(filters.title.toLowerCase());
+        const matchesClient = !filters.client ||
+            req.client?.full_name?.toLowerCase().includes(filters.client.toLowerCase()) ||
+            (req.client as any)?.organization?.toLowerCase().includes(filters.client.toLowerCase());
         const matchesStatus = !filters.status || req.status === filters.status;
+        const matchesAssignee = !filters.assigned_to || req.assigned_to === filters.assigned_to;
         const matchesPriority = !filters.priority || req.priority === filters.priority;
-        const matchesNumber = !filters.request_number || req.request_number?.toString() === filters.request_number;
         const matchesDate = !filters.due_date || (req.due_date && req.due_date.startsWith(filters.due_date));
 
-        return (matchesSearch || false) && (matchesClient || false) && (matchesOrg || false) && matchesAssignee && matchesStatus && matchesPriority && matchesNumber && matchesDate;
+        return matchesTitle && matchesClient && matchesStatus && matchesAssignee && matchesPriority && matchesDate;
     });
 
     const sortedRequests = [...filteredRequests].sort((a, b) => {
@@ -140,53 +129,58 @@ export default function RequestsTable({
 
     return (
         <div className="space-y-6">
-            <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                    <h2 className="text-lg font-black text-iron tracking-tight uppercase">Recent Requests</h2>
-                    <span className="px-2 py-0.5 bg-shark text-storm-gray rounded-md text-[10px] font-black">{sortedRequests.length}</span>
-                </div>
-                <div className="flex items-center gap-2">
-                    <div className="relative w-72 group">
-                        <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-storm-gray group-focus-within:text-[#279da6] transition-colors" size={16} />
-                        <input
-                            type="text"
-                            placeholder="Search requests..."
-                            value={searchQuery}
-                            onChange={(e) => onSearchChange ? onSearchChange(e.target.value) : null}
-                            className="w-full bg-[#09090B] border border-shark/50 rounded-lg py-1.5 pl-12 pr-4 text-[11px] text-iron focus:outline-none focus:border-[#279da6]/40 transition-all font-bold"
-                        />
-                    </div>
-                </div>
-            </div>
 
             <div className="border border-shark/60 rounded-xl overflow-hidden bg-black/20">
                 <div className="overflow-x-auto custom-scrollbar">
-                    <table className="w-full text-left border-collapse table-auto">
+                    <table className="w-full text-left border-collapse table-fixed min-w-[1200px]">
                         <thead>
-                            <tr className="border-b border-shark text-storm-gray text-xs uppercase font-black tracking-widest bg-shark/20">
-                                <th className="px-5 py-5 w-12 border-r border-shark/60 text-center">#</th>
+                            <tr className="border-b border-shark text-storm-gray text-sm uppercase font-black tracking-widest bg-[#17171a]">
+                                <th className="px-5 py-3 w-12 border-r border-shark/60 text-center">#</th>
                                 {[
-                                    { label: 'Title', key: 'title', filter: 'title' },
-                                    ...(showClientColumn ? [{ label: 'Client', key: 'client', filter: 'client' }] : []),
-                                    { label: 'Status', key: 'status', filter: 'status' },
-                                    { label: 'Assignee', key: 'assignee', filter: 'assigned_to' },
-                                    { label: 'Priority', key: 'priority', filter: 'priority' },
-                                    { label: 'Due Date', key: 'due_date', filter: 'due_date' },
-                                    { label: 'Last Updated', key: 'updated_at', filter: 'updated_at' },
-                                    { label: 'Created', key: 'created_at', filter: 'created_at' }
+                                    { label: 'Title', key: 'title', filter: 'title', width: 'w-[24%]' },
+                                    ...(showClientColumn ? [{ label: 'Client', key: 'client', filter: 'client', width: 'w-[15%] min-w-[120px]' }] : []),
+                                    { label: 'Status', key: 'status', filter: 'status', width: 'w-[10%]' },
+                                    { label: 'Assignee', key: 'assignee', filter: 'assigned_to', width: 'w-[12%]' },
+                                    { label: 'Priority', key: 'priority', filter: 'priority', width: 'w-[10%]' },
+                                    { label: 'Due Date', key: 'due_date', filter: 'due_date', width: 'w-[10%]' },
+                                    { label: 'Last Updated', key: 'updated_at', filter: 'updated_at', width: 'w-[7%]' },
+                                    { label: 'Created', key: 'created_at', filter: 'created_at', width: 'w-[7%]' }
                                 ].map((header, idx) => (
-                                    <th key={header.label} className={`px-6 py-5 border-r border-shark/60 group/header relative header-filter-container ${header.label === 'Title' ? 'w-[25%] min-w-[200px]' : ''}`}>
-                                        <div className="flex items-center justify-between gap-2">
-                                            <span className="cursor-default text-[10px]">{header.label}</span>
-                                            <button
-                                                onClick={() => setActiveFilterHeader(activeFilterHeader === header.filter ? null : header.filter)}
-                                                className={`p-1 rounded hover:bg-shark/40 transition-colors ${((filters as any)[header.filter] && !['title', 'client'].includes(header.filter)) || sortConfig.key === header.key ? 'text-[#279da6]' : 'text-storm-gray'}`}
-                                            >
-                                                <Filter size={10} />
-                                            </button>
+                                    <th key={header.label} className={`px-3 py-3 border-r border-shark/60 group/header relative header-filter-container ${header.width || ''}`}>
+                                        <div className={`flex items-center gap-2 ${(header.key === 'updated_at' || header.key === 'created_at') ? 'justify-center' : 'justify-between'}`}>
+                                            {header.filter === 'title' ? (
+                                                <div className="relative flex-1 group -ml-1">
+                                                    <Search size={16} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-storm-gray group-focus-within:text-[#279da6] transition-colors" />
+                                                    <input
+                                                        type="text"
+                                                        value={filters.title}
+                                                        onChange={(e) => setFilters(f => ({ ...f, title: e.target.value }))}
+                                                        placeholder="TITLE"
+                                                        className="w-full bg-transparent border-none py-1.5 pl-8 pr-6 text-sm font-black uppercase tracking-widest text-iron placeholder:text-storm-gray focus:outline-none transition-all font-bold"
+                                                    />
+                                                    {filters.title && (
+                                                        <button
+                                                            onClick={() => setFilters(f => ({ ...f, title: '' }))}
+                                                            className="absolute right-2 top-1/2 -translate-y-1/2 text-storm-gray hover:text-white"
+                                                        >
+                                                            <X size={10} />
+                                                        </button>
+                                                    )}
+                                                </div>
+                                            ) : (
+                                                <>
+                                                    <span className="cursor-default text-sm">{header.label}</span>
+                                                    <button
+                                                        onClick={() => setActiveFilterHeader(activeFilterHeader === header.filter ? null : header.filter)}
+                                                        className={`p-1 rounded hover:bg-shark/40 transition-colors ${((filters as any)[header.filter] && !['updated_at', 'created_at'].includes(header.filter)) || sortConfig.key === header.key ? 'text-[#279da6]' : 'text-storm-gray'}`}
+                                                    >
+                                                        <Filter size={10} />
+                                                    </button>
+                                                </>
+                                            )}
                                         </div>
 
-                                        {activeFilterHeader === header.filter && (
+                                        {activeFilterHeader === header.filter && header.filter !== 'title' && (
                                             <div className={`absolute top-full ${idx > 4 ? 'right-0' : 'left-0'} mt-1 w-44 bg-[#121214] border border-shark rounded-lg shadow-2xl p-2 z-[60] normal-case tracking-normal`}>
                                                 <div className="mb-2 border-b border-shark/40 pb-2">
                                                     <div className="text-[10px] font-bold text-storm-gray uppercase mb-1 px-1">Sort</div>
@@ -206,19 +200,40 @@ export default function RequestsTable({
                                                     </button>
                                                 </div>
 
-                                                {['status', 'assigned_to', 'priority', 'due_date', 'client'].includes(header.filter) && (
+                                                {['client', 'status', 'assigned_to', 'priority', 'due_date'].includes(header.filter) && (
                                                     <div>
                                                         <div className="text-[10px] font-bold text-storm-gray uppercase mb-1 px-1">Filter</div>
+                                                        {header.filter === 'client' && (
+                                                            <div className="relative">
+                                                                <Search size={10} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-storm-gray" />
+                                                                <input
+                                                                    type="text"
+                                                                    value={(filters as any)[header.filter]}
+                                                                    onChange={(e) => setFilters(f => ({ ...f, [header.filter]: e.target.value }))}
+                                                                    className="w-full bg-[#09090B] border border-shark/50 rounded-md py-1.5 px-8 text-[10px] text-iron focus:outline-none focus:border-[#279da6]/40 transition-all font-bold"
+                                                                    placeholder={`Search ${header.label.toLowerCase()}...`}
+                                                                    autoFocus
+                                                                />
+                                                                {(filters as any)[header.filter] && (
+                                                                    <button
+                                                                        onClick={() => setFilters(f => ({ ...f, [header.filter]: '' }))}
+                                                                        className="absolute right-2 top-1/2 -translate-y-1/2 text-storm-gray hover:text-white"
+                                                                    >
+                                                                        <X size={10} />
+                                                                    </button>
+                                                                )}
+                                                            </div>
+                                                        )}
                                                         {header.filter === 'status' && (
                                                             <CustomDropdown
                                                                 value={filters.status}
                                                                 onChange={(val) => { setFilters(f => ({ ...f, status: val })); setActiveFilterHeader(null); }}
                                                                 options={[
-                                                                    { label: 'All Status', value: '' },
-                                                                    { label: 'Todo', value: 'Todo', icon: <Circle size={12} className="text-[#279da6]" />, color: 'text-[#279da6]' },
-                                                                    { label: 'In Progress', value: 'In Progress', icon: <Loader2 size={12} className="text-amber-500 animate-spin" />, color: 'text-amber-500' },
-                                                                    { label: 'Review', value: 'Review', icon: <Eye size={12} className="text-blue-400" />, color: 'text-blue-400' },
-                                                                    { label: 'Done', value: 'Done', icon: <Check size={12} className="text-emerald-500" />, color: 'text-emerald-500' },
+                                                                    { label: 'ALL STATUS', value: '' },
+                                                                    { label: 'TODO', value: 'Todo', icon: <Circle size={12} className="text-[#279da6]" />, color: 'text-[#279da6]' },
+                                                                    { label: 'IN PROGRESS', value: 'In Progress', icon: <Loader2 size={12} className="text-amber-500 animate-spin" />, color: 'text-amber-500' },
+                                                                    { label: 'REVIEW', value: 'Review', icon: <Eye size={12} className="text-blue-400" />, color: 'text-blue-400' },
+                                                                    { label: 'DONE', value: 'Done', icon: <Check size={12} className="text-emerald-500" />, color: 'text-emerald-500' },
                                                                 ]}
                                                             />
                                                         )}
@@ -227,9 +242,9 @@ export default function RequestsTable({
                                                                 value={filters.assigned_to}
                                                                 onChange={(val) => { setFilters(f => ({ ...f, assigned_to: val })); setActiveFilterHeader(null); }}
                                                                 options={[
-                                                                    { label: 'All Team', value: '' },
+                                                                    { label: 'ALL TEAM', value: '' },
                                                                     ...teamMembers.map((m: any) => ({
-                                                                        label: m.full_name || m.name,
+                                                                        label: (m.full_name || (m as any).name)?.toUpperCase(),
                                                                         value: m.profile_id || m.id,
                                                                         icon: <User size={12} className="text-[#279da6]" />
                                                                     }))
@@ -241,11 +256,11 @@ export default function RequestsTable({
                                                                 value={filters.priority}
                                                                 onChange={(val) => { setFilters(f => ({ ...f, priority: val })); setActiveFilterHeader(null); }}
                                                                 options={[
-                                                                    { label: 'All Priority', value: '' },
-                                                                    { label: 'Low', value: 'Low', icon: <Flag size={12} className="text-storm-gray" />, color: 'text-storm-gray' },
-                                                                    { label: 'Medium', value: 'Medium', icon: <Flag size={12} className="text-blue-400" />, color: 'text-blue-400' },
-                                                                    { label: 'High', value: 'High', icon: <Flag size={12} className="text-amber-500" />, color: 'text-amber-500' },
-                                                                    { label: 'Critical', value: 'Critical', icon: <Flag size={12} className="text-rose-500" />, color: 'text-rose-500' },
+                                                                    { label: 'ALL PRIORITY', value: '' },
+                                                                    { label: 'LOW', value: 'Low', icon: <Flag size={12} className="text-storm-gray" />, color: 'text-storm-gray' },
+                                                                    { label: 'MEDIUM', value: 'Medium', icon: <Flag size={12} className="text-blue-400" />, color: 'text-blue-400' },
+                                                                    { label: 'HIGH', value: 'High', icon: <Flag size={12} className="text-amber-500" />, color: 'text-amber-500' },
+                                                                    { label: 'CRITICAL', value: 'Critical', icon: <Flag size={12} className="text-rose-500" />, color: 'text-rose-500' },
                                                                 ]}
                                                             />
                                                         )}
@@ -255,15 +270,6 @@ export default function RequestsTable({
                                                                 value={filters.due_date}
                                                                 onChange={(e) => { setFilters(f => ({ ...f, due_date: e.target.value })); setActiveFilterHeader(null); }}
                                                                 className="w-full bg-[#09090B] border border-shark/50 rounded-md py-1 px-2 text-[10px] text-iron focus:outline-none [color-scheme:dark]"
-                                                            />
-                                                        )}
-                                                        {header.filter === 'client' && (
-                                                            <input
-                                                                type="text"
-                                                                placeholder="Filter client..."
-                                                                value={filters.client}
-                                                                onChange={(e) => setFilters(f => ({ ...f, client: e.target.value }))}
-                                                                className="w-full bg-[#09090B] border border-shark/50 rounded-md py-1 px-2 text-[10px] text-iron focus:outline-none"
                                                             />
                                                         )}
                                                     </div>
@@ -284,52 +290,57 @@ export default function RequestsTable({
                             ) : (
                                 sortedRequests.map((item: RequestItem, index: number) => (
                                     <tr key={item.id} className="hover:bg-shark/10 transition-colors group text-sm">
-                                        <td className="px-5 py-4.5 border-r border-shark/60 text-center font-black text-storm-gray">
+                                        <td className="px-5 py-2.5 border-r border-shark/60 text-center font-black text-storm-gray">
                                             {(index + 1).toString().padStart(2, '0')}
                                         </td>
                                         <td
-                                            className="px-6 py-4.5 font-black text-iron border-r border-shark/60 group-hover:text-[#279da6] cursor-pointer transition-colors"
+                                            className="px-6 py-2.5 font-black text-iron border-r border-shark/60 group-hover:text-[#279da6] cursor-pointer transition-colors hover:bg-white/5"
                                             onClick={() => router.push(`/requests/${item.slug || item.id}`)}
                                         >
-                                            <div className="flex flex-col">
+                                            <div className="flex flex-col uppercase tracking-tight font-black">
                                                 <span className="line-clamp-1">{item.title}</span>
-                                                <span className="text-[9px] text-storm-gray font-bold uppercase tracking-tighter opacity-60">REF: {item.id.slice(0, 8)}</span>
                                             </div>
                                         </td>
                                         {showClientColumn && (
-                                            <td className="px-6 py-4.5 border-r border-shark/60">
-                                                <div className="flex flex-col gap-0.5 min-w-[120px]">
-                                                    <span className="text-iron font-black truncate block">{item.client?.full_name || 'Unknown'}</span>
-                                                    {(item.client as any)?.organization && (
-                                                        <span className="text-[11px] text-storm-gray uppercase font-black tracking-tighter truncate block">{(item.client as any).organization}</span>
+                                            <td className="px-4 py-2.5 border-r border-shark/60 hover:bg-white/5 transition-colors">
+                                                <div className="flex flex-col gap-0.5 min-w-[120px] uppercase tracking-tight">
+                                                    {item.client?.organization ? (
+                                                        <>
+                                                            <span className="text-iron font-black truncate block uppercase">{item.client.organization}</span>
+                                                            <span className="text-[10px] text-storm-gray uppercase font-black tracking-tighter truncate block opacity-60">{item.client.full_name || 'Unknown'}</span>
+                                                        </>
+                                                    ) : (
+                                                        <span className="text-iron font-black truncate block uppercase">{item.client?.full_name || 'Unknown'}</span>
                                                     )}
                                                 </div>
                                             </td>
                                         )}
-                                        <td className="px-4 py-4.5 border-r border-shark/60 text-center">
+                                        <td className="px-4 py-2.5 border-r border-shark/60 text-storm-gray font-black whitespace-nowrap text-[12px] uppercase text-center hover:bg-white/5 transition-colors leading-tight">
                                             <CustomDropdown
                                                 value={item.status}
                                                 onChange={(val) => handleUpdate(item.id, 'status', val)}
-                                                className="w-28"
+                                                variant="minimal"
+                                                className="w-full"
                                                 options={[
-                                                    { label: 'Todo', value: 'Todo', icon: <Circle size={12} className="text-[#279da6]" />, color: 'text-[#279da6]' },
-                                                    { label: 'In Progress', value: 'In Progress', icon: <Loader2 size={12} className="text-amber-500 animate-spin" />, color: 'text-amber-500' },
-                                                    { label: 'Review', value: 'Review', icon: <Eye size={12} className="text-blue-400" />, color: 'text-blue-400' },
-                                                    { label: 'Done', value: 'Done', icon: <Check size={12} className="text-emerald-500" />, color: 'text-emerald-500' },
+                                                    { label: 'TODO', value: 'Todo', icon: <Circle size={12} className="text-[#279da6]" />, color: 'text-[#279da6]' },
+                                                    { label: 'IN PROGRESS', value: 'In Progress', icon: <Loader2 size={12} className="text-amber-500 animate-spin" />, color: 'text-amber-500' },
+                                                    { label: 'REVIEW', value: 'Review', icon: <Eye size={12} className="text-blue-400" />, color: 'text-blue-400' },
+                                                    { label: 'DONE', value: 'Done', icon: <Check size={12} className="text-emerald-500" />, color: 'text-emerald-500' },
                                                 ]}
                                             />
                                         </td>
-                                        <td className="px-4 py-4.5 text-santas-gray border-r border-shark/60">
+                                        <td className="px-3 py-2.5 relative text-center border-r border-shark/60 hover:bg-white/5 transition-colors">
                                             <div className="flex items-center gap-2">
                                                 <CustomDropdown
                                                     value={item.assigned_to || ''}
                                                     onChange={(val) => handleUpdate(item.id, 'assigned_to', val)}
-                                                    className="w-32"
-                                                    placeholder="Unassigned"
+                                                    variant="minimal"
+                                                    className="w-full"
+                                                    placeholder="UNASSIGNED"
                                                     options={[
-                                                        { label: 'Unassigned', value: '' },
+                                                        { label: 'UNASSIGNED', value: '' },
                                                         ...teamMembers.filter((tm: any) => tm.profile_id || tm.id).map((tm: any) => ({
-                                                            label: tm.name || tm.full_name,
+                                                            label: (tm.name || tm.full_name)?.toUpperCase(),
                                                             value: tm.profile_id || tm.id,
                                                             icon: <User size={12} className="text-[#279da6]" />
                                                         }))
@@ -337,20 +348,21 @@ export default function RequestsTable({
                                                 />
                                             </div>
                                         </td>
-                                        <td className="px-4 py-4.5 border-r border-shark/60 font-black">
+                                        <td className="px-4 py-2.5 border-r border-shark/60 font-black hover:bg-white/5 transition-colors uppercase tracking-tight">
                                             <CustomDropdown
                                                 value={item.priority}
                                                 onChange={(val) => handleUpdate(item.id, 'priority', val)}
-                                                className="w-28"
+                                                variant="minimal"
+                                                className="w-full"
                                                 options={[
-                                                    { label: 'Low', value: 'Low', icon: <Flag size={12} className="text-storm-gray" />, color: 'text-storm-gray' },
-                                                    { label: 'Medium', value: 'Medium', icon: <Flag size={12} className="text-blue-400" />, color: 'text-blue-400' },
-                                                    { label: 'High', value: 'High', icon: <Flag size={12} className="text-amber-500" />, color: 'text-amber-500' },
-                                                    { label: 'Critical', value: 'Critical', icon: <Flag size={12} className="text-rose-500" />, color: 'text-rose-500' },
+                                                    { label: 'LOW', value: 'Low', icon: <Flag size={12} className="text-storm-gray" />, color: 'text-storm-gray' },
+                                                    { label: 'MEDIUM', value: 'Medium', icon: <Flag size={12} className="text-blue-400" />, color: 'text-blue-400' },
+                                                    { label: 'HIGH', value: 'High', icon: <Flag size={12} className="text-amber-500" />, color: 'text-amber-500' },
+                                                    { label: 'CRITICAL', value: 'Critical', icon: <Flag size={12} className="text-rose-500" />, color: 'text-rose-500' },
                                                 ]}
                                             />
                                         </td>
-                                        <td className="px-4 py-4.5 text-storm-gray border-r border-shark/60 whitespace-nowrap">
+                                        <td className="px-6 py-2.5 text-santas-gray border-r border-shark/60 whitespace-nowrap hover:bg-white/5 transition-colors uppercase">
                                             <div className="flex items-center gap-2 group/date relative">
                                                 <input
                                                     ref={el => { dateInputRefs.current[item.id] = el; }}
@@ -365,7 +377,7 @@ export default function RequestsTable({
                                                 />
                                             </div>
                                         </td>
-                                        <td className="px-6 py-4.5 text-storm-gray border-r border-shark/60 whitespace-nowrap text-xs">
+                                        <td className="px-6 py-2.5 text-storm-gray border-r border-shark/60 whitespace-nowrap text-xs text-center uppercase">
                                             {item.updated_at ? (
                                                 <div className="flex flex-col">
                                                     <span className="text-iron font-black">{formatDate(item.updated_at)}</span>
@@ -373,7 +385,7 @@ export default function RequestsTable({
                                                 </div>
                                             ) : '-'}
                                         </td>
-                                        <td className="px-6 py-4.5 text-storm-gray whitespace-nowrap text-xs">
+                                        <td className="px-6 py-2.5 text-storm-gray whitespace-nowrap text-xs text-center uppercase">
                                             <div className="flex flex-col">
                                                 <span className="text-iron font-black">{formatDate(item.created_at)}</span>
                                                 <span className="opacity-50 font-bold">{formatTime(item.created_at)}</span>

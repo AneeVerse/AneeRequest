@@ -1,4 +1,5 @@
 import { createServiceClient } from '@/lib/supabase';
+import { slugify } from '@/lib/utils';
 
 export interface ClientItem {
     id: string;
@@ -9,6 +10,8 @@ export interface ClientItem {
     created_at: string;
     last_login: string | null;
     status: string;
+    website?: string | null;
+    slug: string;
 }
 
 /**
@@ -38,7 +41,8 @@ export async function getClients(): Promise<ClientItem[]> {
             ...client,
             profile_id: profile?.id || null,
             avatar_url: profile?.avatar_url || null,
-            last_login: authUser?.last_sign_in_at || client.last_login || null
+            last_login: authUser?.last_sign_in_at || client.last_login || null,
+            slug: slugify(client.organization || client.name)
         };
     });
 }

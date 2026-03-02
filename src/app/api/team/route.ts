@@ -1,6 +1,5 @@
 import { NextResponse } from 'next/server';
 import { supabase, createServiceClient } from '@/lib/supabase';
-
 import { getEnrichedTeamMembers } from '@/lib/data/team';
 
 export async function GET() {
@@ -22,12 +21,13 @@ export async function POST(request: Request) {
         }
 
         const serviceClient = createServiceClient();
+        const cleanEmail = email.trim();
 
         // 1. Create the user in Supabase Auth (if password provided)
         let authUserId = null;
         if (password) {
             const { data: authData, error: authError } = await serviceClient.auth.admin.createUser({
-                email,
+                email: cleanEmail,
                 password,
                 email_confirm: true,
                 user_metadata: {
@@ -39,14 +39,48 @@ export async function POST(request: Request) {
             if (authError) throw authError;
             authUserId = authData.user.id;
 
-            // 2. Update profile role to team_member
-            await serviceClient
+            // 2. Update profile role and metadata
+            const { error: pError } = await serviceClient
                 .from('profiles')
                 .update({
-                    role: 'team_member',
-                    avatar_url: avatarUrl || undefined
+                    role: (role || 'viewer').toLowerCase().includes('admin') ? 'admin' : 'team_member',
+                    avatar_url: avatarUrl || undefined,
+                    full_name: name,
+                    accessible_sections: accessible_sections || []
                 })
                 .eq('id', authUserId);
+
+            if (pError) console.error('POST Profile update error:', pError);
+        } else {
+            // Find existing profile by email (case-insensitive)
+            const { data: existingProfile } = await serviceClient
+                .from('profiles')
+                .select('id')
+                .ilike('email', cleanEmail)
+                .maybeSingle();
+
+            if (!existingProfile) {
+                // Create a placeholder profile
+                const { data: newProfile, error: insError } = await serviceClient.from('profiles').insert({
+                    id: crypto.randomUUID(),
+                    email: cleanEmail,
+                    full_name: name,
+                    avatar_url: avatarUrl,
+                    role: (role || 'viewer').toLowerCase().includes('admin') ? 'admin' : 'team_member'
+                }).select().single();
+
+                if (insError) console.error('POST Profile insert error:', insError);
+                if (newProfile) authUserId = newProfile.id;
+            } else {
+                authUserId = existingProfile.id;
+                // Update existing profile with new info
+                const { error: upError } = await serviceClient.from('profiles').update({
+                    avatar_url: avatarUrl,
+                    full_name: name,
+                    role: (role || 'viewer').toLowerCase().includes('admin') ? 'admin' : 'team_member'
+                }).eq('id', authUserId);
+                if (upError) console.error('POST Profile update existing error:', upError);
+            }
         }
 
         // 3. Add to team_members table
@@ -56,7 +90,7 @@ export async function POST(request: Request) {
                 {
                     profile_id: authUserId,
                     name,
-                    email,
+                    email: cleanEmail,
                     department,
                     position,
                     accessible_sections: accessible_sections || [],
@@ -66,8 +100,7 @@ export async function POST(request: Request) {
             .select();
 
         if (tableError) {
-            // Rollback auth user if table insert fails
-            if (authUserId) {
+            if (authUserId && password) {
                 await serviceClient.auth.admin.deleteUser(authUserId);
             }
             throw tableError;
@@ -87,7 +120,7 @@ export async function POST(request: Request) {
 export async function PATCH(request: Request) {
     try {
         const body = await request.json();
-        const { id, name, email, department, position, password, oldEmail, accessible_sections, avatarUrl } = body;
+        const { id, name, email, department, position, password, oldEmail, role, accessible_sections, avatarUrl } = body;
 
         if (!id) {
             return NextResponse.json({ error: "Missing team member ID" }, { status: 400 });
@@ -98,69 +131,101 @@ export async function PATCH(request: Request) {
         // 1. Update team_members table
         const updateData: any = {};
         if (name) updateData.name = name;
-        if (email) updateData.email = email;
+        if (email) updateData.email = email.trim();
         if (department !== undefined) updateData.department = department;
         if (position !== undefined) updateData.position = position;
         if (accessible_sections !== undefined) updateData.accessible_sections = accessible_sections;
 
-        let memberData;
-        if (Object.keys(updateData).length > 0) {
-            const { data, error: memberError } = await serviceClient
-                .from('team_members')
-                .update(updateData)
-                .eq('id', id)
-                .select()
-                .maybeSingle();
+        const { data: memberData, error: memberError } = await serviceClient
+            .from('team_members')
+            .update(updateData)
+            .eq('id', id)
+            .select()
+            .maybeSingle();
 
-            if (memberError) throw memberError;
-            if (!data) throw new Error("Team member not found");
-            memberData = data;
-        } else {
-            const { data, error: fetchError } = await serviceClient
-                .from('team_members')
-                .select('*')
-                .eq('id', id)
-                .maybeSingle();
+        if (memberError) throw memberError;
+        if (!memberData) throw new Error("Team member not found");
 
-            if (fetchError) throw fetchError;
-            if (!data) throw new Error("Team member not found");
-            memberData = data;
-        }
+        const targetEmail = (oldEmail || email || memberData.email).trim();
 
-        // 2. Update auth user if exists
-        const { data: usersData, error: listError } = await serviceClient.auth.admin.listUsers();
-        if (listError) throw listError;
+        // 2. Sync with Profiles and Auth
+        try {
+            // Find ALL profiles matching this email to ensure we sync them all
+            const { data: matchingProfiles } = await serviceClient
+                .from('profiles')
+                .select('id, email')
+                .ilike('email', targetEmail);
 
-        const authUser = usersData.users.find(u =>
-            u.email === (oldEmail || email || memberData.email)
-        );
-
-        if (authUser) {
-            const authUpdateData: any = {};
-            if (email) authUpdateData.email = email;
-            if (password) authUpdateData.password = password;
-            if (name || avatarUrl) {
-                authUpdateData.user_metadata = {
-                    ...(name && { full_name: name }),
-                    ...(avatarUrl && { avatar_url: avatarUrl })
-                };
+            const profileIds = matchingProfiles?.map(p => p.id) || [];
+            if (memberData.profile_id && !profileIds.includes(memberData.profile_id)) {
+                profileIds.push(memberData.profile_id);
             }
 
-            const { error: updateAuthError } = await serviceClient.auth.admin.updateUserById(authUser.id, authUpdateData);
-            if (updateAuthError) throw updateAuthError;
+            // Update Auth Metadata if reachable
+            const { data: usersData } = await serviceClient.auth.admin.listUsers();
+            const authUser = usersData?.users.find(u =>
+                profileIds.includes(u.id) ||
+                u.email?.toLowerCase() === targetEmail.toLowerCase()
+            );
 
-            // Update profiles table
+            if (authUser) {
+                const authUpdateData: any = {};
+                if (email) authUpdateData.email = email.trim();
+                if (password) authUpdateData.password = password;
+                if (name || avatarUrl) {
+                    authUpdateData.user_metadata = {
+                        ...(name && { full_name: name }),
+                        ...(avatarUrl && { avatar_url: avatarUrl })
+                    };
+                }
+                const { error: authUpErr } = await serviceClient.auth.admin.updateUserById(authUser.id, authUpdateData);
+                if (authUpErr) console.error('PATCH Auth update error:', authUpErr);
+                if (!profileIds.includes(authUser.id)) profileIds.push(authUser.id);
+            }
+
+            // Sync Profile Records
             const profileUpdateData: any = {};
-            if (email) profileUpdateData.email = email;
+            if (email) profileUpdateData.email = email.trim();
             if (name) profileUpdateData.full_name = name;
             if (avatarUrl !== undefined) profileUpdateData.avatar_url = avatarUrl;
+            if (accessible_sections !== undefined) profileUpdateData.accessible_sections = accessible_sections;
+
+            // Ensure role is correct for team members
+            if (role) {
+                profileUpdateData.role = role.toLowerCase().includes('admin') ? 'admin' : 'team_member';
+            }
 
             if (Object.keys(profileUpdateData).length > 0) {
-                await serviceClient
-                    .from('profiles')
-                    .update(profileUpdateData)
-                    .eq('id', authUser.id);
+                if (profileIds.length > 0) {
+                    // Update all matching profiles
+                    for (const pid of profileIds) {
+                        const { error: pUpErr } = await serviceClient.from('profiles').update(profileUpdateData).eq('id', pid);
+                        if (pUpErr) console.error(`PATCH Profile update error for ${pid}:`, pUpErr);
+                    }
+                } else {
+                    // Create placeholder if absolutely none found
+                    const { data: newP, error: pInsErr } = await serviceClient.from('profiles').insert({
+                        id: crypto.randomUUID(),
+                        email: targetEmail,
+                        full_name: name || memberData.name,
+                        avatar_url: avatarUrl,
+                        role: role ? (role.toLowerCase().includes('admin') ? 'admin' : 'team_member') : 'team_member'
+                    }).select().single();
+
+                    if (pInsErr) console.error('PATCH Profile insert error:', pInsErr);
+                    if (newP) {
+                        await serviceClient.from('team_members').update({ profile_id: newP.id }).eq('id', id);
+                    }
+                }
             }
+
+            // Final check: if team_member has no profile_id but we found reference profiles, link it
+            if (!memberData.profile_id && profileIds.length > 0) {
+                await serviceClient.from('team_members').update({ profile_id: profileIds[0] }).eq('id', id);
+            }
+
+        } catch (syncErr) {
+            console.error('Profile/Auth synchronization error:', syncErr);
         }
 
         return NextResponse.json({
@@ -185,27 +250,19 @@ export async function DELETE(request: Request) {
         }
 
         const serviceClient = createServiceClient();
+        const cleanEmail = email.trim();
 
-        // 1. Delete the Auth user first
-        const { data: usersData, error: listError } = await serviceClient.auth.admin.listUsers();
-        if (listError) throw listError;
+        // Delete from team_members first
+        await serviceClient.from('team_members').delete().eq('id', id);
 
-        const authUser = usersData.users.find(u => u.email === email);
+        // Try to delete Auth user
+        const { data: usersData } = await serviceClient.auth.admin.listUsers();
+        const authUser = usersData.users.find(u => u.email?.toLowerCase() === cleanEmail.toLowerCase());
         if (authUser) {
-            const { error: authDeleteError } = await serviceClient.auth.admin.deleteUser(authUser.id);
-            if (authDeleteError) throw authDeleteError;
+            await serviceClient.auth.admin.deleteUser(authUser.id);
         }
 
-        // 2. Delete from team_members table (cascade will handle assignments)
-        const { error: memberDeleteError } = await serviceClient
-            .from('team_members')
-            .delete()
-            .eq('id', id);
-
-        if (memberDeleteError) throw memberDeleteError;
-
         return NextResponse.json({ message: "Team member deleted successfully" });
-
     } catch (error: any) {
         console.error("Team Member Deletion Error:", error);
         return NextResponse.json({ error: error.message }, { status: 500 });

@@ -15,7 +15,9 @@ import {
     Flag,
     User as UserIcon,
     SortAsc,
-    SortDesc
+    SortDesc,
+    X,
+    Search
 } from 'lucide-react';
 import CustomDropdown from '@/components/CustomDropdown';
 import { TaskItem } from '@/lib/data/tasks';
@@ -41,6 +43,7 @@ export default function TasksTable({
     const router = useRouter();
     const [activeFilterHeader, setActiveFilterHeader] = useState<string | null>(null);
     const [filters, setFilters] = useState({
+        title: '',
         assigned_to: '',
         status: '',
         priority: '',
@@ -84,12 +87,13 @@ export default function TasksTable({
             task.description?.toLowerCase().includes(searchLower);
 
         // Advanced filters
+        const matchesTitle = !filters.title || task.title?.toLowerCase().includes(filters.title.toLowerCase());
         const matchesAssignee = !filters.assigned_to || task.assigned_to === filters.assigned_to;
         const matchesStatus = !filters.status || task.status === filters.status;
         const matchesPriority = !filters.priority || task.priority === filters.priority;
         const matchesDate = !filters.due_date || (task.due_date && task.due_date.startsWith(filters.due_date));
 
-        return (matchesSearch || false) && matchesAssignee && matchesStatus && matchesPriority && matchesDate;
+        return (matchesSearch || false) && matchesTitle && matchesAssignee && matchesStatus && matchesPriority && matchesDate;
     });
 
     const sortedTasks = [...filteredTasks].sort((a, b) => {
@@ -127,33 +131,55 @@ export default function TasksTable({
     return (
         <div className="border border-shark/60 rounded-xl overflow-hidden bg-black/20">
             <div className="overflow-x-auto">
-                <table className="w-full text-left border-collapse table-auto">
+                <table className="w-full text-left border-collapse table-fixed min-w-[1200px]">
                     <thead>
-                        <tr className="border-b border-shark text-storm-gray text-xs uppercase font-black tracking-widest bg-shark/20">
-                            <th className="px-5 py-5 w-12 border-r border-shark/60 text-center">#</th>
+                        <tr className="border-b border-shark text-storm-gray text-sm uppercase font-black tracking-widest bg-[#17171a]">
+                            <th className="px-5 py-3 w-12 border-r border-shark/60 text-center font-black text-storm-gray">#</th>
                             {[
-                                { label: 'Title', key: 'title', filter: 'title' },
-                                ...(showRequestColumn ? [{ label: 'Request', key: 'request', filter: 'request' }] : []),
-                                { label: 'Status', key: 'status', filter: 'status' },
-                                { label: 'Assigned', key: 'assignee', filter: 'assigned_to' },
-                                { label: 'Priority', key: 'priority', filter: 'priority' },
-                                { label: 'Due Date', key: 'due_date', filter: 'due_date' },
-                                { label: 'Last Updated', key: 'updated_at', filter: 'updated_at' },
-                                { label: 'Created', key: 'created_at', filter: 'created_at' }
+                                { label: 'Title', key: 'title', filter: 'title', width: 'w-[24%]' },
+                                ...(showRequestColumn ? [{ label: 'Request', key: 'request', filter: 'request', width: 'min-w-[150px]' }] : []),
+                                { label: 'Status', key: 'status', filter: 'status', width: 'w-[10%]' },
+                                { label: 'Assigned', key: 'assignee', filter: 'assigned_to', width: 'w-[12%]' },
+                                { label: 'Priority', key: 'priority', filter: 'priority', width: 'w-[10%]' },
+                                { label: 'Due Date', key: 'due_date', filter: 'due_date', width: 'w-[10%]' },
+                                { label: 'Last Updated', key: 'updated_at', filter: 'updated_at', width: 'w-[7%]' },
+                                { label: 'Created', key: 'created_at', filter: 'created_at', width: 'w-[7%]' }
                             ].map((header, idx) => (
-                                <th key={header.label} className={`px-6 py-5 border-r border-shark/60 group/header relative header-filter-container ${idx === (showRequestColumn ? 8 : 7) ? 'border-r-0' : header.label === 'Request' ? 'min-w-[150px]' : ''}`}>
-                                    <div className="flex items-center justify-between gap-2">
-                                        <span className="cursor-default text-[10px]">{header.label}</span>
-
-                                        <button
-                                            onClick={() => setActiveFilterHeader(activeFilterHeader === header.filter ? null : header.filter)}
-                                            className={`p-1 rounded hover:bg-shark/40 transition-colors ${((filters as any)[header.filter] && !['title', 'creator', 'request'].includes(header.filter)) || sortConfig.key === header.key ? 'text-[#279da6]' : 'text-storm-gray'}`}
-                                        >
-                                            <Filter size={10} />
-                                        </button>
+                                <th key={header.label} className={`px-3 py-3 border-r border-shark/60 group/header relative header-filter-container ${header.width || ''} ${idx === (showRequestColumn ? 7 : 6) ? 'border-r-0' : ''}`}>
+                                    <div className={`flex items-center gap-2 ${(header.key === 'updated_at' || header.key === 'created_at') ? 'justify-center' : 'justify-between'}`}>
+                                        {header.filter === 'title' ? (
+                                            <div className="relative flex-1 group -ml-1">
+                                                <Search size={16} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-storm-gray group-focus-within:text-[#279da6] transition-colors" />
+                                                <input
+                                                    type="text"
+                                                    value={filters.title}
+                                                    onChange={(e) => setFilters(f => ({ ...f, title: e.target.value }))}
+                                                    placeholder="TITLE"
+                                                    className="w-full bg-transparent border-none py-1.5 pl-8 pr-6 text-sm font-black uppercase tracking-widest text-iron placeholder:text-storm-gray focus:outline-none transition-all"
+                                                />
+                                                {filters.title && (
+                                                    <button
+                                                        onClick={() => setFilters(f => ({ ...f, title: '' }))}
+                                                        className="absolute right-2 top-1/2 -translate-y-1/2 text-storm-gray hover:text-white"
+                                                    >
+                                                        <X size={10} />
+                                                    </button>
+                                                )}
+                                            </div>
+                                        ) : (
+                                            <>
+                                                <span className="cursor-default text-sm">{header.label}</span>
+                                                <button
+                                                    onClick={() => setActiveFilterHeader(activeFilterHeader === header.filter ? null : header.filter)}
+                                                    className={`p-1 rounded hover:bg-shark/40 transition-colors ${((filters as any)[header.filter] && !['creator', 'request'].includes(header.filter)) || sortConfig.key === header.key ? 'text-[#279da6]' : 'text-storm-gray'}`}
+                                                >
+                                                    <Filter size={10} />
+                                                </button>
+                                            </>
+                                        )}
                                     </div>
 
-                                    {activeFilterHeader === header.filter && (
+                                    {activeFilterHeader === header.filter && header.filter !== 'title' && (
                                         <div className={`absolute top-full ${idx > 5 ? 'right-0' : 'left-0'} mt-1 w-44 bg-[#121214] border border-shark rounded-lg shadow-2xl p-2 z-[60] normal-case tracking-normal`}>
                                             <div className="mb-2 border-b border-shark/40 pb-2">
                                                 <div className="text-[10px] font-bold text-storm-gray uppercase mb-1 px-1">Sort</div>
@@ -242,21 +268,21 @@ export default function TasksTable({
                         ) : (
                             sortedTasks.map((item: TaskItem, index: number) => (
                                 <tr key={item.id} className="hover:bg-shark/10 transition-colors group text-sm">
-                                    <td className="px-5 py-4.5 border-r border-shark/60 text-center font-black text-storm-gray">
+                                    <td className="px-5 py-2.5 border-r border-shark/60 text-center font-black text-storm-gray">
                                         {(index + 1).toString().padStart(2, '0')}
                                     </td>
                                     <td
-                                        className="px-6 py-4.5 font-black text-iron border-r border-shark/60 group-hover:text-[#279da6] transition-colors cursor-pointer"
+                                        className="px-6 py-2.5 font-black text-iron border-r border-shark/60 group-hover:text-[#279da6] transition-colors cursor-pointer hover:bg-white/5"
                                         onClick={() => router.push(`/tasks/${item.slug || item.id}`)}
                                     >
-                                        <div className="line-clamp-2 min-w-[200px] leading-snug">
+                                        <div className="line-clamp-2 min-w-[200px] leading-snug uppercase tracking-tight font-black">
                                             {item.title}
                                         </div>
                                     </td>
                                     {showRequestColumn && (
-                                        <td className="px-6 py-4.5 text-santas-gray border-r border-shark/60 whitespace-nowrap">
+                                        <td className="px-3 py-2.5 relative text-center text-santas-gray border-r border-shark/60 whitespace-nowrap hover:bg-white/5 transition-colors">
                                             {item.request_links && item.request_links.length > 0 ? (
-                                                <div className="flex flex-col gap-1.5">
+                                                <div className="flex flex-col gap-1">
                                                     {item.request_links.map((link, idx) => (
                                                         <div
                                                             key={idx}
@@ -266,61 +292,64 @@ export default function TasksTable({
                                                             }}
                                                             className="flex flex-col cursor-pointer hover:text-[#279da6] transition-colors leading-tight"
                                                         >
-                                                            <span className="text-iron font-black truncate max-w-[150px] text-xs">{link.request?.title}</span>
-                                                            {idx === 0 && <span className="text-[10px] opacity-40 uppercase font-black tracking-widest leading-none mt-0.5">Internal Request</span>}
+                                                            <span className="text-iron font-black truncate max-w-[150px] text-xs uppercase tracking-tight">{link.request?.title}</span>
+                                                            {idx === 0 && <span className="text-[9px] opacity-40 uppercase font-black tracking-widest leading-none mt-0.5">Internal Request</span>}
                                                         </div>
                                                     ))}
                                                 </div>
                                             ) : (
-                                                <span className="opacity-30 italic text-xs">None</span>
+                                                <span className="opacity-30 italic text-xs uppercase">None</span>
                                             )}
                                         </td>
                                     )}
 
-                                    <td className="px-6 py-4.5 border-r border-shark/60">
+                                    <td className="px-4 py-2.5 border-r border-shark/60 hover:bg-white/5 transition-colors">
                                         <CustomDropdown
                                             value={item.status}
                                             onChange={(val) => handleUpdate(item.id, 'status', val)}
                                             options={[
-                                                { label: 'Todo', value: 'Todo', icon: <Circle size={12} className="text-[#279da6]" />, color: 'text-[#279da6]' },
-                                                { label: 'In Progress', value: 'In Progress', icon: <Loader2 size={12} className="text-amber-500 animate-spin" />, color: 'text-amber-500' },
-                                                { label: 'Review', value: 'Review', icon: <Eye size={12} className="text-blue-400" />, color: 'text-blue-400' },
-                                                { label: 'Done', value: 'Done', icon: <Check size={12} className="text-emerald-500" />, color: 'text-emerald-500' },
+                                                { label: 'TODO', value: 'Todo', icon: <Circle size={12} className="text-[#279da6]" />, color: 'text-[#279da6]' },
+                                                { label: 'IN PROGRESS', value: 'In Progress', icon: <Loader2 size={12} className="text-amber-500 animate-spin" />, color: 'text-amber-500' },
+                                                { label: 'REVIEW', value: 'Review', icon: <Eye size={12} className="text-blue-400" />, color: 'text-blue-400' },
+                                                { label: 'DONE', value: 'Done', icon: <Check size={12} className="text-emerald-500" />, color: 'text-emerald-500' },
                                             ]}
-                                            className="w-28"
+                                            variant="minimal"
+                                            className="w-full"
                                         />
                                     </td>
-                                    <td className="px-4 py-4.5 text-santas-gray border-r border-shark/60 whitespace-nowrap">
+                                    <td className="px-4 py-2.5 text-santas-gray border-r border-shark/60 whitespace-nowrap hover:bg-white/5 transition-colors">
                                         <div className="flex items-center gap-2">
                                             <CustomDropdown
                                                 value={item.assigned_to || ''}
                                                 onChange={(val) => handleUpdate(item.id, 'assigned_to', val)}
                                                 options={[
-                                                    { label: 'Unassigned', value: '', icon: <PlusIcon size={12} className="text-storm-gray" /> },
+                                                    { label: 'UNASSIGNED', value: '', icon: <PlusIcon size={12} className="text-storm-gray" /> },
                                                     ...teamMembers.filter((tm: any) => tm.profile_id).map((tm: any) => ({
-                                                        label: tm.name || tm.full_name,
+                                                        label: (tm.name || tm.full_name)?.toUpperCase(),
                                                         value: tm.profile_id,
                                                         icon: <UserIcon size={12} className="text-[#279da6]" />
                                                     }))
                                                 ]}
-                                                className="w-36"
+                                                variant="minimal"
+                                                className="w-full"
                                             />
                                         </div>
                                     </td>
-                                    <td className="px-4 py-4.5 border-r border-shark/60 font-black text-center">
+                                    <td className="px-4 py-2.5 border-r border-shark/60 text-storm-gray font-black whitespace-nowrap text-[12px] uppercase text-center hover:bg-white/5 transition-colors leading-tight">
                                         <CustomDropdown
                                             value={item.priority}
                                             onChange={(val) => handleUpdate(item.id, 'priority', val)}
                                             options={[
-                                                { label: 'Low', value: 'Low', icon: <Flag size={12} className="text-storm-gray" />, color: 'text-storm-gray' },
-                                                { label: 'Medium', value: 'Medium', icon: <Flag size={12} className="text-blue-400" />, color: 'text-blue-400' },
-                                                { label: 'High', value: 'High', icon: <Flag size={12} className="text-amber-500" />, color: 'text-amber-500' },
-                                                { label: 'Critical', value: 'Critical', icon: <Flag size={12} className="text-rose-500" />, color: 'text-rose-500' },
+                                                { label: 'LOW', value: 'Low', icon: <Flag size={12} className="text-storm-gray" />, color: 'text-storm-gray' },
+                                                { label: 'MEDIUM', value: 'Medium', icon: <Flag size={12} className="text-blue-400" />, color: 'text-blue-400' },
+                                                { label: 'HIGH', value: 'High', icon: <Flag size={12} className="text-amber-500" />, color: 'text-amber-500' },
+                                                { label: 'CRITICAL', value: 'Critical', icon: <Flag size={12} className="text-rose-500" />, color: 'text-rose-500' },
                                             ]}
-                                            className="w-28"
+                                            variant="minimal"
+                                            className="w-full"
                                         />
                                     </td>
-                                    <td className="px-6 py-4.5 text-storm-gray border-r border-shark/60 whitespace-nowrap">
+                                    <td className="px-6 py-2.5 text-storm-gray border-r border-shark/60 whitespace-nowrap hover:bg-white/5 transition-colors">
                                         <div className="flex items-center gap-2 group/date relative">
                                             <input
                                                 ref={el => { dateInputRefs.current[item.id] = el; }}
@@ -335,7 +364,7 @@ export default function TasksTable({
                                             />
                                         </div>
                                     </td>
-                                    <td className="px-6 py-4.5 text-storm-gray border-r border-shark/60 whitespace-nowrap text-xs">
+                                    <td className="px-6 py-2.5 text-storm-gray border-r border-shark/60 whitespace-nowrap text-xs text-center border-shark/60 uppercase">
                                         {item.updated_at ? (
                                             <div className="flex flex-col">
                                                 <span className="text-iron font-black">{formatDate(item.updated_at)}</span>
@@ -343,7 +372,7 @@ export default function TasksTable({
                                             </div>
                                         ) : '-'}
                                     </td>
-                                    <td className="px-6 py-4.5 text-storm-gray whitespace-nowrap text-xs">
+                                    <td className="px-6 py-2.5 text-storm-gray whitespace-nowrap text-xs text-center uppercase">
                                         <div className="flex flex-col">
                                             <span className="text-iron font-black">{formatDate(item.created_at)}</span>
                                             <span className="opacity-50 font-bold">{formatTime(item.created_at)}</span>

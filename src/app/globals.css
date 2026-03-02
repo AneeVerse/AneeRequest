@@ -16,6 +16,21 @@
   --color-dodger-blue: #279da6;
   --color-cornflower-blue: #279da6;
   --color-bittersweet: #FF6467;
+
+  --font-size-xs: 11px;
+  --font-size-sm: 12px;
+  --font-size-base: 13px;
+  --font-size-lg: 14px;
+  --font-size-xl: 16px;
+  --font-size-2xl: 18px;
+  --font-size-3xl: 20px;
+  --font-size-4xl: 24px;
+  --font-size-5xl: 28px;
+}
+
+/* Base Font Size */
+body {
+  font-size: 13px;
 }
 
 :root {

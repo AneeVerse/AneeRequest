@@ -2,7 +2,7 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { ChevronDown } from 'lucide-react';
+import { ChevronDown, X } from 'lucide-react';
 
 interface Option {
     label: string;
@@ -19,7 +19,8 @@ interface CustomDropdownProps {
     placeholder?: string;
     className?: string;
     disabled?: boolean;
-    variant?: 'default' | 'status' | 'priority';
+    variant?: 'default' | 'status' | 'priority' | 'minimal';
+    showClear?: boolean;
 }
 
 export default function CustomDropdown({
@@ -29,7 +30,8 @@ export default function CustomDropdown({
     placeholder = 'Select...',
     className = '',
     disabled = false,
-    variant = 'default'
+    variant = 'default',
+    showClear = false
 }: CustomDropdownProps) {
     const [isOpen, setIsOpen] = useState(false);
     const [coords, setCoords] = useState({ top: 0, left: 0, width: 0 });
@@ -84,8 +86,10 @@ export default function CustomDropdown({
             style={{
                 position: 'absolute',
                 top: `${coords.top + 8}px`,
-                left: `${coords.left}px`,
-                width: `${coords.width}px`
+                left: variant === 'minimal' ? `${coords.left + coords.width / 2}px` : `${coords.left}px`,
+                width: variant === 'minimal' ? 'max-content' : `${coords.width}px`,
+                minWidth: `${coords.width}px`,
+                transform: variant === 'minimal' ? 'translateX(-50%)' : 'none'
             }}
             className="z-[9999] bg-[#18181B] border border-shark rounded-xl shadow-[0_20px_50px_rgba(0,0,0,0.6)] overflow-hidden py-1 animate-in fade-in zoom-in-95 duration-200 origin-top"
         >
@@ -95,7 +99,7 @@ export default function CustomDropdown({
                     type="button"
                     disabled={option.disabled}
                     onClick={() => handleSelect(option.value)}
-                    className={`w-full flex items-center gap-3 px-3 py-2 text-[10px] font-black uppercase tracking-widest transition-all text-left disabled:opacity-30 disabled:cursor-not-allowed ${value === option.value
+                    className={`w-full flex items-center gap-3 px-3 py-2 text-[12px] font-black uppercase tracking-widest transition-all text-left disabled:opacity-30 disabled:cursor-not-allowed ${value === option.value
                         ? 'bg-[#279da6]/10 text-[#279da6]'
                         : 'text-santas-gray hover:bg-white/5 hover:text-white'
                         }`}
@@ -119,24 +123,49 @@ export default function CustomDropdown({
                 type="button"
                 disabled={disabled}
                 onClick={() => setIsOpen(!isOpen)}
-                className={`w-full flex items-center justify-between gap-2 px-2.5 py-1.5 bg-black/40 border border-shark rounded-lg transition-all font-black text-[10px] uppercase tracking-wider group focus:outline-none focus:border-[#279da6]/50 disabled:opacity-50 disabled:cursor-not-allowed ${isOpen ? 'border-[#279da6]/50 shadow-lg shadow-[#279da6]/5' : 'hover:border-shark-light'
-                    }`}
+                className={variant === 'minimal'
+                    ? `flex items-center gap-2 group focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed ${className}`
+                    : `w-full flex items-center justify-between gap-2 px-3.5 py-2.5 bg-black/40 border border-shark/50 rounded-xl transition-all font-black text-[12px] uppercase tracking-wider group focus:outline-none focus:border-[#279da6]/50 disabled:opacity-50 disabled:cursor-not-allowed ${isOpen ? 'border-[#279da6]/50 shadow-lg shadow-[#279da6]/5' : 'hover:border-shark-light'} ${className}`
+                }
             >
                 <div className="flex items-center gap-2 truncate">
                     {selectedOption?.icon && React.isValidElement(selectedOption.icon) && (
                         <span className="shrink-0">
-                            {React.cloneElement(selectedOption.icon as React.ReactElement, { size: 12 } as any)}
+                            {React.cloneElement(selectedOption.icon as React.ReactElement, { size: variant === 'minimal' ? 14 : 12 } as any)}
                         </span>
                     )}
-                    <span className={selectedOption?.color || 'text-iron'}>
+                    <span className={`${selectedOption?.color || 'text-iron'} ${variant === 'minimal' ? 'font-black text-[12px] uppercase tracking-wider' : 'font-black text-[12px] uppercase tracking-wider'}`}>
                         {selectedOption ? selectedOption.label : placeholder}
                     </span>
                 </div>
-                <ChevronDown
-                    size={12}
-                    className={`text-storm-gray group-hover:text-[#279da6] transition-all transform shrink-0 ${isOpen ? 'rotate-180 text-[#279da6]' : ''
-                        }`}
-                />
+                <div className="flex items-center gap-2 pr-6">
+                    {(value && variant !== 'minimal' && showClear) && (
+                        <button
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                onChange('');
+                            }}
+                            className="absolute right-9 p-1 hover:bg-shark rounded-md text-storm-gray hover:text-white transition-colors z-10"
+                        >
+                            <X size={12} />
+                        </button>
+                    )}
+                    <div className="absolute right-3.5 top-1/2 -translate-y-1/2 flex items-center">
+                        {variant !== 'minimal' && (
+                            <ChevronDown
+                                size={12}
+                                className={`text-storm-gray group-hover:text-[#279da6] transition-all transform shrink-0 ${isOpen ? 'rotate-180 text-[#279da6]' : ''
+                                    }`}
+                            />
+                        )}
+                        {variant === 'minimal' && (
+                            <ChevronDown
+                                size={10}
+                                className={`text-storm-gray/50 group-hover:text-[#279da6] transition-all transform shrink-0 ${isOpen ? 'rotate-180' : ''}`}
+                            />
+                        )}
+                    </div>
+                </div>
             </button>
 
             {dropdownMenu}

@@ -7,7 +7,7 @@ export async function GET() {
         // Fetch from both tables to bridge the gap
         const [clientsRes, profilesRes] = await Promise.all([
             supabase.from('clients').select('*').order('created_at', { ascending: false }),
-            supabase.from('profiles').select('id, email, full_name, role, avatar_url').eq('role', 'client')
+            supabase.from('profiles').select('id, email, full_name, role, avatar_url')
         ]);
 
         if (clientsRes.error) throw clientsRes.error;
@@ -32,7 +32,7 @@ export async function GET() {
 export async function POST(request: Request) {
     try {
         const body = await request.json();
-        const { name, organization, email, password, status, avatarUrl } = body;
+        const { name, organization, email, password, status, avatarUrl, website } = body;
 
         if (!email || !password || !name) {
             return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
@@ -48,7 +48,8 @@ export async function POST(request: Request) {
             email_confirm: true, // Automatically confirm email
             user_metadata: {
                 full_name: name,
-                avatar_url: avatarUrl
+                avatar_url: avatarUrl,
+                website: website
             }
         });
 
@@ -108,7 +109,7 @@ export async function POST(request: Request) {
 export async function PATCH(request: Request) {
     try {
         const body = await request.json();
-        const { id, name, organization, email, password, oldEmail, drive_folder_id, status, avatarUrl } = body;
+        const { id, name, organization, email, password, oldEmail, drive_folder_id, status, avatarUrl, website } = body;
 
         if (!id) {
             return NextResponse.json({ error: "Missing client ID" }, { status: 400 });
@@ -148,40 +149,45 @@ export async function PATCH(request: Request) {
             clientData = data;
         }
 
-        // 2. Find the Auth user by current or old email and update metadata/email/password
-        const { data: usersData, error: listError } = await serviceClient.auth.admin.listUsers();
-        if (listError) throw listError;
+        // 2. Find and update the profile in 'profiles' table directly
+        const searchEmail = oldEmail || email || clientData.email;
 
-        // Try searching by oldEmail first if provided, then email, then the email from DB
-        const authUser = usersData.users.find(u =>
-            u.email === (oldEmail || email || clientData.email)
-        );
+        const profileUpdateData: any = {};
+        if (email) profileUpdateData.email = email;
+        if (name) profileUpdateData.full_name = name;
+        if (avatarUrl !== undefined) profileUpdateData.avatar_url = avatarUrl;
 
-        if (authUser) {
-            const authUpdateData: any = {};
-            if (email) authUpdateData.email = email;
-            if (password) authUpdateData.password = password;
-            if (name || avatarUrl) {
-                authUpdateData.user_metadata = {
-                    ...(name && { full_name: name }),
-                    ...(avatarUrl && { avatar_url: avatarUrl })
-                };
+        if (Object.keys(profileUpdateData).length > 0) {
+            // Update profile by matching email (case-insensitive if needed, but exact is fine if we use the original email)
+            const { data: updatedProfiles, error: profileUpdateError } = await serviceClient
+                .from('profiles')
+                .update(profileUpdateData)
+                .ilike('email', searchEmail)
+                .select();
+
+            if (profileUpdateError) {
+                console.error("Profile update error:", profileUpdateError);
             }
 
-            const { error: updateAuthError } = await serviceClient.auth.admin.updateUserById(authUser.id, authUpdateData);
-            if (updateAuthError) throw updateAuthError;
+            // 3. Update Auth user if we successfully found their profile ID
+            if (updatedProfiles && updatedProfiles.length > 0) {
+                const profileId = updatedProfiles[0].id;
+                const authUpdateData: any = {};
+                if (email) authUpdateData.email = email;
+                if (password) authUpdateData.password = password;
+                if (name || avatarUrl || website !== undefined) {
+                    authUpdateData.user_metadata = {
+                        ...(name && { full_name: name }),
+                        ...(avatarUrl && { avatar_url: avatarUrl }),
+                        ...(website !== undefined && { website })
+                    };
+                }
 
-            // Update 'profiles' table manually
-            const profileUpdateData: any = {};
-            if (email) profileUpdateData.email = email;
-            if (name) profileUpdateData.full_name = name;
-            if (avatarUrl !== undefined) profileUpdateData.avatar_url = avatarUrl;
-
-            if (Object.keys(profileUpdateData).length > 0) {
-                await serviceClient
-                    .from('profiles')
-                    .update(profileUpdateData)
-                    .eq('id', authUser.id);
+                try {
+                    await serviceClient.auth.admin.updateUserById(profileId, authUpdateData);
+                } catch (err) {
+                    console.error("Auth user update error:", err);
+                }
             }
         }
 

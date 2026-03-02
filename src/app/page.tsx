@@ -56,7 +56,7 @@ export default function DashboardPage() {
                         <div className="p-2 bg-shark/40 rounded-lg border border-shark group-hover:border-malibu/20 transition-all">
                           {stat.icon}
                         </div>
-                        <div className={`flex items-center gap-1 text-[10px] font-bold px-1.5 py-0.5 rounded-full ${stat.up ? 'bg-emerald-500/10 text-emerald-500' : 'bg-rose-500/10 text-rose-500'}`}>
+                        <div className={`flex items-center gap-1 text-[12px] font-bold px-1.5 py-0.5 rounded-full ${stat.up ? 'bg-emerald-500/10 text-emerald-500' : 'bg-rose-500/10 text-rose-500'}`}>
                           {stat.up ? <ArrowUpRight size={10} /> : <ArrowDownRight size={10} />}
                           {stat.trend}
                         </div>
@@ -86,7 +86,7 @@ export default function DashboardPage() {
                         { label: 'Build Stability', value: 78, color: 'bg-amber-400' },
                       ].map((goal, i) => (
                         <div key={i} className="space-y-2">
-                          <div className="flex justify-between text-[11px] font-bold">
+                          <div className="flex justify-between text-[12px] font-bold">
                             <span className="text-santas-gray uppercase tracking-wider">{goal.label}</span>
                             <span className="text-iron">{goal.value}%</span>
                           </div>
