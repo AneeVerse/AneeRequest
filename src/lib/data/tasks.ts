@@ -16,6 +16,13 @@ export interface TaskItem {
             id: string;
             slug: string | null;
             title: string;
+            client?: {
+                id: string;
+                full_name: string;
+                email: string;
+                organization?: string;
+                avatar_url?: string | null;
+            } | null;
         } | null;
     }[] | null;
     due_date: string | null;
@@ -44,7 +51,12 @@ export async function getTasksData() {
                     team_members!team_members_profile_id_fkey (name)
                 ),
                 request_links:task_request_links (
-                    request:request_id (id, slug, title)
+                    request:request_id (
+                        id, 
+                        slug, 
+                        title,
+                        client:client_id (id, full_name, email, avatar_url)
+                    )
                 )
             `)
         .order('created_at', { ascending: false });
@@ -54,7 +66,41 @@ export async function getTasksData() {
         return [];
     }
 
-    return (data || []) as TaskItem[];
+    const tasks = (data || []) as TaskItem[];
+
+    // Extract client emails for organization/avatar enrichment
+    const clientEmails = new Set<string>();
+    tasks.forEach(task => {
+        task.request_links?.forEach(link => {
+            if (link.request?.client?.email) {
+                clientEmails.add(link.request.client.email);
+            }
+        });
+    });
+
+    // Fetch organizations and avatars for all clients
+    if (clientEmails.size > 0) {
+        const { data: clientsData } = await supabase
+            .from('clients')
+            .select('email, organization')
+            .in('email', Array.from(clientEmails));
+
+        if (clientsData) {
+            tasks.forEach(task => {
+                task.request_links?.forEach(link => {
+                    const email = link.request?.client?.email;
+                    if (email) {
+                        const c = clientsData.find(cd => cd.email.toLowerCase().trim() === email.toLowerCase().trim());
+                        if (c) {
+                            (link.request!.client as any).organization = c.organization;
+                        }
+                    }
+                });
+            });
+        }
+    }
+
+    return tasks;
 }
 
 /**

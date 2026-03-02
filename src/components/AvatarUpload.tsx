@@ -122,12 +122,10 @@ export default function AvatarUpload({
                     className={`w-24 h-24 rounded-full bg-shark flex items-center justify-center text-3xl font-black text-white bg-gradient-to-br from-[#279da6]/40 via-[#279da6]/10 to-transparent ring-4 ring-shark/50 shadow-2xl relative cursor-pointer overflow-hidden transition-all hover:ring-[#279da6]/30 ${isUploading || isFetchingLogo ? 'cursor-wait' : ''}`}
                 >
                     {currentAvatarUrl ? (
-                        <Image
+                        <img
                             src={currentAvatarUrl}
                             alt="Avatar"
-                            fill
-                            unoptimized
-                            className="object-cover"
+                            className="w-full h-full object-cover"
                         />
                     ) : (
                         <span>{initials}</span>

@@ -276,9 +276,9 @@ export default function TaskDetailModal({
             <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
 
             {/* Drawer - wider to accommodate detail + chat */}
-            <div className="relative w-full max-w-4xl h-full bg-[#121214] border-l border-shark shadow-2xl flex animate-slide-left">
+            <div className="relative w-full max-w-4xl h-full bg-[#121214] border-l border-shark shadow-2xl flex flex-col md:flex-row animate-slide-left">
                 {/* Left Panel: Task Details */}
-                <div className="flex-1 flex flex-col border-r border-shark/30 min-w-0">
+                <div className="flex-1 flex flex-col md:border-r border-shark/30 min-w-0">
                     {/* Header */}
                     <div className="h-16 px-6 border-b border-shark flex items-center justify-between bg-[#09090B]/50 backdrop-blur-md shrink-0">
                         <div className="flex items-center gap-3">
@@ -286,13 +286,28 @@ export default function TaskDetailModal({
                                 <ChevronLeft size={20} />
                             </button>
                             <div>
-                                <div className="flex items-center gap-2">
-                                    <span className="text-[10px] font-black text-[#279da6] bg-shark/40 py-0.5 px-2 rounded-lg border border-[#279da6]/20">
+                                <div className="flex items-center gap-3">
+                                    <span className="text-[10px] font-black text-[#279da6] bg-shark/40 py-0.5 px-2 rounded-lg border border-[#279da6]/20 shrink-0">
                                         TSK-{task.id.slice(0, 4).toUpperCase()}
                                     </span>
-                                    <h2 className="text-sm font-black text-iron uppercase tracking-widest truncate max-w-[300px]">
-                                        Task Details
-                                    </h2>
+                                    {task.request_links?.[0]?.request?.client && (
+                                        <div className="flex items-center gap-2 border-l border-shark/60 pl-3">
+                                            <div className="w-5 h-5 rounded bg-shark flex items-center justify-center text-[8px] text-[#279da6] font-black shrink-0 border border-white/5 overflow-hidden">
+                                                {task.request_links[0].request.client.avatar_url ? (
+                                                    <img
+                                                        src={task.request_links[0].request.client.avatar_url}
+                                                        alt={task.request_links[0].request.client.organization || 'Org'}
+                                                        className="w-full h-full object-cover"
+                                                    />
+                                                ) : (
+                                                    task.request_links[0].request.client.organization?.[0] || 'O'
+                                                )}
+                                            </div>
+                                            <span className="text-[11px] font-bold text-iron uppercase tracking-widest truncate max-w-[150px]">
+                                                {task.request_links[0].request.client.organization || 'Individual'}
+                                            </span>
+                                        </div>
+                                    )}
                                 </div>
                             </div>
                         </div>
@@ -322,7 +337,7 @@ export default function TaskDetailModal({
                         </div>
 
                         {/* Status & Priority Grid */}
-                        <div className="grid grid-cols-2 gap-4">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                             <div className="space-y-1.5">
                                 <label className="text-[10px] font-black text-storm-gray uppercase tracking-widest ml-1">Status</label>
                                 <CustomDropdown
@@ -357,7 +372,7 @@ export default function TaskDetailModal({
                         </div>
 
                         {/* Assignee & Due Date Grid */}
-                        <div className="grid grid-cols-2 gap-4">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                             <div className="space-y-1.5">
                                 <label className="text-[10px] font-black text-storm-gray uppercase tracking-widest ml-1">Assigned To</label>
                                 <CustomDropdown
@@ -479,7 +494,7 @@ export default function TaskDetailModal({
                 </div>
 
                 {/* Right Panel: Discussions (identical to ChatDrawer) */}
-                <div className="w-[380px] flex flex-col bg-[#09090B]/40 shrink-0">
+                <div className="w-full md:w-[380px] flex flex-col bg-[#09090B]/40 shrink-0 border-t md:border-t-0 border-shark/30">
                     {/* Chat Header */}
                     <div className="h-16 px-6 border-b border-shark/30 flex items-center justify-between shrink-0">
                         <div className="flex items-center gap-2">
@@ -515,8 +530,12 @@ export default function TaskDetailModal({
                                 <div key={msg.id} className={`flex flex-col ${isMe ? 'items-end' : 'items-start'}`}>
                                     {!isMe && showAvatar && (
                                         <div className="flex items-center gap-2 mb-2 ml-1">
-                                            <div className="w-6 h-6 rounded-lg bg-[#279da6]/20 flex items-center justify-center text-[10px] font-black text-[#279da6]">
-                                                {msg.sender?.full_name?.[0] || 'U'}
+                                            <div className="w-6 h-6 rounded-lg bg-[#279da6]/20 flex items-center justify-center text-[10px] font-black text-[#279da6] overflow-hidden">
+                                                {msg.sender?.avatar_url ? (
+                                                    <img src={msg.sender.avatar_url} alt={msg.sender.full_name} className="w-full h-full object-cover" />
+                                                ) : (
+                                                    msg.sender?.full_name?.[0] || 'U'
+                                                )}
                                             </div>
                                             <span className="text-[10px] font-black text-storm-gray uppercase tracking-widest flex items-center gap-1">
                                                 {msg.sender?.full_name}

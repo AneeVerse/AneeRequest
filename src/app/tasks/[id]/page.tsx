@@ -65,6 +65,13 @@ interface TaskDetails {
             id: string;
             slug: string | null;
             title: string;
+            client?: {
+                id: string;
+                full_name: string;
+                email: string;
+                organization?: string;
+                avatar_url?: string;
+            } | null;
         } | null;
     }[] | null;
     created_by: string | null;
@@ -416,6 +423,26 @@ export default function TaskDetailsPage() {
                                     <span className="text-[10px] font-black text-[#279da6] bg-shark/40 py-1 px-2.5 rounded-lg border border-[#279da6]/20 shadow-sm">
                                         TSK-{task.id.slice(0, 4).toUpperCase()}
                                     </span>
+                                    {task.request_links?.[0]?.request?.client && (
+                                        <div className="flex items-center gap-2 px-2 py-1 bg-shark/20 border border-shark/40 rounded-lg">
+                                            <div className="w-5 h-5 rounded flex items-center justify-center bg-shark/40 border border-shark/60 text-[8px] font-black text-[#279da6] overflow-hidden shrink-0">
+                                                {task.request_links[0].request.client.avatar_url ? (
+                                                    <Image
+                                                        src={task.request_links[0].request.client.avatar_url}
+                                                        alt={task.request_links[0].request.client.organization || 'Org'}
+                                                        width={20}
+                                                        height={20}
+                                                        className="object-cover"
+                                                    />
+                                                ) : (
+                                                    <span>{task.request_links[0].request.client.organization?.[0] || 'O'}</span>
+                                                )}
+                                            </div>
+                                            <span className="text-[10px] font-black text-storm-gray uppercase tracking-tighter truncate max-w-[100px]">
+                                                {task.request_links[0].request.client.organization || 'Individual'}
+                                            </span>
+                                        </div>
+                                    )}
                                     <div className="flex flex-col justify-center">
                                         <h1 className="text-sm font-bold text-iron leading-tight">{task.title}</h1>
                                         <div className="flex items-center gap-1.5 mt-0.5">
@@ -676,6 +703,32 @@ export default function TaskDetailsPage() {
                                     </div>
 
                                     <div className="space-y-4 pt-4">
+                                        {/* Organization */}
+                                        {task.request_links?.[0]?.request?.client && (
+                                            <div className="flex items-center justify-between gap-4">
+                                                <span className="text-[12px] font-bold text-storm-gray">Organization:</span>
+                                                <div className="flex items-center gap-2.5 bg-shark/20 py-1.5 px-3 rounded-xl border border-white/5">
+                                                    <div className="w-7 h-7 rounded bg-shark flex items-center justify-center text-[10px] text-[#279da6] font-black shrink-0 border border-white/5 shadow-inner overflow-hidden">
+                                                        {task.request_links[0].request.client.avatar_url ? (
+                                                            <Image
+                                                                src={task.request_links[0].request.client.avatar_url}
+                                                                alt={task.request_links[0].request.client.organization || 'Org'}
+                                                                width={28}
+                                                                height={28}
+                                                                className="object-cover"
+                                                            />
+                                                        ) : (
+                                                            task.request_links[0].request.client.organization?.[0] || 'O'
+                                                        )}
+                                                    </div>
+                                                    <div className="flex flex-col min-w-0">
+                                                        <p className="text-[11px] font-bold text-iron leading-tight truncate">{task.request_links[0].request.client.organization || 'Individual'}</p>
+                                                        <span className="text-[8px] text-storm-gray font-bold opacity-40 uppercase truncate">{task.request_links[0].request.client.full_name}</span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        )}
+
                                         {/* Creator */}
                                         <div className="flex items-center justify-between gap-4">
                                             <span className="text-[12px] font-bold text-storm-gray">Created By:</span>

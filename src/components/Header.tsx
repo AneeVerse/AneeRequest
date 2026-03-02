@@ -118,30 +118,34 @@ const Header: React.FC<HeaderProps> = ({
 
                 {/* Dynamic Sub-Navigation */}
                 {tabs && tabs.length > 0 && (
-                    <div className="flex items-center bg-black/60 border border-shark/50 p-1 rounded-xl overflow-visible ml-2 shrink-0">
-                        {tabs.map((tabItem) => {
-                            const label = typeof tabItem === 'string' ? tabItem : tabItem.label;
-                            const icon = typeof tabItem === 'string' ? null : tabItem.icon;
-                            const count = tabCounts?.[label];
-                            return (
-                                <button
-                                    key={label}
-                                    onClick={() => setActiveTab?.(label)}
-                                    className={`relative px-4 py-1.5 rounded-lg text-[12px] font-bold transition-all whitespace-nowrap cursor-pointer tracking-tight flex items-center gap-1.5 ${activeTab === label
-                                        ? 'bg-shark/80 text-[#279da6] shadow-lg'
-                                        : 'text-storm-gray hover:text-iron hover:bg-white/5'
-                                        }`}
-                                >
-                                    {icon}
-                                    {label}
-                                    {count !== undefined && count > 0 && (
-                                        <span className="absolute -top-3 -right-0.5 min-w-[17px] h-[17px] flex items-center justify-center rounded-full text-[12px] font-black px-1 border border-[#09090B] shadow-md bg-[#279da6] text-white z-[20]">
-                                            {count > 99 ? '99+' : count}
-                                        </span>
-                                    )}
-                                </button>
-                            );
-                        })}
+                    <div className="flex items-center overflow-x-auto no-scrollbar min-w-0 max-w-full py-1">
+                        <div className="flex items-center bg-[#0C0C0E]/90 border border-shark/40 p-1 pr-3 rounded-xl min-w-max h-9">
+                            {tabs.map((tabItem) => {
+                                const label = typeof tabItem === 'string' ? tabItem : tabItem.label;
+                                const icon = typeof tabItem === 'string' ? null : tabItem.icon;
+                                const count = tabCounts?.[label];
+                                const isActive = activeTab === label;
+
+                                return (
+                                    <button
+                                        key={label}
+                                        onClick={() => setActiveTab?.(label)}
+                                        className={`relative px-4 py-1.5 rounded-lg text-[11px] sm:text-[12px] font-bold transition-all whitespace-nowrap cursor-pointer tracking-tight flex items-center gap-2 shrink-0 group/tab h-full ${isActive
+                                            ? 'bg-shark/80 text-[#279da6]'
+                                            : 'text-storm-gray hover:text-iron hover:bg-white/5'
+                                            }`}
+                                    >
+                                        {icon}
+                                        <span>{label}</span>
+                                        {count !== undefined && count > 0 && (
+                                            <span className="absolute -top-2 -right-1.5 min-w-[20px] h-5 flex items-center justify-center rounded-full text-[9px] font-black px-1.5 border border-[#121214] bg-[#279da6] text-white z-20 shadow-xl scale-110">
+                                                {count > 99 ? '99+' : count}
+                                            </span>
+                                        )}
+                                    </button>
+                                );
+                            })}
+                        </div>
                     </div>
                 )}
 

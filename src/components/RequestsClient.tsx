@@ -90,6 +90,11 @@ export default function RequestsClient({
     }, [initialRequests, initialProfiles, initialTeamMembers]);
 
     useEffect(() => {
+        // Initial check for mobile to auto-collapse
+        if (window.innerWidth < 1024) {
+            setIsSidebarCollapsed(true);
+        }
+
         if (isCreating && inlineRequestInputRef.current) {
             inlineRequestInputRef.current.focus();
         }
@@ -269,7 +274,7 @@ export default function RequestsClient({
             </button>
 
             {isFilterOpen && (
-                <div className="absolute right-0 mt-2 w-[500px] bg-[#121214] border border-shark rounded-xl shadow-2xl p-5 z-50 space-y-4 animate-in fade-in slide-in-from-top-2 duration-200">
+                <div className="absolute right-0 mt-2 w-[calc(100vw-2rem)] sm:w-[500px] bg-[#121214] border border-shark rounded-xl shadow-2xl p-5 z-50 space-y-4 animate-in fade-in slide-in-from-top-2 duration-200">
                     <div className="flex items-center justify-between mb-1">
                         <h4 className="text-[12px] font-black uppercase tracking-widest text-[#279da6]">Advanced Filters</h4>
                         <button
@@ -405,7 +410,10 @@ export default function RequestsClient({
 
     return (
         <div className={`flex h-screen bg-[#09090B] text-iron font-sans overflow-hidden transition-all duration-500 ${isImpersonating ? 'p-1.5' : ''}`} style={isImpersonating ? { backgroundColor: '#0f2b1a' } : undefined}>
-            <Sidebar isCollapsed={isSidebarCollapsed} />
+            <Sidebar
+                isCollapsed={isSidebarCollapsed}
+                onToggle={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
+            />
 
             <div className="flex-1 flex flex-col min-w-0 bg-[#09090B] relative">
                 <div className={`flex-1 flex flex-col min-w-0 bg-[#121214] rounded-t-2xl overflow-hidden border-t border-l border-r mt-6 mr-6 transition-all duration-500 ${isImpersonating ? 'border-[#22c55e]/60 shadow-[0_0_15px_rgba(34,197,94,0.15),0_0_40px_rgba(34,197,94,0.08),inset_0_0_20px_rgba(34,197,94,0.03)]' : 'border-shark'}`}>

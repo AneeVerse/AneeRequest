@@ -15,7 +15,12 @@ export async function GET(request: Request) {
             assignee:assigned_to (id, full_name),
             creator:created_by (id, full_name),
             request_links:task_request_links (
-                request:request_id (id, slug, title)
+                request:request_id (
+                    id, 
+                    slug, 
+                    title,
+                    client:client_id (id, full_name, email, avatar_url)
+                )
             )
         `;
 
@@ -26,7 +31,12 @@ export async function GET(request: Request) {
                 assignee:assigned_to (id, full_name),
                 creator:created_by (id, full_name),
                 request_links:task_request_links!inner (
-                    request:request_id (id, slug, title)
+                    request:request_id (
+                        id, 
+                        slug, 
+                        title,
+                        client:client_id (id, full_name, email, avatar_url)
+                    )
                 )
             `;
         }
@@ -47,10 +57,60 @@ export async function GET(request: Request) {
             query = query.eq('id', resolvedId);
         }
 
+        // Perform the query
         const { data, error } = await query;
-
         if (error) throw error;
-        return NextResponse.json(data);
+
+        const tasks = Array.isArray(data) ? data : [data].filter(Boolean);
+
+        // Extract client emails for organization/avatar enrichment
+        const clientEmails = new Set<string>();
+        tasks.forEach((task: any) => {
+            task.request_links?.forEach((link: any) => {
+                if (link.request?.client?.email) {
+                    clientEmails.add(link.request.client.email);
+                }
+            });
+        });
+
+        // Fetch organizations for all clients and their primary branding profile
+        if (clientEmails.size > 0) {
+            // Get client records to find matching organizations and emails
+            const { data: clientsData } = await supabase
+                .from('clients')
+                .select('email, organization')
+                .in('email', Array.from(clientEmails));
+
+            if (clientsData) {
+                // Now get the primary logos for these client emails from profiles
+                const { data: logoProfiles } = await supabase
+                    .from('profiles')
+                    .select('email, avatar_url')
+                    .in('email', Array.from(clientEmails));
+
+                tasks.forEach((task: any) => {
+                    task.request_links?.forEach((link: any) => {
+                        const email = link.request?.client?.email;
+                        if (email) {
+                            const normalizedEmail = email.toLowerCase().trim();
+                            const c = clientsData.find(cd => cd.email.toLowerCase().trim() === normalizedEmail);
+                            if (c) {
+                                link.request.client.organization = c.organization;
+
+                                // ALSO override the avatar_url with the one from the primary client profile
+                                // if the individual user profile doesn't have one or if we want to prioritize org logo
+                                const lp = logoProfiles?.find(p => p.email.toLowerCase().trim() === normalizedEmail);
+                                if (lp?.avatar_url) {
+                                    link.request.client.avatar_url = lp.avatar_url;
+                                }
+                            }
+                        }
+                    });
+                });
+            }
+        }
+
+        return NextResponse.json(taskId && tasks.length === 1 ? tasks[0] : tasks);
     } catch (error: any) {
         return NextResponse.json({ error: error.message }, { status: 500 });
     }

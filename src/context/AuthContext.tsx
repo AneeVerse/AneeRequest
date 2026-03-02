@@ -53,7 +53,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             const { data: { session } } = await supabase.auth.getSession();
             if (session) {
                 setUser(session.user);
-                await fetchProfile(session.user.id);
+                await fetchProfile(session.user.id, session.user.email);
             }
             setIsLoading(false);
 
@@ -68,7 +68,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                     } else if (session && event !== 'INITIAL_SESSION') {
                         // Avoid redundant fetch if INITIAL_SESSION (already handled above)
                         setUser(session.user);
-                        await fetchProfile(session.user.id);
+                        await fetchProfile(session.user.id, session.user.email);
                     }
                     setIsLoading(false);
                 }
@@ -84,12 +84,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         };
     }, []);
 
-    const fetchProfile = async (userId: string) => {
+    const fetchProfile = async (userId: string, userEmail?: string) => {
         try {
+            const emailToUse = userEmail || user?.email;
             // Parallelize database lookups for speed
             const [profileResult, clientResult, teamResult] = await Promise.all([
                 supabase.from('profiles').select('*').eq('id', userId).maybeSingle(),
-                user?.email ? supabase.from('clients').select('organization').eq('email', user.email).maybeSingle() : Promise.resolve({ data: null }),
+                emailToUse ? supabase.from('clients').select('organization').eq('email', emailToUse).maybeSingle() : Promise.resolve({ data: null }),
                 supabase.from('team_members').select('position, accessible_sections').eq('profile_id', userId).maybeSingle()
             ]);
 
@@ -167,7 +168,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     const refreshProfile = async () => {
         if (user) {
-            await fetchProfile(user.id);
+            await fetchProfile(user.id, user.email);
         }
     };
 

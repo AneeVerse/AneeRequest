@@ -32,12 +32,13 @@ export async function PATCH(request: Request) {
             );
         }
 
-        // 2. Sync with public.clients if user is a client
-        if (email || fullName) {
+        // 2. Sync with public.clients if user is a client (or if updating organization/logo)
+        if (email || fullName || avatarUrl || organization) {
             const clientUpdates: any = {};
             if (email) clientUpdates.email = email;
             if (fullName) clientUpdates.name = fullName;
             if (organization) clientUpdates.organization = organization;
+            if (avatarUrl) clientUpdates.avatar_url = avatarUrl;
 
             updatePromises.push(
                 Promise.resolve(

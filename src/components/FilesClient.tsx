@@ -108,6 +108,13 @@ export default function FilesClient({ initialRootId, initialDriveItems, initialD
         setDriveItems(initialDriveItems);
     }, [initialDriveItems]);
 
+    useEffect(() => {
+        // Initial check for mobile to auto-collapse
+        if (window.innerWidth < 1024) {
+            setIsSidebarCollapsed(true);
+        }
+    }, []);
+
     const [dbEnrichment, setDbEnrichment] = useState<DBEnrichment>(initialDbEnrichment);
 
     // Preview
@@ -445,8 +452,8 @@ export default function FilesClient({ initialRootId, initialDriveItems, initialD
     });
 
     const filtersElement = (
-        <div className="flex items-center gap-3">
-            <div className="relative w-64">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-3 w-full sm:w-auto">
+            <div className="relative w-full sm:w-64">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-santas-gray" size={14} />
                 <input
                     type="text"
@@ -456,74 +463,82 @@ export default function FilesClient({ initialRootId, initialDriveItems, initialD
                     className="w-full bg-black/40 border border-shark/50 rounded-xl py-2 pl-9 pr-4 text-[11px] text-iron placeholder:text-storm-gray focus:outline-none focus:border-[#279da6]/40 transition-all font-bold"
                 />
             </div>
+            {/* ... other items will follow ... */}
 
-            <div className="w-[1px] h-4 bg-shark/60 mx-1" />
+            <div className="hidden sm:block w-[1px] h-4 bg-shark/60 mx-1" />
 
-            {/* Filters Dropdown */}
-            <div className="relative" ref={filterMenuRef}>
-                <button
-                    onClick={() => setIsFilterMenuOpen(!isFilterMenuOpen)}
-                    className={`flex items-center gap-2 px-3 py-1.5 rounded-xl border border-shark/60 hover:border-[#279da6]/40 hover:bg-white/5 transition-all group ${filterType !== 'all' ? 'bg-[#279da6]/10 border-[#279da6]/40 text-[#279da6]' : 'text-santas-gray'}`}
-                >
-                    <Filter size={14} className={filterType !== 'all' ? 'text-[#279da6]' : 'group-hover:text-white'} />
-                    <span className="text-[11px] font-bold uppercase tracking-tight">
-                        {filterType === 'all' ? 'Filters' : filterType}
-                    </span>
-                    <ChevronDown size={12} className={`transition-transform duration-300 ${isFilterMenuOpen ? 'rotate-180' : ''}`} />
-                </button>
+            <div className="flex items-center gap-2 w-full sm:w-auto">
+                {/* Filters Dropdown */}
+                <div className="relative flex-1 sm:flex-initial" ref={filterMenuRef}>
+                    <button
+                        onClick={() => setIsFilterMenuOpen(!isFilterMenuOpen)}
+                        className={`flex items-center justify-between sm:justify-start w-full sm:w-auto gap-2 px-3 py-1.5 rounded-xl border border-shark/60 hover:border-[#279da6]/40 hover:bg-white/5 transition-all group ${filterType !== 'all' ? 'bg-[#279da6]/10 border-[#279da6]/40 text-[#279da6]' : 'text-santas-gray'}`}
+                    >
+                        <div className="flex items-center gap-2">
+                            <Filter size={14} className={filterType !== 'all' ? 'text-[#279da6]' : 'group-hover:text-white'} />
+                            <span className="text-[11px] font-bold uppercase tracking-tight">
+                                {filterType === 'all' ? 'Filters' : filterType}
+                            </span>
+                        </div>
+                        <ChevronDown size={12} className={`transition-transform duration-300 ${isFilterMenuOpen ? 'rotate-180' : ''}`} />
+                    </button>
 
-                {isFilterMenuOpen && (
-                    <div className="absolute top-full right-0 mt-2 w-48 bg-[#121214] border border-shark/60 rounded-xl shadow-2xl py-2 z-[60] animate-zoom-in backdrop-blur-xl bg-opacity-95">
-                        {[
-                            { id: 'all', label: 'All Files', icon: <FileIcon size={14} /> },
-                            { id: 'folder', label: 'Folders', icon: <FolderOpen size={14} /> },
-                            { id: 'doc', label: 'Google Docs', icon: <FileText size={14} className="text-blue-500" /> },
-                            { id: 'sheet', label: 'Google Sheets', icon: <Table size={14} className="text-green-500" /> },
-                            { id: 'slide', label: 'Google Slides', icon: <Presentation size={14} className="text-yellow-500" /> },
-                            { id: 'image', label: 'Images', icon: <ImageIcon size={14} className="text-emerald-500" /> },
-                            { id: 'pdf', label: 'PDFs', icon: <FileText size={14} className="text-rose-500" /> },
-                        ].map((opt) => (
-                            <button
-                                key={opt.id}
-                                onClick={() => { setFilterType(opt.id); setIsFilterMenuOpen(false); }}
-                                className={`w-full flex items-center gap-3 px-4 py-2 hover:bg-white/5 text-xs transition-colors ${filterType === opt.id ? 'text-[#279da6] bg-[#279da6]/5 font-bold' : 'text-iron'}`}
-                            >
-                                <span className="opacity-80 group-hover:opacity-100">{opt.icon}</span>
-                                <span className="uppercase tracking-widest text-[10px]">{opt.label}</span>
-                                {filterType === opt.id && <Check size={12} className="ml-auto" />}
-                            </button>
-                        ))}
-                    </div>
-                )}
-            </div>
+                    {isFilterMenuOpen && (
+                        <div className="absolute top-full right-0 mt-2 w-full sm:w-48 bg-[#121214] border border-shark/60 rounded-xl shadow-2xl py-2 z-[60] animate-zoom-in backdrop-blur-xl bg-opacity-95">
+                            {[
+                                { id: 'all', label: 'All Files', icon: <FileIcon size={14} /> },
+                                { id: 'folder', label: 'Folders', icon: <FolderOpen size={14} /> },
+                                { id: 'doc', label: 'Google Docs', icon: <FileText size={14} className="text-blue-500" /> },
+                                { id: 'sheet', label: 'Google Sheets', icon: <Table size={14} className="text-green-500" /> },
+                                { id: 'slide', label: 'Google Slides', icon: <Presentation size={14} className="text-yellow-500" /> },
+                                { id: 'image', label: 'Images', icon: <ImageIcon size={14} className="text-emerald-500" /> },
+                                { id: 'pdf', label: 'PDFs', icon: <FileText size={14} className="text-rose-500" /> },
+                            ].map((opt) => (
+                                <button
+                                    key={opt.id}
+                                    onClick={() => { setFilterType(opt.id); setIsFilterMenuOpen(false); }}
+                                    className={`w-full flex items-center gap-3 px-4 py-2 hover:bg-white/5 text-xs transition-colors ${filterType === opt.id ? 'text-[#279da6] bg-[#279da6]/5 font-bold' : 'text-iron'}`}
+                                >
+                                    <span className="opacity-80 group-hover:opacity-100">{opt.icon}</span>
+                                    <span className="uppercase tracking-widest text-[10px]">{opt.label}</span>
+                                    {filterType === opt.id && <Check size={12} className="ml-auto" />}
+                                </button>
+                            ))}
+                        </div>
+                    )}
+                </div>
 
-            <div className="h-4 w-[1px] bg-shark mx-1" />
+                <div className="h-4 w-[1px] bg-shark mx-1 hidden sm:block" />
 
-            {/* View Mode Switcher */}
-            <div className="flex items-center bg-black/40 border border-shark/60 rounded-xl p-0.5 overflow-hidden">
-                <button
-                    onClick={() => setViewMode('list')}
-                    className={`p-1.5 rounded-lg transition-all flex items-center gap-2 ${viewMode === 'list' ? 'bg-[#279da6] text-white shadow-lg shadow-[#279da6]/20' : 'text-santas-gray hover:text-white hover:bg-white/5'}`}
-                    title="List view"
-                >
-                    <List size={14} />
-                    {viewMode === 'list' && <span className="text-[10px] font-black uppercase pr-1">List</span>}
-                </button>
-                <button
-                    onClick={() => setViewMode('grid')}
-                    className={`p-1.5 rounded-lg transition-all flex items-center gap-2 ${viewMode === 'grid' ? 'bg-[#279da6] text-white shadow-lg shadow-[#279da6]/20' : 'text-santas-gray hover:text-white hover:bg-white/5'}`}
-                    title="Grid view"
-                >
-                    <LayoutGrid size={14} />
-                    {viewMode === 'grid' && <span className="text-[10px] font-black uppercase pr-1">Grid</span>}
-                </button>
+                {/* View Mode Switcher */}
+                <div className="flex items-center flex-1 sm:flex-initial bg-black/40 border border-shark/60 rounded-xl p-0.5 overflow-hidden">
+                    <button
+                        onClick={() => setViewMode('list')}
+                        className={`flex-1 sm:flex-initial p-1.5 rounded-lg transition-all flex items-center justify-center gap-2 ${viewMode === 'list' ? 'bg-[#279da6] text-white shadow-lg shadow-[#279da6]/20' : 'text-santas-gray hover:text-white hover:bg-white/5'}`}
+                        title="List view"
+                    >
+                        <List size={14} />
+                        {viewMode === 'list' && <span className="text-[10px] font-black uppercase pr-1">List</span>}
+                    </button>
+                    <button
+                        onClick={() => setViewMode('grid')}
+                        className={`flex-1 sm:flex-initial p-1.5 rounded-lg transition-all flex items-center justify-center gap-2 ${viewMode === 'grid' ? 'bg-[#279da6] text-white shadow-lg shadow-[#279da6]/20' : 'text-santas-gray hover:text-white hover:bg-white/5'}`}
+                        title="Grid view"
+                    >
+                        <LayoutGrid size={14} />
+                        {viewMode === 'grid' && <span className="text-[10px] font-black uppercase pr-1">Grid</span>}
+                    </button>
+                </div>
             </div>
         </div>
     );
 
     return (
         <div className={`flex h-screen bg-[#09090B] text-iron font-sans overflow-hidden transition-all duration-500 ${isImpersonating ? 'p-1.5' : ''}`} style={isImpersonating ? { backgroundColor: '#0f2b1a' } : undefined}>
-            <Sidebar isCollapsed={isSidebarCollapsed} />
+            <Sidebar
+                isCollapsed={isSidebarCollapsed}
+                onToggle={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
+            />
 
             <div className="flex-1 flex flex-col min-w-0 bg-[#09090B] relative">
                 <div className={`flex-1 flex flex-col min-w-0 bg-[#121214] rounded-t-2xl overflow-hidden border-t border-l border-r mt-6 mr-6 transition-all duration-500 ${isImpersonating ? 'border-[#22c55e]/60 shadow-[0_0_15px_rgba(34,197,94,0.15)]' : 'border-shark'}`}>
@@ -558,9 +573,9 @@ export default function FilesClient({ initialRootId, initialDriveItems, initialD
                                         {i > 0 && <ChevronRight size={14} className="text-storm-gray shrink-0" />}
                                         <button
                                             onClick={() => navigateToBreadcrumb(i)}
-                                            className={`font-black uppercase tracking-widest text-[10px] transition-all truncate max-w-[120px] ${i === driveBreadcrumbs.length - 1 ? 'text-[#279da6]' : 'text-storm-gray hover:text-iron'}`}
+                                            className={`font-black uppercase tracking-widest text-[10px] transition-all truncate max-w-[80px] sm:max-w-[120px] ${i === driveBreadcrumbs.length - 1 ? 'text-[#279da6]' : 'text-storm-gray hover:text-iron'} ${i < driveBreadcrumbs.length - 2 ? 'hidden md:block' : ''}`}
                                         >
-                                            {crumb.name}
+                                            {i < driveBreadcrumbs.length - 2 && i !== 0 ? '...' : crumb.name}
                                         </button>
                                     </React.Fragment>
                                 ))}
@@ -821,90 +836,176 @@ export default function FilesClient({ initialRootId, initialDriveItems, initialD
                                         </div>
                                     ) : (
                                         /* List View */
-                                        <div className="flex flex-col gap-1 border border-shark/40 rounded-2xl overflow-hidden bg-[#09090B]/20">
-                                            {/* Header */}
-                                            <div className="flex items-center px-4 py-2.5 bg-white/5 border-b border-shark/60 text-[10px] font-black text-storm-gray uppercase tracking-widest">
+                                        <div className="space-y-2 sm:space-y-1">
+                                            {/* Desktop Header - Hidden on Mobile */}
+                                            <div className="hidden sm:flex items-center px-4 py-2.5 bg-white/5 border border-shark/40 rounded-xl text-[10px] font-black text-storm-gray uppercase tracking-widest mb-1">
                                                 <div className="flex-1">NAME</div>
                                                 <div className="w-32 hidden md:block">TYPE</div>
                                                 <div className="w-24 hidden sm:block">SIZE</div>
                                                 <div className="w-32 text-right">ACTIONS</div>
                                             </div>
+
                                             {/* Items */}
                                             {filteredItems.map((item) => (
-                                                <div
-                                                    key={item.id}
-                                                    onClick={() => item.isFolder ? navigateToSubfolder(item) : (setPreviewFile({ ...item, url: item.webViewLink, previewUrl: item.previewUrl, type: item.mimeType }), setIsPreviewOpen(true))}
-                                                    className="flex items-center px-4 py-2.5 hover:bg-white/5 transition-all cursor-pointer group border-b border-shark/20 last:border-none"
-                                                >
-                                                    <div className="flex-1 flex items-center gap-3 min-w-0">
-                                                        <div className="shrink-0 scale-75 origin-left">
-                                                            {getFileIcon(item.mimeType, item.name)}
+                                                <div key={item.id}>
+                                                    {/* Mobile Card View */}
+                                                    <div
+                                                        onClick={() => item.isFolder ? navigateToSubfolder(item) : (setPreviewFile({ ...item, url: item.webViewLink, previewUrl: item.previewUrl, type: item.mimeType }), setIsPreviewOpen(true))}
+                                                        className="sm:hidden flex flex-col p-4 bg-[#18181B] border border-shark/40 rounded-2xl gap-3 active:scale-[0.98] transition-all"
+                                                    >
+                                                        <div className="flex items-start justify-between gap-3">
+                                                            <div className="flex items-center gap-3 min-w-0">
+                                                                <div className="shrink-0 scale-90">
+                                                                    {getFileIcon(item.mimeType, item.name)}
+                                                                </div>
+                                                                <div className="min-w-0">
+                                                                    <p className="text-xs font-black text-iron truncate uppercase tracking-tight">{item.name}</p>
+                                                                    <div className="flex items-center gap-2 mt-0.5">
+                                                                        <span className="text-[9px] font-black text-storm-gray uppercase tracking-widest">{getFileTypeLabel(item.mimeType)}</span>
+                                                                        <span className="w-1 h-1 rounded-full bg-shark" />
+                                                                        <span className="text-[9px] font-black text-storm-gray uppercase tracking-widest">{!item.isFolder && item.size ? formatFileSize(item.size) : '--'}</span>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                            {dbEnrichment.clients.some(c => (c.org || c.name) === item.name) && (
+                                                                <span className="shrink-0 text-[8px] font-black bg-cyan-500/10 text-cyan-400 px-1.5 py-0.5 rounded border border-cyan-500/20 uppercase">CLIENT</span>
+                                                            )}
                                                         </div>
-                                                        <p className="text-xs font-black text-iron truncate uppercase tracking-tight group-hover:text-[#279da6] transition-colors">{item.name}</p>
-                                                        {dbEnrichment.clients.some(c => (c.org || c.name) === item.name) && (
-                                                            <span className="text-[8px] font-black bg-cyan-500/10 text-cyan-400 px-1.5 py-0.5 rounded border border-cyan-500/20 uppercase">CLIENT</span>
-                                                        )}
-                                                    </div>
-                                                    <div className="w-32 hidden md:block">
-                                                        <span className="text-[9px] font-black text-storm-gray uppercase tracking-widest">{getFileTypeLabel(item.mimeType)}</span>
-                                                    </div>
-                                                    <div className="w-24 hidden sm:block">
-                                                        <span className="text-[9px] font-black text-storm-gray uppercase tracking-widest">{!item.isFolder && item.size ? formatFileSize(item.size) : '--'}</span>
-                                                    </div>
-                                                    <div className="w-32 flex items-center justify-end gap-1 opacity-100 transition-opacity">
-                                                        <button
-                                                            onClick={(e) => {
-                                                                e.stopPropagation();
-                                                                setNamingModal({
-                                                                    isOpen: true,
-                                                                    type: 'rename',
-                                                                    title: `Rename ${item.isFolder ? 'Folder' : 'File'}`,
-                                                                    initialValue: item.name,
-                                                                    onConfirm: async (newName) => {
-                                                                        if (!newName.trim()) return;
-                                                                        try {
-                                                                            const res = await fetch('/api/drive/browse', {
-                                                                                method: 'PATCH',
-                                                                                headers: { 'Content-Type': 'application/json' },
-                                                                                body: JSON.stringify({
-                                                                                    id: item.id,
-                                                                                    newName: newName.trim(),
-                                                                                    isFolder: item.isFolder
-                                                                                })
-                                                                            });
-                                                                            if (res.ok) {
-                                                                                refreshFolder();
-                                                                                router.refresh();
+
+                                                        <div className="flex items-center justify-end gap-2 pt-3 border-t border-shark/30">
+                                                            <button
+                                                                onClick={(e) => {
+                                                                    e.stopPropagation();
+                                                                    setNamingModal({
+                                                                        isOpen: true,
+                                                                        type: 'rename',
+                                                                        title: `Rename ${item.isFolder ? 'Folder' : 'File'}`,
+                                                                        initialValue: item.name,
+                                                                        onConfirm: async (newName) => {
+                                                                            if (!newName.trim()) return;
+                                                                            try {
+                                                                                const res = await fetch('/api/drive/browse', {
+                                                                                    method: 'PATCH',
+                                                                                    headers: { 'Content-Type': 'application/json' },
+                                                                                    body: JSON.stringify({
+                                                                                        id: item.id,
+                                                                                        newName: newName.trim(),
+                                                                                        isFolder: item.isFolder
+                                                                                    })
+                                                                                });
+                                                                                if (res.ok) {
+                                                                                    refreshFolder();
+                                                                                    router.refresh();
+                                                                                }
+                                                                            } catch (e) {
+                                                                                console.error('Rename error:', e);
+                                                                            } finally {
+                                                                                setNamingModal(prev => ({ ...prev, isOpen: false }));
                                                                             }
-                                                                        } catch (e) {
-                                                                            console.error('Rename error:', e);
-                                                                        } finally {
-                                                                            setNamingModal(prev => ({ ...prev, isOpen: false }));
                                                                         }
-                                                                    }
-                                                                });
-                                                            }}
-                                                            className="p-1.5 rounded-lg hover:bg-[#279da6]/20 text-storm-gray hover:text-[#279da6] transition-all"
-                                                        >
-                                                            <Pencil size={12} />
-                                                        </button>
-                                                        <button
-                                                            onClick={(e) => { e.stopPropagation(); setDeleteTarget(item); setIsDeleting(true); }}
-                                                            className="p-1.5 rounded-lg hover:bg-rose-500/20 text-storm-gray hover:text-rose-400 transition-all"
-                                                        >
-                                                            <Trash2 size={12} />
-                                                        </button>
-                                                        {!item.isFolder && (
-                                                            <a
-                                                                href={item.webContentLink || item.webViewLink}
-                                                                target="_blank"
-                                                                rel="noopener noreferrer"
-                                                                onClick={(e) => e.stopPropagation()}
-                                                                className="p-1.5 rounded-lg hover:bg-white/10 text-storm-gray hover:text-white transition-all"
+                                                                    });
+                                                                }}
+                                                                className="flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-xl bg-shark/40 border border-shark/60 text-[10px] font-black text-iron uppercase tracking-widest"
                                                             >
-                                                                <Download size={12} />
-                                                            </a>
-                                                        )}
+                                                                <Pencil size={12} className="text-[#279da6]" />
+                                                                Rename
+                                                            </button>
+                                                            {!item.isFolder && (
+                                                                <a
+                                                                    href={item.webContentLink || item.webViewLink}
+                                                                    target="_blank"
+                                                                    rel="noopener noreferrer"
+                                                                    onClick={(e) => e.stopPropagation()}
+                                                                    className="flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-xl bg-shark/40 border border-shark/60 text-[10px] font-black text-iron uppercase tracking-widest"
+                                                                >
+                                                                    <Download size={12} />
+                                                                    Get
+                                                                </a>
+                                                            )}
+                                                            <button
+                                                                onClick={(e) => { e.stopPropagation(); setDeleteTarget(item); setIsDeleting(true); }}
+                                                                className="p-2 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-400"
+                                                            >
+                                                                <Trash2 size={12} />
+                                                            </button>
+                                                        </div>
+                                                    </div>
+
+                                                    {/* Desktop List Row - Hidden on Mobile */}
+                                                    <div
+                                                        onClick={() => item.isFolder ? navigateToSubfolder(item) : (setPreviewFile({ ...item, url: item.webViewLink, previewUrl: item.previewUrl, type: item.mimeType }), setIsPreviewOpen(true))}
+                                                        className="hidden sm:flex items-center px-4 py-2.5 bg-[#18181B]/40 hover:bg-white/5 border border-shark/40 hover:border-shark transition-all cursor-pointer group rounded-xl mb-1"
+                                                    >
+                                                        <div className="flex-1 flex items-center gap-3 min-w-0">
+                                                            <div className="shrink-0 scale-75 origin-left">
+                                                                {getFileIcon(item.mimeType, item.name)}
+                                                            </div>
+                                                            <p className="text-xs font-black text-iron truncate uppercase tracking-tight group-hover:text-[#279da6] transition-colors">{item.name}</p>
+                                                            {dbEnrichment.clients.some(c => (c.org || c.name) === item.name) && (
+                                                                <span className="text-[8px] font-black bg-cyan-500/10 text-cyan-400 px-1.5 py-0.5 rounded border border-cyan-500/20 uppercase">CLIENT</span>
+                                                            )}
+                                                        </div>
+                                                        <div className="w-32 hidden md:block">
+                                                            <span className="text-[9px] font-black text-storm-gray uppercase tracking-widest">{getFileTypeLabel(item.mimeType)}</span>
+                                                        </div>
+                                                        <div className="w-24 hidden sm:block">
+                                                            <span className="text-[9px] font-black text-storm-gray uppercase tracking-widest">{!item.isFolder && item.size ? formatFileSize(item.size) : '--'}</span>
+                                                        </div>
+                                                        <div className="w-32 flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                            <button
+                                                                onClick={(e) => {
+                                                                    e.stopPropagation();
+                                                                    setNamingModal({
+                                                                        isOpen: true,
+                                                                        type: 'rename',
+                                                                        title: `Rename ${item.isFolder ? 'Folder' : 'File'}`,
+                                                                        initialValue: item.name,
+                                                                        onConfirm: async (newName) => {
+                                                                            if (!newName.trim()) return;
+                                                                            try {
+                                                                                const res = await fetch('/api/drive/browse', {
+                                                                                    method: 'PATCH',
+                                                                                    headers: { 'Content-Type': 'application/json' },
+                                                                                    body: JSON.stringify({
+                                                                                        id: item.id,
+                                                                                        newName: newName.trim(),
+                                                                                        isFolder: item.isFolder
+                                                                                    })
+                                                                                });
+                                                                                if (res.ok) {
+                                                                                    refreshFolder();
+                                                                                    router.refresh();
+                                                                                }
+                                                                            } catch (e) {
+                                                                                console.error('Rename error:', e);
+                                                                            } finally {
+                                                                                setNamingModal(prev => ({ ...prev, isOpen: false }));
+                                                                            }
+                                                                        }
+                                                                    });
+                                                                }}
+                                                                className="p-1.5 rounded-lg hover:bg-[#279da6]/20 text-storm-gray hover:text-[#279da6] transition-all"
+                                                            >
+                                                                <Pencil size={12} />
+                                                            </button>
+                                                            <button
+                                                                onClick={(e) => { e.stopPropagation(); setDeleteTarget(item); setIsDeleting(true); }}
+                                                                className="p-1.5 rounded-lg hover:bg-rose-500/20 text-storm-gray hover:text-rose-400 transition-all"
+                                                            >
+                                                                <Trash2 size={12} />
+                                                            </button>
+                                                            {!item.isFolder && (
+                                                                <a
+                                                                    href={item.webContentLink || item.webViewLink}
+                                                                    target="_blank"
+                                                                    rel="noopener noreferrer"
+                                                                    onClick={(e) => e.stopPropagation()}
+                                                                    className="p-1.5 rounded-lg hover:bg-white/10 text-storm-gray hover:text-white transition-all"
+                                                                >
+                                                                    <Download size={12} />
+                                                                </a>
+                                                            )}
+                                                        </div>
                                                     </div>
                                                 </div>
                                             ))}

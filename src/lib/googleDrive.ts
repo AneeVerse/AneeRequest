@@ -12,14 +12,30 @@ let googleAuth: any;
 
 if (serviceAccountKey) {
     try {
-        const credentials = typeof serviceAccountKey === 'string' ? JSON.parse(serviceAccountKey) : serviceAccountKey;
+        let keyString = serviceAccountKey;
+        // Handle cases where the string might be wrapped in extra quotes from .env
+        if (keyString.startsWith('"') && keyString.endsWith('"')) {
+            keyString = keyString.substring(1, keyString.length - 1);
+        }
+
+        // Robust cleanup: replace literal newlines and fix common bad escapes
+        const sanitizedKey = keyString
+            .replace(/\\n/g, '\n')     // Handle escaped newlines
+            .replace(/\\V/g, '\nV')    // Fix the specific \V error we've seen
+            .replace(/\\\//g, '/')     // Fix escaped slashes
+            .replace(/\n/g, '\\n');    // Ensure it's a valid JSON string for parsing if it had literal newlines
+
+        // If it's already a valid JSON object or a stringified one, parse it
+        const credentials = typeof sanitizedKey === 'string' ? JSON.parse(sanitizedKey) : sanitizedKey;
+
         googleAuth = new google.auth.GoogleAuth({
             credentials,
             scopes: ['https://www.googleapis.com/auth/drive'],
         });
-        console.log('Google Drive: Initialized with Service Account');
+        console.log('Google Drive: ✅ Service Account Initialized');
     } catch (e) {
-        console.error('Failed to initialize Service Account:', e);
+        console.error('Google Drive: ❌ Service Account Parsing FAILED:', (e as Error).message);
+        console.log('Google Drive: Falling back to OAuth2 refresh token...');
     }
 }
 

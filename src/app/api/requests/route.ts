@@ -59,7 +59,7 @@ export async function GET(request: Request) {
             .from('requests')
             .select(`
                 *,
-                client:client_id (id, full_name, email),
+                client:client_id (id, full_name, email, avatar_url),
                 assignee:assigned_to (id, full_name)
             `);
 
@@ -88,7 +88,7 @@ export async function GET(request: Request) {
                 .from('requests')
                 .select(`
                     *,
-                    client:client_id (id, full_name, email),
+                    client:client_id (id, full_name, email, avatar_url),
                     assignee:assigned_to (id, full_name)
                 `)
                 .eq(isUuid ? 'id' : 'slug', id)
@@ -101,16 +101,19 @@ export async function GET(request: Request) {
                 return NextResponse.json({ error: "Request not found" }, { status: 404 });
             }
 
-            // Fetch organization from clients table
+            // Fetch organization and branding from clients and primary profile
             if (data.client?.email) {
-                const { data: clientData } = await supabase
-                    .from('clients')
-                    .select('organization')
-                    .eq('email', data.client.email)
-                    .maybeSingle();
+                const email = data.client.email;
+                const [clientRes, logoRes] = await Promise.all([
+                    supabase.from('clients').select('organization').ilike('email', email).maybeSingle(),
+                    supabase.from('profiles').select('avatar_url').ilike('email', email).maybeSingle()
+                ]);
 
-                if (clientData) {
-                    data.client.organization = clientData.organization;
+                if (clientRes.data) {
+                    data.client.organization = clientRes.data.organization;
+                }
+                if (logoRes.data?.avatar_url) {
+                    data.client.avatar_url = logoRes.data.avatar_url;
                 }
 
                 // Calculate request number for this client
@@ -129,22 +132,39 @@ export async function GET(request: Request) {
         const { data, error } = await query.order('created_at', { ascending: false });
         if (error) throw error;
 
-        // Fetch organizations for all clients if it's a list
+        // Fetch organizations for all clients and their primary branding profile
         const clientEmails = data
             .map(r => r.client?.email)
             .filter(Boolean);
 
         if (clientEmails.length > 0) {
+            // Get client records to find matching organizations and emails
             const { data: clientsData } = await supabase
                 .from('clients')
                 .select('email, organization')
                 .in('email', clientEmails);
 
             if (clientsData) {
+                // Now get the primary logos for these client emails from profiles
+                const { data: logoProfiles } = await supabase
+                    .from('profiles')
+                    .select('email, avatar_url')
+                    .in('email', clientEmails);
+
                 data.forEach(r => {
-                    if (r.client?.email) {
-                        const c = clientsData.find(cd => cd.email === r.client.email);
-                        if (c) r.client.organization = c.organization;
+                    const email = r.client?.email;
+                    if (email) {
+                        const normalizedEmail = email.toLowerCase().trim();
+                        const c = clientsData.find(cd => cd.email.toLowerCase().trim() === normalizedEmail);
+                        if (c) {
+                            r.client.organization = c.organization;
+
+                            // ALSO override the avatar_url with the one from the primary client profile
+                            const lp = logoProfiles?.find(p => p.email.toLowerCase().trim() === normalizedEmail);
+                            if (lp?.avatar_url) {
+                                r.client.avatar_url = lp.avatar_url;
+                            }
+                        }
                     }
                 });
             }

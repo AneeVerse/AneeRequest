@@ -307,15 +307,14 @@ export default function AccountPage() {
                                         {isLoading ? (
                                             <Loader2 size={24} className="text-[#279da6] animate-spin" />
                                         ) : avatarUrl ? (
-                                            <Image
+                                            <img
                                                 src={avatarUrl}
                                                 alt="Profile"
-                                                fill
-                                                unoptimized
-                                                className="object-cover"
+                                                className="w-full h-full object-cover"
                                             />
                                         ) : (
-                                            (displayProfile?.organization || displayProfile?.full_name || displayProfile?.email || 'U').split(' ').filter(Boolean).map((n: string) => n[0]).join('').slice(0, 2).toUpperCase()
+                                            ((displayProfile?.organization && displayProfile.organization.toLowerCase() !== 'individual' ? displayProfile.organization : displayProfile?.full_name) || displayProfile?.email || 'U')
+                                                .split(' ').filter(Boolean).map((n: string) => n[0]).join('').slice(0, 2).toUpperCase()
                                         )}
 
                                         {/* Hover Overlay */}
@@ -347,7 +346,9 @@ export default function AccountPage() {
                                         ) : (
                                             <>
                                                 <h2 className="text-3xl font-black text-white tracking-tighter uppercase leading-none">
-                                                    {displayProfile?.organization || displayProfile?.full_name || (displayProfile?.role === 'super_admin' ? 'Super Admin' : 'User Account')}
+                                                    {(displayProfile?.organization && displayProfile.organization.toLowerCase() !== 'individual')
+                                                        ? displayProfile.organization
+                                                        : displayProfile?.full_name || (displayProfile?.role === 'super_admin' ? 'Super Admin' : 'User Account')}
                                                 </h2>
                                                 <div className="flex items-center gap-3">
                                                     <p className="text-[10px] font-black text-storm-gray uppercase tracking-[0.2em]">{displayProfile?.role?.replace('_', ' ') || 'Guest Account'}</p>

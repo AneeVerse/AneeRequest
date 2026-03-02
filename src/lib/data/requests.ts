@@ -5,7 +5,7 @@ export interface RequestItem {
     slug: string | null;
     title: string;
     description: string;
-    client: { id: string; full_name: string; email: string; organization?: string } | null;
+    client: { id: string; full_name: string; email: string; organization?: string; avatar_url?: string | null } | null;
     status: string;
     priority: string;
     assigned_to: string | null;
@@ -65,7 +65,7 @@ export async function getRequestsData(
         .from('requests')
         .select(`
             *,
-            client:client_id (id, full_name, email),
+            client:client_id (id, full_name, email, avatar_url),
             assignee:assigned_to (id, full_name)
         `);
 
@@ -107,7 +107,7 @@ export async function getRequestsData(
         if (clientsData) {
             data?.forEach(r => {
                 if (r.client?.email) {
-                    const c = clientsData.find(cd => cd.email === r.client!.email);
+                    const c = clientsData.find(cd => cd.email.toLowerCase().trim() === r.client!.email.toLowerCase().trim());
                     if (c) {
                         (r.client as any).organization = c.organization;
                     }

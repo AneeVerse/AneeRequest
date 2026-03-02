@@ -62,9 +62,10 @@ const SidebarItem: React.FC<SidebarItemProps> = ({ item, isActive, isCollapsed }
 
 interface SidebarProps {
     isCollapsed: boolean;
+    onToggle?: () => void;
 }
 
-export default function Sidebar({ isCollapsed }: SidebarProps) {
+export default function Sidebar({ isCollapsed, onToggle }: SidebarProps) {
     const pathname = usePathname();
     const router = useRouter();
     const { profile, viewAsProfile, isImpersonating, stopImpersonating, signOut, isLoading } = useAuth();
@@ -143,7 +144,15 @@ export default function Sidebar({ isCollapsed }: SidebarProps) {
 
     return (
         <>
-            <aside className={`flex flex-col bg-[#09090B] transition-all duration-300 ease-in-out ${isCollapsed ? 'w-20' : 'w-64'}`}>
+            {/* Mobile Overlay */}
+            {!isCollapsed && (
+                <div
+                    className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[90] lg:hidden transition-opacity duration-300"
+                    onClick={onToggle}
+                />
+            )}
+
+            <aside className={`fixed inset-y-0 left-0 z-[100] flex flex-col bg-[#09090B] transition-all duration-300 ease-in-out lg:relative lg:z-0 shadow-2xl lg:shadow-none ${isCollapsed ? '-translate-x-full lg:translate-x-0 lg:w-20' : 'translate-x-0 w-64'}`}>
                 {/* Brand Header */}
                 <div className={`${isCollapsed ? 'p-4 justify-center' : 'p-6 gap-3'} mb-2 flex items-center`}>
                     <div className="relative w-12 h-12 flex-shrink-0">
@@ -177,12 +186,14 @@ export default function Sidebar({ isCollapsed }: SidebarProps) {
                                 <div className="p-4 border-b border-shark/40 flex items-center gap-3">
                                     <div className="w-10 h-10 rounded-full bg-shark flex items-center justify-center text-sm font-black text-white bg-gradient-to-br from-[#279da6]/30 to-transparent ring-1 ring-white/5 relative overflow-hidden">
                                         {displayProfile?.avatar_url ? (
-                                            <Image
+                                            <img
                                                 src={displayProfile.avatar_url}
                                                 alt="Avatar"
-                                                fill
-                                                unoptimized
-                                                className="object-cover"
+                                                className="w-full h-full object-cover"
+                                                onError={(e) => {
+                                                    (e.target as any).style.display = 'none';
+                                                    (e.target as any).parentElement.innerHTML = (displayProfile?.organization || displayProfile?.full_name || displayProfile?.email || 'U').split(' ').filter(Boolean).map((n: string) => n[0]).join('').slice(0, 2).toUpperCase();
+                                                }}
                                             />
                                         ) : (
                                             (displayProfile?.organization || displayProfile?.full_name || displayProfile?.email || 'U').split(' ').filter(Boolean).map((n: string) => n[0]).join('').slice(0, 2).toUpperCase()
@@ -245,12 +256,14 @@ export default function Sidebar({ isCollapsed }: SidebarProps) {
                             {isLoading ? (
                                 <Loader2 size={16} className="text-[#279da6] animate-spin" />
                             ) : displayProfile?.avatar_url ? (
-                                <Image
+                                <img
                                     src={displayProfile.avatar_url}
                                     alt="Avatar"
-                                    fill
-                                    unoptimized
-                                    className="object-cover"
+                                    className="w-full h-full object-cover"
+                                    onError={(e) => {
+                                        (e.target as any).style.display = 'none';
+                                        (e.target as any).parentElement.innerHTML = (displayProfile?.organization || displayProfile?.full_name || displayProfile?.email || 'U').split(' ').filter(Boolean).map((n: string) => n[0]).join('').slice(0, 2).toUpperCase();
+                                    }}
                                 />
                             ) : (
                                 (displayProfile?.organization || displayProfile?.full_name || displayProfile?.email || 'U').split(' ').filter(Boolean).map((n: string) => n[0]).join('').slice(0, 2).toUpperCase()
@@ -266,7 +279,9 @@ export default function Sidebar({ isCollapsed }: SidebarProps) {
                                 ) : (
                                     <>
                                         <p className="text-sm font-black text-white truncate leading-none mb-1.5">
-                                            {displayProfile?.organization || displayProfile?.full_name || (displayProfile?.role === 'super_admin' ? 'Super Admin' : 'User Account')}
+                                            {(displayProfile?.organization && displayProfile.organization.toLowerCase() !== 'individual')
+                                                ? displayProfile.organization
+                                                : displayProfile?.full_name || (displayProfile?.role === 'super_admin' ? 'Super Admin' : 'User Account')}
                                         </p>
                                         <div className="flex items-center gap-1.5 overflow-hidden">
                                             <p className="text-[12px] text-[#279da6] font-black uppercase tracking-tighter shrink-0">

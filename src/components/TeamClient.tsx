@@ -1,6 +1,8 @@
 'use client';
 
 import React, { useState, useRef, useEffect } from 'react';
+import { createPortal } from 'react-dom';
+
 import Sidebar from '@/components/Sidebar';
 import Header from '@/components/Header';
 import {
@@ -88,6 +90,30 @@ export default function TeamClient({ initialMembers, initialCounts }: TeamClient
         direction: 'desc'
     });
     const [activeFilterHeader, setActiveFilterHeader] = useState<string | null>(null);
+    const [filterCoords, setFilterCoords] = useState({ top: 0, left: 0, width: 0 });
+    const headerRefs = useRef<{ [key: string]: HTMLTableCellElement | null }>({});
+
+    const updateFilterPosition = (filterKey: string) => {
+        const el = headerRefs.current[filterKey];
+        if (el) {
+            const rect = el.getBoundingClientRect();
+            setFilterCoords({
+                top: rect.bottom + window.scrollY,
+                left: rect.left + window.scrollX,
+                width: rect.width
+            });
+        }
+    };
+
+    const toggleFilter = (filterKey: string) => {
+        if (activeFilterHeader === filterKey) {
+            setActiveFilterHeader(null);
+        } else {
+            updateFilterPosition(filterKey);
+            setActiveFilterHeader(filterKey);
+        }
+    };
+
 
     const [members, setMembers] = useState<TeamMember[]>(initialMembers);
 
@@ -111,6 +137,11 @@ export default function TeamClient({ initialMembers, initialCounts }: TeamClient
     const inlineInputRef = useRef<HTMLInputElement>(null);
 
     useEffect(() => {
+        // Initial check for mobile to auto-collapse
+        if (window.innerWidth < 1024) {
+            setIsSidebarCollapsed(true);
+        }
+
         if (isCreating) {
             setTimeout(() => inlineInputRef.current?.focus(), 100);
         }
@@ -321,7 +352,7 @@ export default function TeamClient({ initialMembers, initialCounts }: TeamClient
                 </button>
 
                 {isFilterOpen && (
-                    <div className="absolute right-0 mt-2 w-80 bg-[#121214] border border-shark rounded-2xl shadow-2xl p-4 z-50 space-y-4 animate-in fade-in slide-in-from-top-2 duration-200">
+                    <div className="absolute right-0 mt-2 w-[calc(100vw-2rem)] sm:w-80 bg-[#121214] border border-shark rounded-2xl shadow-2xl p-4 z-50 space-y-4 animate-in fade-in slide-in-from-top-2 duration-200">
                         <div className="flex items-center justify-between mb-1">
                             <h4 className="text-[10px] font-black uppercase tracking-widest text-[#279da6]">Advanced Filters</h4>
                             <button
@@ -398,7 +429,10 @@ export default function TeamClient({ initialMembers, initialCounts }: TeamClient
 
     return (
         <div className={`flex h-screen bg-[#09090B] text-iron font-sans overflow-hidden transition-all duration-500 ${isImpersonating ? 'p-1.5' : ''}`} style={isImpersonating ? { backgroundColor: '#0f2b1a' } : undefined}>
-            <Sidebar isCollapsed={isSidebarCollapsed} />
+            <Sidebar
+                isCollapsed={isSidebarCollapsed}
+                onToggle={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
+            />
 
             <div className="flex-1 flex flex-col min-w-0 bg-[#09090B] relative">
                 <div className={`flex-1 flex flex-col min-w-0 bg-[#121214] rounded-t-2xl overflow-hidden border-t border-l border-r mt-6 mr-6 transition-all duration-500 ${isImpersonating ? 'border-[#22c55e]/60 shadow-[0_0_15px_rgba(34,197,94,0.15),0_0_40px_rgba(34,197,94,0.08),inset_0_0_20px_rgba(34,197,94,0.03)]' : 'border-shark'}`}>
@@ -469,9 +503,9 @@ export default function TeamClient({ initialMembers, initialCounts }: TeamClient
                                                 <p className="text-[10px] font-black text-storm-gray uppercase tracking-widest">Photo</p>
                                             </div>
 
-                                            <div className="flex-1 space-y-8">
+                                            <div className="flex-1 space-y-4 sm:space-y-8 min-w-0">
                                                 {/* Header Grid: 4-column layout */}
-                                                <div className="grid grid-cols-1 md:grid-cols-4 gap-x-5 gap-y-8">
+                                                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-x-5 gap-y-4 sm:gap-y-8">
                                                     <div className="space-y-1.5 flex-1">
                                                         <label className="text-[10px] font-black text-storm-gray uppercase tracking-widest ml-1">Full Name</label>
                                                         <div className="relative group">
@@ -499,7 +533,7 @@ export default function TeamClient({ initialMembers, initialCounts }: TeamClient
                                                             />
                                                         </div>
                                                     </div>
-                                                    <div className="space-y-1.5 flex-1 col-span-2">
+                                                    <div className="space-y-1.5 flex-1 col-span-1 sm:col-span-2 lg:col-span-2">
                                                         <label className="text-[10px] font-black text-storm-gray uppercase tracking-widest ml-1">Password</label>
                                                         <div className="relative group">
                                                             <Eye size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-storm-gray group-focus-within:text-[#279da6] transition-colors" />
@@ -512,7 +546,7 @@ export default function TeamClient({ initialMembers, initialCounts }: TeamClient
                                                             />
                                                         </div>
                                                     </div>
-                                                    <div className="space-y-1.5 flex-1 col-span-2">
+                                                    <div className="space-y-1.5 flex-1 col-span-1 sm:col-span-2 lg:col-span-2">
                                                         <label className="text-[10px] font-black text-storm-gray uppercase tracking-widest ml-1">Confirm Password</label>
                                                         <div className="relative group">
                                                             <EyeOff size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-storm-gray group-focus-within:text-[#279da6] transition-colors" />
@@ -571,125 +605,42 @@ export default function TeamClient({ initialMembers, initialCounts }: TeamClient
 
                             {/* Team Members Table */}
                             <div className="border border-shark/60 rounded-xl bg-black/20 overflow-hidden">
-                                <div className="overflow-x-auto custom-scrollbar">
-                                    <table className="w-full text-left border-collapse table-fixed min-w-[1200px]">
-                                        <thead>
-                                            <tr className="border-b border-shark text-storm-gray text-sm uppercase font-black tracking-widest bg-[#17171a]">
-                                                <th className="px-5 py-3 w-12 border-r border-shark/60 text-center">#</th>
-                                                {[
-                                                    { label: 'NAME', key: 'name', width: 'w-[24%]' },
-                                                    { label: 'EMAIL', key: 'email', width: 'w-[16%]' },
-                                                    { label: 'REQUESTS', key: 'request_count', width: 'w-[10%]' },
-                                                    { label: 'TASKS', key: 'task_count', width: 'w-[10%]' },
-                                                    { label: 'LAST LOGIN', key: 'last_login', width: 'w-[15%]' },
-                                                    { label: 'CREATED AT', key: 'created_at', width: 'w-[15%]' }
-                                                ].map((header, idx) => (
-                                                    <th key={header.label} className={`px-4 py-3 border-r border-shark/60 group/header relative header-filter-container ${header.width || ''}`}>
-                                                        <div className="flex items-center justify-between gap-2">
-                                                            {header.key === 'name' ? (
-                                                                <div className="relative flex-1 group -ml-1">
-                                                                    <Search size={16} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-storm-gray group-focus-within:text-[#279da6] transition-colors" />
-                                                                    <input
-                                                                        type="text"
-                                                                        value={(filters as any).name || ''}
-                                                                        onChange={(e) => setFilters({ ...filters, name: e.target.value })}
-                                                                        placeholder="NAME"
-                                                                        className="w-full bg-transparent border-none py-1.5 pl-8 pr-6 text-sm font-black uppercase tracking-widest text-iron placeholder:text-storm-gray focus:outline-none transition-all font-bold"
-                                                                    />
-                                                                    {(filters as any).name && (
-                                                                        <button
-                                                                            onClick={() => setFilters({ ...filters, name: '' })}
-                                                                            className="absolute right-2 top-1/2 -translate-y-1/2 text-storm-gray hover:text-white"
-                                                                        >
-                                                                            <X size={10} />
-                                                                        </button>
-                                                                    )}
-                                                                </div>
-                                                            ) : (
-                                                                <>
-                                                                    <span className="cursor-default text-sm">{header.label}</span>
-                                                                    <button
-                                                                        onClick={() => setActiveFilterHeader(activeFilterHeader === header.key ? null : header.key)}
-                                                                        className={`p-1 rounded hover:bg-shark/40 transition-colors ${filters[header.key as keyof typeof filters] || sortConfig.key === header.key ? 'text-[#279da6]' : 'text-storm-gray'}`}
-                                                                    >
-                                                                        <Filter size={10} />
-                                                                    </button>
-                                                                </>
-                                                            )}
-                                                        </div>
-
-                                                        {activeFilterHeader === header.key && header.key !== 'name' && (
-                                                            <div className={`absolute top-full ${idx > 3 ? 'right-0' : 'left-0'} mt-1 w-48 bg-[#121214] border border-shark rounded-lg shadow-2xl p-2 z-[60] normal-case tracking-normal`}>
-                                                                <div className="mb-2 border-b border-shark/40 pb-2">
-                                                                    <div className="text-[10px] font-bold text-storm-gray uppercase mb-1 px-1">Sort</div>
-                                                                    <div className="flex flex-col gap-0.5">
-                                                                        <button
-                                                                            onClick={() => { handleSort(header.key); setActiveFilterHeader(null); }}
-                                                                            className={`w-full text-left px-2 py-1.5 rounded text-[11px] font-bold flex items-center justify-between group transition-colors ${sortConfig.key === header.key && sortConfig.direction === 'asc' ? 'bg-[#279da6]/10 text-[#279da6]' : 'text-iron hover:bg-shark/40'}`}
-                                                                        >
-                                                                            <div className="flex items-center gap-2">
-                                                                                <SortAsc size={12} className={sortConfig.key === header.key && sortConfig.direction === 'asc' ? 'text-[#279da6]' : 'text-storm-gray'} />
-                                                                                Ascending
-                                                                            </div>
-                                                                            {sortConfig.key === header.key && sortConfig.direction === 'asc' && <Check size={10} />}
-                                                                        </button>
-                                                                        <button
-                                                                            onClick={() => { handleSort(header.key); setActiveFilterHeader(null); }}
-                                                                            className={`w-full text-left px-2 py-1.5 rounded text-[11px] font-bold flex items-center justify-between group transition-colors ${sortConfig.key === header.key && sortConfig.direction === 'desc' ? 'bg-[#279da6]/10 text-[#279da6]' : 'text-iron hover:bg-shark/40'}`}
-                                                                        >
-                                                                            <div className="flex items-center gap-2">
-                                                                                <SortDesc size={12} className={sortConfig.key === header.key && sortConfig.direction === 'desc' ? 'text-[#279da6]' : 'text-storm-gray'} />
-                                                                                Descending
-                                                                            </div>
-                                                                            {sortConfig.key === header.key && sortConfig.direction === 'desc' && <Check size={10} />}
-                                                                        </button>
-                                                                    </div>
-                                                                </div>
-
-                                                                {header.key !== 'name' && (
-                                                                    <div className="relative">
-                                                                        <Search size={10} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-storm-gray" />
-                                                                        <input
-                                                                            type="text"
-                                                                            value={(filters as any)[header.key] || ''}
-                                                                            onChange={(e) => setFilters({ ...filters, [header.key]: e.target.value })}
-                                                                            className="w-full bg-shark/30 border border-shark/50 rounded px-8 py-1.5 text-[11px] text-iron focus:outline-none focus:border-[#279da6]/40 transition-all font-bold"
-                                                                            placeholder={`Filter ${header.label}...`}
-                                                                            autoFocus
-                                                                        />
-                                                                        {(filters as any)[header.key] && (
-                                                                            <button
-                                                                                onClick={() => setFilters({ ...filters, [header.key]: '' })}
-                                                                                className="absolute right-2 top-1/2 -translate-y-1/2 text-storm-gray hover:text-white"
-                                                                            >
-                                                                                <X size={10} />
-                                                                            </button>
-                                                                        )}
-                                                                    </div>
-                                                                )}
-                                                            </div>
+                                {/* Mobile View: Stacked Cards */}
+                                <div className="sm:hidden flex flex-col divide-y divide-shark/60 max-h-[70vh] overflow-y-auto custom-scrollbar">
+                                    {sortedMembers.length === 0 ? (
+                                        <div className="px-6 py-20 text-center text-storm-gray uppercase text-[10px] font-black tracking-widest opacity-40">
+                                            No team members found matching your criteria.
+                                        </div>
+                                    ) : (
+                                        sortedMembers.map((member: TeamMember, index: number) => (
+                                            <div key={member.id} className="p-4 bg-shark/5 flex flex-col gap-4 animate-zoom-in">
+                                                {/* Card Header: Avatar & Member Info */}
+                                                <div className="flex items-start gap-3">
+                                                    <div
+                                                        className="w-12 h-12 rounded-2xl bg-shark flex items-center justify-center text-[12px] font-black text-white overflow-hidden border border-white/5 bg-gradient-to-br from-[#279da6]/20 to-transparent shrink-0 cursor-pointer"
+                                                        onClick={() => {
+                                                            if (member.profile_id) {
+                                                                impersonate({
+                                                                    id: member.profile_id,
+                                                                    email: member.email,
+                                                                    full_name: member.name,
+                                                                    role: 'team_member',
+                                                                    team_role: member.role,
+                                                                    accessible_sections: member.accessible_sections
+                                                                }, '/team');
+                                                            }
+                                                        }}
+                                                    >
+                                                        {member.avatar_url ? (
+                                                            <img src={member.avatar_url} alt={member.name} className="w-full h-full object-cover" />
+                                                        ) : (
+                                                            member.name.split(' ').map((n: string) => n[0]).join('')
                                                         )}
-                                                    </th>
-                                                ))}
-                                                <th className="px-3 py-5 w-10 text-center"></th>
-                                            </tr>
-                                        </thead>
-                                        <tbody className="divide-y divide-shark/60">
-                                            {sortedMembers.length === 0 ? (
-                                                <tr>
-                                                    <td colSpan={8} className="px-6 py-12 text-center text-storm-gray font-medium uppercase tracking-widest opacity-40">
-                                                        No team members found matching your criteria.
-                                                    </td>
-                                                </tr>
-                                            ) : (
-                                                sortedMembers.map((member: TeamMember, index: number) => (
-                                                    <tr key={member.id} className="hover:bg-shark/10 transition-colors group text-sm">
-                                                        <td className="px-5 py-2.5 border-r border-shark/60 text-center font-black text-storm-gray">
-                                                            {(index + 1).toString().padStart(2, '0')}
-                                                        </td>
-                                                        <td className="px-6 py-2.5 border-r border-shark/60 hover:bg-white/5 transition-colors">
-                                                            <div
-                                                                className="flex items-center gap-3 cursor-pointer group/name uppercase tracking-tight"
+                                                    </div>
+                                                    <div className="flex-1 min-w-0">
+                                                        <div className="flex items-center justify-between">
+                                                            <h3
+                                                                className="text-xs font-black text-white uppercase leading-tight truncate cursor-pointer hover:text-[#279da6] transition-colors"
                                                                 onClick={() => {
                                                                     if (member.profile_id) {
                                                                         impersonate({
@@ -703,23 +654,258 @@ export default function TeamClient({ initialMembers, initialCounts }: TeamClient
                                                                     }
                                                                 }}
                                                             >
-                                                                <div className="w-12 h-12 rounded-full bg-shark flex items-center justify-center text-[12px] font-black text-white overflow-hidden border border-white/5 group-hover/name:ring-2 ring-[#279da6]/50 transition-all shrink-0">
+                                                                {member.name}
+                                                            </h3>
+                                                            <div className="flex gap-1 shrink-0">
+                                                                <button
+                                                                    onClick={() => {
+                                                                        if (member.profile_id) {
+                                                                            impersonate({
+                                                                                id: member.profile_id,
+                                                                                email: member.email,
+                                                                                full_name: member.name,
+                                                                                role: 'team_member',
+                                                                                team_role: member.role,
+                                                                                accessible_sections: member.accessible_sections
+                                                                            }, '/team');
+                                                                        }
+                                                                    }}
+                                                                    className="p-1.5 rounded-lg text-storm-gray hover:bg-shark hover:text-[#279da6] transition-all"
+                                                                >
+                                                                    <UserCog size={14} />
+                                                                </button>
+                                                                <button
+                                                                    onClick={() => handleEditClick(member)}
+                                                                    className="p-1.5 rounded-lg text-storm-gray hover:bg-shark hover:text-white transition-all"
+                                                                >
+                                                                    <Edit2 size={14} />
+                                                                </button>
+                                                            </div>
+                                                        </div>
+                                                        <p className="text-[10px] font-black text-[#279da6] tracking-widest truncate mt-0.5 opacity-80">
+                                                            {member.email}
+                                                        </p>
+                                                    </div>
+                                                </div>
+
+                                                {/* Card Stats */}
+                                                <div className="grid grid-cols-2 gap-3 pt-1">
+                                                    <div className="flex items-center gap-4 bg-black/20 rounded-xl p-2 px-4 self-center justify-between col-span-2">
+                                                        <div
+                                                            className="flex items-center gap-2 cursor-pointer group"
+                                                            onClick={() => {
+                                                                if (member.profile_id) {
+                                                                    impersonate({
+                                                                        id: member.profile_id,
+                                                                        email: member.email,
+                                                                        full_name: member.name,
+                                                                        role: 'team_member',
+                                                                        team_role: member.role,
+                                                                        accessible_sections: member.accessible_sections
+                                                                    }, '/team');
+                                                                    router.push('/requests');
+                                                                }
+                                                            }}
+                                                        >
+                                                            <MessageSquare size={14} className="text-[#279da6]" />
+                                                            <div className="flex flex-col">
+                                                                <span className="text-[12px] font-black text-white leading-none">{member.request_count || 0}</span>
+                                                                <span className="text-[8px] font-black text-storm-gray uppercase tracking-widest">Requests</span>
+                                                            </div>
+                                                        </div>
+
+                                                        <div className="w-px h-6 bg-shark/60" />
+
+                                                        <div
+                                                            className="flex items-center gap-2 cursor-pointer group"
+                                                            onClick={() => {
+                                                                if (member.profile_id) {
+                                                                    impersonate({
+                                                                        id: member.profile_id,
+                                                                        email: member.email,
+                                                                        full_name: member.name,
+                                                                        role: 'team_member',
+                                                                        team_role: member.role,
+                                                                        accessible_sections: member.accessible_sections
+                                                                    }, '/team');
+                                                                    router.push('/tasks');
+                                                                }
+                                                            }}
+                                                        >
+                                                            <CheckSquare size={14} className="text-amber-400" />
+                                                            <div className="flex flex-col">
+                                                                <span className="text-[12px] font-black text-white leading-none">{member.task_count || 0}</span>
+                                                                <span className="text-[8px] font-black text-storm-gray uppercase tracking-widest">Tasks</span>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        ))
+                                    )}
+                                </div>
+
+                                {/* Desktop View: Standard Table */}
+                                <div className="hidden sm:block overflow-x-auto custom-scrollbar">
+                                    <table className="w-full text-left border-collapse">
+                                        <thead>
+                                            <tr className="border-b border-shark text-storm-gray text-xs uppercase font-black tracking-widest bg-[#17171a]">
+                                                <th className="px-5 py-3 w-10 sm:w-16 border-r border-shark/60 text-center text-storm-gray font-black">#</th>
+                                                {[
+                                                    { label: 'Name', key: 'name', width: 'min-w-[200px]' },
+                                                    { label: 'Email', key: 'email', width: 'min-w-[220px]' },
+                                                    { label: 'Requests', key: 'request_count', width: 'min-w-[100px]' },
+                                                    { label: 'Created', key: 'created_at', width: 'min-w-[140px]' }
+                                                ].map((header, idx) => (
+                                                    <th
+                                                        key={header.key}
+                                                        ref={el => { headerRefs.current[header.key] = el; }}
+                                                        className={`px-4 py-3 border-r border-shark/60 group/header relative header-filter-container ${header.width || ''}`}
+                                                    >
+                                                        <div className="flex items-center justify-between gap-2">
+                                                            {header.key === 'name' ? (
+                                                                <div className="relative flex-1 group -ml-1">
+                                                                    <Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-storm-gray group-focus-within:text-[#279da6] transition-colors" />
+                                                                    <input
+                                                                        type="text"
+                                                                        value={(filters as any).name || ''}
+                                                                        onChange={(e) => setFilters({ ...filters, name: e.target.value })}
+                                                                        placeholder="NAME"
+                                                                        className="w-full bg-transparent border-none py-1.5 pl-8 pr-6 text-[11px] font-black uppercase tracking-widest text-iron placeholder:text-storm-gray focus:outline-none transition-all font-bold"
+                                                                    />
+                                                                    {(filters as any).name && (
+                                                                        <button
+                                                                            onClick={() => setFilters({ ...filters, name: '' })}
+                                                                            className="absolute right-2 top-1/2 -translate-y-1/2 text-storm-gray hover:text-white"
+                                                                        >
+                                                                            <X size={10} />
+                                                                        </button>
+                                                                    )}
+                                                                </div>
+                                                            ) : (
+                                                                <>
+                                                                    <span className="cursor-default text-[10px] font-black">{header.label}</span>
+                                                                    <button
+                                                                        onClick={() => toggleFilter(header.key)}
+                                                                        className={`p-1 rounded hover:bg-shark/40 transition-colors ${filters[header.key as keyof typeof filters] || sortConfig.key === header.key ? 'text-[#279da6]' : 'text-storm-gray'}`}
+                                                                    >
+                                                                        <Filter size={10} />
+                                                                    </button>
+                                                                </>
+                                                            )}
+                                                        </div>
+
+                                                        {activeFilterHeader === header.key && header.key !== 'name' && typeof document !== 'undefined' && createPortal(
+                                                            <div
+                                                                style={{
+                                                                    position: 'absolute',
+                                                                    top: `${filterCoords.top + 4}px`,
+                                                                    left: idx > 2 ? `${filterCoords.left + filterCoords.width - 192}px` : `${filterCoords.left}px`,
+                                                                }}
+                                                                className={`w-48 bg-[#121214] border border-shark rounded-xl shadow-2xl p-2 z-[9999] normal-case tracking-normal animate-zoom-in`}
+                                                                onClick={(e) => e.stopPropagation()}
+                                                            >
+                                                                <div className="mb-2 border-b border-shark/40 pb-2">
+                                                                    <div className="text-[9px] font-black text-storm-gray uppercase mb-1 px-1 tracking-widest">Sort</div>
+                                                                    <div className="flex flex-col gap-0.5">
+                                                                        <button
+                                                                            onClick={() => { handleSort(header.key); setActiveFilterHeader(null); }}
+                                                                            className={`w-full text-left px-2 py-1.5 rounded-lg text-[10px] uppercase font-black tracking-wider flex items-center justify-between group transition-all ${sortConfig.key === header.key && sortConfig.direction === 'asc' ? 'bg-[#279da6]/10 text-[#279da6]' : 'text-storm-gray hover:bg-shark/40 hover:text-white'}`}
+                                                                        >
+                                                                            <div className="flex items-center gap-2">
+                                                                                <SortAsc size={12} className={sortConfig.key === header.key && sortConfig.direction === 'asc' ? 'text-[#279da6]' : 'text-storm-gray'} />
+                                                                                Ascending
+                                                                            </div>
+                                                                            {sortConfig.key === header.key && sortConfig.direction === 'asc' && <Check size={10} />}
+                                                                        </button>
+                                                                        <button
+                                                                            onClick={() => { handleSort(header.key); setActiveFilterHeader(null); }}
+                                                                            className={`w-full text-left px-2 py-1.5 rounded-lg text-[10px] uppercase font-black tracking-wider flex items-center justify-between group transition-all ${sortConfig.key === header.key && sortConfig.direction === 'desc' ? 'bg-[#279da6]/10 text-[#279da6]' : 'text-storm-gray hover:bg-shark/40 hover:text-white'}`}
+                                                                        >
+                                                                            <div className="flex items-center gap-2">
+                                                                                <SortDesc size={12} className={sortConfig.key === header.key && sortConfig.direction === 'desc' ? 'text-[#279da6]' : 'text-storm-gray'} />
+                                                                                Descending
+                                                                            </div>
+                                                                            {sortConfig.key === header.key && sortConfig.direction === 'desc' && <Check size={10} />}
+                                                                        </button>
+                                                                    </div>
+                                                                </div>
+
+                                                                {header.key !== 'name' && (
+                                                                    <div className="relative px-1 pb-1">
+                                                                        <Search size={10} className="absolute left-3 top-1/2 -translate-y-1/2 text-storm-gray" />
+                                                                        <input
+                                                                            type="text"
+                                                                            value={(filters as any)[header.key] || ''}
+                                                                            onChange={(e) => setFilters(f => ({ ...f, [header.key]: e.target.value }))}
+                                                                            className="w-full bg-[#09090B] border border-shark/50 rounded-lg px-8 py-1.5 text-[10px] font-bold text-iron focus:outline-none focus:border-[#279da6]/40 transition-all font-bold"
+                                                                            placeholder={`Filter...`}
+                                                                            autoFocus
+                                                                        />
+                                                                        {(filters as any)[header.key] && (
+                                                                            <button
+                                                                                onClick={() => setFilters(f => ({ ...f, [header.key]: '' }))}
+                                                                                className="absolute right-2 top-1/2 -translate-y-1/2 text-storm-gray hover:text-white"
+                                                                            >
+                                                                                <X size={10} />
+                                                                            </button>
+                                                                        )}
+                                                                    </div>
+                                                                )}
+                                                            </div>,
+                                                            document.body
+                                                        )}
+                                                    </th>
+                                                ))}
+                                                <th className="px-3 py-5 w-24 text-center"></th>
+                                            </tr>
+                                        </thead>
+                                        <tbody className="divide-y divide-shark/60">
+                                            {sortedMembers.length === 0 ? (
+                                                <tr>
+                                                    <td colSpan={8} className="px-6 py-20 text-center text-storm-gray uppercase text-[10px] font-black tracking-widest opacity-40">
+                                                        No team members found matching your criteria.
+                                                    </td>
+                                                </tr>
+                                            ) : (
+                                                sortedMembers.map((member: TeamMember, index: number) => (
+                                                    <tr key={member.id} className="hover:bg-shark/10 transition-colors group text-sm">
+                                                        <td className="px-5 py-3 border-r border-shark/60 text-center font-black text-storm-gray">
+                                                            {(index + 1).toString().padStart(2, '0')}
+                                                        </td>
+                                                        <td className="px-4 py-3 border-r border-shark/60 hover:bg-white/5 transition-colors">
+                                                            <div
+                                                                className="flex items-center gap-4 cursor-pointer group/name uppercase tracking-tight"
+                                                                onClick={() => {
+                                                                    if (member.profile_id) {
+                                                                        impersonate({
+                                                                            id: member.profile_id,
+                                                                            email: member.email,
+                                                                            full_name: member.name,
+                                                                            role: 'team_member',
+                                                                            team_role: member.role,
+                                                                            accessible_sections: member.accessible_sections
+                                                                        }, '/team');
+                                                                    }
+                                                                }}
+                                                            >
+                                                                <div className="w-12 h-12 rounded-xl bg-shark flex items-center justify-center text-[11px] font-black text-white overflow-hidden border border-white/5 group-hover/name:ring-2 ring-[#279da6]/30 transition-all shrink-0 bg-gradient-to-br from-[#279da6]/10 to-transparent">
                                                                     {member.avatar_url ? (
                                                                         <img src={member.avatar_url} alt={member.name} className="w-full h-full object-cover" />
                                                                     ) : (
                                                                         member.name.split(' ').map((n: string) => n[0]).join('')
                                                                     )}
                                                                 </div>
-                                                                <div className="flex flex-col">
-                                                                    <span className="font-black text-iron group-hover/name:text-[#279da6] transition-colors">{member.name}</span>
-                                                                    <span className="text-[10px] text-[#279da6] font-bold opacity-0 group-hover/name:opacity-100 transition-opacity leading-none">Click to impersonate</span>
+                                                                <div className="flex flex-col min-w-0">
+                                                                    <span className="font-black text-iron group-hover/name:text-[#279da6] transition-colors truncate text-[12px] leading-tight">{member.name}</span>
+                                                                    <span className="text-[9px] text-[#279da6] font-black tracking-widest opacity-0 group-hover/name:opacity-60 transition-opacity">CLICK TO IMPERSONATE</span>
                                                                 </div>
                                                             </div>
                                                         </td>
-                                                        <td className="px-6 py-2.5 border-r border-shark/60 text-storm-gray font-black uppercase tracking-tight hover:bg-white/5 transition-colors">{member.email}</td>
-                                                        <td className="px-4 py-2.5 border-r border-shark/60 hover:bg-white/5 transition-colors text-center">
+                                                        <td className="px-6 py-3 border-r border-shark/60 text-storm-gray font-black uppercase tracking-tight hover:bg-white/5 transition-colors text-[11px] opacity-60 truncate">{member.email}</td>
+                                                        <td className="px-4 py-3 border-r border-shark/60 hover:bg-white/5 transition-colors text-center">
                                                             <div
-                                                                className="flex items-center gap-2 cursor-pointer hover:opacity-80 transition-opacity"
+                                                                className="flex items-center gap-2 justify-center cursor-pointer hover:opacity-70 transition-opacity group/stat"
                                                                 onClick={() => {
                                                                     if (member.profile_id) {
                                                                         impersonate({
@@ -733,15 +919,14 @@ export default function TeamClient({ initialMembers, initialCounts }: TeamClient
                                                                         router.push('/requests');
                                                                     }
                                                                 }}
-                                                                title="View requests as this member"
                                                             >
-                                                                <MessageSquare size={14} className="text-[#279da6]" />
-                                                                <span className="text-iron font-black">{member.request_count || 0}</span>
+                                                                <MessageSquare size={14} className="text-[#279da6] group-hover/stat:scale-110 transition-transform" />
+                                                                <span className="text-iron font-black text-xs">{member.request_count || 0}</span>
                                                             </div>
                                                         </td>
-                                                        <td className="px-4 py-2.5 border-r border-shark/60 hover:bg-white/5 transition-colors text-center">
+                                                        <td className="px-4 py-3 border-r border-shark/60 hover:bg-white/5 transition-colors text-center">
                                                             <div
-                                                                className="flex items-center gap-2 cursor-pointer hover:opacity-80 transition-opacity"
+                                                                className="flex items-center gap-2 justify-center cursor-pointer hover:opacity-70 transition-opacity group/stat"
                                                                 onClick={() => {
                                                                     if (member.profile_id) {
                                                                         impersonate({
@@ -755,27 +940,26 @@ export default function TeamClient({ initialMembers, initialCounts }: TeamClient
                                                                         router.push('/tasks');
                                                                     }
                                                                 }}
-                                                                title="View tasks as this member"
                                                             >
-                                                                <CheckSquare size={14} className="text-amber-400" />
-                                                                <span className="text-iron font-black">{member.task_count || 0}</span>
+                                                                <CheckSquare size={14} className="text-amber-400 group-hover/stat:scale-110 transition-transform" />
+                                                                <span className="text-iron font-black text-xs">{member.task_count || 0}</span>
                                                             </div>
                                                         </td>
-                                                        <td className="px-6 py-4.5 border-r border-shark/60 text-storm-gray font-black whitespace-nowrap text-xs hover:bg-white/5 transition-colors uppercase text-center">
+                                                        <td className="px-6 py-3 border-r border-shark/60 text-storm-gray font-black whitespace-nowrap text-[10px] hover:bg-white/5 transition-colors uppercase text-center">
                                                             {member.last_login ? (
                                                                 <div className="flex flex-col">
                                                                     <span className="text-iron font-black">{formatDate(member.last_login)}</span>
-                                                                    <span className="opacity-50 font-bold">{formatTime(member.last_login)}</span>
+                                                                    <span className="opacity-40 font-bold scale-90">{formatTime(member.last_login)}</span>
                                                                 </div>
-                                                            ) : 'Never'}
+                                                            ) : <span className="opacity-40 tracking-widest">NEVER</span>}
                                                         </td>
-                                                        <td className="px-6 py-4.5 border-r border-shark/60 text-storm-gray font-black whitespace-nowrap text-xs hover:bg-white/5 transition-colors uppercase text-center">
+                                                        <td className="px-6 py-3 border-r border-shark/60 text-storm-gray font-black whitespace-nowrap text-[10px] hover:bg-white/5 transition-colors uppercase text-center">
                                                             <div className="flex flex-col">
                                                                 <span className="text-iron font-black">{formatDate(member.created_at)}</span>
-                                                                <span className="opacity-50 font-bold">{formatTime(member.created_at)}</span>
+                                                                <span className="opacity-40 font-bold scale-90">{formatTime(member.created_at)}</span>
                                                             </div>
                                                         </td>
-                                                        <td className="px-3 py-2.5 text-center relative hover:bg-white/5 transition-colors">
+                                                        <td className="px-3 py-3 text-center relative hover:bg-white/5 transition-colors">
                                                             <div className="flex items-center justify-center gap-1">
                                                                 <button
                                                                     onClick={() => {
@@ -792,21 +976,19 @@ export default function TeamClient({ initialMembers, initialCounts }: TeamClient
                                                                             alert('This team member does not have an account yet.');
                                                                         }
                                                                     }}
-                                                                    className="p-1.5 rounded-md text-storm-gray hover:bg-shark hover:text-white transition-all cursor-pointer"
+                                                                    className="p-1.5 rounded-lg text-storm-gray hover:bg-shark hover:text-[#279da6] transition-all cursor-pointer"
                                                                     title="Impersonate"
                                                                 >
                                                                     <UserCog size={16} />
                                                                 </button>
                                                                 <button
                                                                     onClick={() => handleEditClick(member)}
-                                                                    className="p-1.5 rounded-md text-storm-gray hover:bg-shark hover:text-white transition-all cursor-pointer"
+                                                                    className="p-1.5 rounded-lg text-storm-gray hover:bg-shark hover:text-white transition-all cursor-pointer"
                                                                     title="Edit Member"
                                                                 >
                                                                     <Edit2 size={16} />
                                                                 </button>
                                                             </div>
-
-
                                                         </td>
                                                     </tr>
                                                 ))
@@ -856,9 +1038,10 @@ export default function TeamClient({ initialMembers, initialCounts }: TeamClient
                                     </div>
                                 </div>
                             </div>
-                        )}
-                </div>
-            </div>
-        </div>
+                        )
+                    }
+                </div >
+            </div >
+        </div >
     );
 }
