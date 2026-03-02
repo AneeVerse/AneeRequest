@@ -2,41 +2,50 @@ import { NextResponse } from 'next/server';
 import { v4 as uuidv4 } from 'uuid';
 import { createServiceClient } from '@/lib/supabase';
 import { ensureFolderPath, uploadFileToDrive } from '@/lib/googleDrive';
+import { resolveRequestSlug, resolveTaskSlug } from '@/lib/utils';
 
 export async function POST(request: Request) {
     try {
         const formData = await request.formData();
         const file = formData.get('file') as File;
-        const requestId = formData.get('requestId') as string | null;
-        const taskId = formData.get('taskId') as string | null;
+        const requestIdRaw = formData.get('requestId') as string | null;
+        const taskIdRaw = formData.get('taskId') as string | null;
         const senderId = formData.get('senderId') as string | null;
 
         if (!file) {
             return NextResponse.json({ error: "No file uploaded" }, { status: 400 });
         }
 
+        // Resolve slugs to UUIDs
+        let requestId = requestIdRaw ? await resolveRequestSlug(requestIdRaw) : null;
+        let taskId = taskIdRaw ? await resolveTaskSlug(taskIdRaw) : null;
+
         // If requestId is provided, upload to Google Drive (chat attachments)
         if (requestId) {
             const supabase = createServiceClient();
-            // ... (keep existing drive logic)
             const { data: req, error: reqErr } = await supabase
                 .from('requests')
-                .select(`
-                    id, title, client_id,
-                    client:client_id (id, full_name, email)
-                `)
+                .select('id, title, client_id')
                 .eq('id', requestId)
                 .single();
 
-            if (reqErr) throw reqErr;
+            if (reqErr || !req) throw new Error(reqErr?.message || 'Request not found');
 
+            // Get client profile (where email is stored)
+            const { data: clientProfile } = await supabase
+                .from('profiles')
+                .select('id, full_name, email')
+                .eq('id', req.client_id)
+                .single();
+
+            // Get client metadata (where organization/drive_folder_id are stored)
             const { data: clientData } = await supabase
                 .from('clients')
-                .select('organization, name')
-                .ilike('email', (req.client as any)?.email || '')
+                .select('organization, name, drive_folder_id')
+                .ilike('email', clientProfile?.email || '')
                 .maybeSingle();
 
-            const clientName = clientData?.organization || clientData?.name || (req.client as any)?.full_name || 'Unknown';
+            const clientName = clientData?.organization || clientData?.name || clientProfile?.full_name || 'Unknown';
 
             let folder: 'production' | 'distributed' = 'production';
             if (senderId) {
@@ -51,7 +60,7 @@ export async function POST(request: Request) {
                 }
             }
 
-            const folderId = await ensureFolderPath(clientName, req.title, folder);
+            const folderId = await ensureFolderPath(clientName, req.title, folder, clientData?.drive_folder_id);
             const fileBuffer = Buffer.from(await file.arrayBuffer());
             const { fileId, webViewLink } = await uploadFileToDrive(
                 folderId,

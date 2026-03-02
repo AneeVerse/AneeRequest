@@ -216,6 +216,11 @@ export default function RequestDetailsPage() {
         request_ids: [] as string[]
     });
     const [allRequests, setAllRequests] = useState<any[]>([]);
+    const [isCreatingRequestedFolder, setIsCreatingRequestedFolder] = useState(false);
+    const [isLinkFolderModalOpen, setIsLinkFolderModalOpen] = useState(false);
+    const [linkedFolderId, setLinkedFolderId] = useState('');
+    const [isEditingDescription, setIsEditingDescription] = useState(false);
+    const [editedDescription, setEditedDescription] = useState('');
 
     // WYSIWYG formatting helpers
     const execFormat = (command: string, value?: string) => {
@@ -476,7 +481,8 @@ export default function RequestDetailsPage() {
                     ...(data.drive_file_id ? { drive_file_id: data.drive_file_id } : {})
                 }]);
             } else {
-                alert("Upload failed");
+                const err = await response.json();
+                alert(`Upload failed: ${err.error || 'Unknown error'}`);
             }
         } catch (error) {
             console.error('Upload error:', error);
@@ -705,6 +711,26 @@ export default function RequestDetailsPage() {
         }
     }, [activeTab]);
 
+    const handleCreateFolder = async () => {
+        setIsCreatingRequestedFolder(true);
+        try {
+            const response = await fetch(`/api/requests/${id}/files`, {
+                method: 'POST'
+            });
+            if (response.ok) {
+                fetchRequestFiles();
+            } else {
+                const err = await response.json();
+                alert(`Error creating folder: ${err.error}`);
+            }
+        } catch (error) {
+            console.error('Failed to create folder:', error);
+            alert('Failed to create folder. Please try again.');
+        } finally {
+            setIsCreatingRequestedFolder(false);
+        }
+    };
+
     if (isLoading && !request) {
         return (
             <div className="flex h-screen items-center justify-center bg-[#09090B]">
@@ -837,7 +863,7 @@ export default function RequestDetailsPage() {
                                                         <div className="bg-shark/20 border border-shark/50 rounded-2xl p-6 shadow-sm">
                                                             <div className="flex items-center justify-between mb-4">
                                                                 <span className="text-[11px] font-black text-[#279da6] uppercase tracking-widest">Request Submitted</span>
-                                                                <span className="text-[10px] text-storm-gray font-bold">
+                                                                <span className="text-[10px] text-rose-500 font-black uppercase tracking-widest">
                                                                     {new Date(request.created_at).toLocaleString('en-US', {
                                                                         month: 'short',
                                                                         day: 'numeric',
@@ -846,9 +872,51 @@ export default function RequestDetailsPage() {
                                                                     })}
                                                                 </span>
                                                             </div>
-                                                            <p className="text-iron text-sm leading-relaxed whitespace-pre-wrap">
-                                                                {request.description}
-                                                            </p>
+                                                            {isEditingDescription ? (
+                                                                <div className="space-y-3">
+                                                                    <textarea
+                                                                        value={editedDescription}
+                                                                        onChange={(e) => setEditedDescription(e.target.value)}
+                                                                        className="w-full bg-black/40 border border-[#279da6]/30 rounded-xl p-4 text-sm text-iron focus:outline-none focus:border-[#279da6] min-h-[120px] transition-all resize-none font-bold"
+                                                                        placeholder="Enter request description..."
+                                                                    />
+                                                                    <div className="flex items-center gap-2 justify-end">
+                                                                        <button
+                                                                            onClick={() => setIsEditingDescription(false)}
+                                                                            className="px-4 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest text-storm-gray hover:text-white transition-all"
+                                                                        >
+                                                                            Cancel
+                                                                        </button>
+                                                                        <button
+                                                                            onClick={async () => {
+                                                                                await handleUpdateField('description', editedDescription);
+                                                                                setIsEditingDescription(false);
+                                                                            }}
+                                                                            className="px-4 py-1.5 rounded-lg bg-[#279da6] text-white text-[10px] font-black uppercase tracking-widest hover:bg-[#20838b] transition-all shadow-lg shadow-[#279da6]/20"
+                                                                        >
+                                                                            Save Changes
+                                                                        </button>
+                                                                    </div>
+                                                                </div>
+                                                            ) : (
+                                                                <div className="group relative">
+                                                                    <p className="text-iron text-sm leading-relaxed whitespace-pre-wrap font-bold pr-10">
+                                                                        {request.description}
+                                                                    </p>
+                                                                    {isAdmin && (
+                                                                        <button
+                                                                            onClick={() => {
+                                                                                setEditedDescription(request.description || '');
+                                                                                setIsEditingDescription(true);
+                                                                            }}
+                                                                            className="absolute top-0 right-0 p-2 text-storm-gray hover:text-[#279da6] opacity-0 group-hover:opacity-100 transition-all rounded-lg hover:bg-[#279da6]/10"
+                                                                            title="Edit Description"
+                                                                        >
+                                                                            <Pencil size={14} />
+                                                                        </button>
+                                                                    )}
+                                                                </div>
+                                                            )}
                                                         </div>
                                                     </div>
                                                 </div>
@@ -869,7 +937,7 @@ export default function RequestDetailsPage() {
                                                         const isMe = msg.sender_id === profile?.id;
                                                         return (
                                                             <div key={msg.id} className={`flex gap-4 ${isMe ? 'flex-row-reverse' : ''}`}>
-                                                                <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 border border-white/5 shadow-lg relative overflow-hidden ${isMe ? 'bg-[#279da6] text-white' : 'bg-shark text-[#279da6]'
+                                                                <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 border border-white/5 shadow-lg relative overflow-hidden ${isMe ? 'bg-shark text-[#279da6]' : 'bg-shark text-[#279da6]'
                                                                     }`}>
                                                                     {isMe ? (
                                                                         profile?.avatar_url ? (
@@ -907,7 +975,7 @@ export default function RequestDetailsPage() {
                                                                         </span>
                                                                     </div>
                                                                     <div className={`px-5 py-3 rounded-2xl text-sm leading-relaxed shadow-lg ${isMe
-                                                                        ? 'bg-[#279da6] text-white rounded-tr-none'
+                                                                        ? 'bg-shark text-white rounded-tr-none border border-[#279da6]/30'
                                                                         : 'bg-shark text-iron rounded-tl-none border border-white/5'
                                                                         }`}>
                                                                         {/* Rich text message renderer — supports HTML (new) and plain text with markdown (old) */}
@@ -933,7 +1001,7 @@ export default function RequestDetailsPage() {
                                                                                             return <em key={j}>{part.slice(1, -1)}</em>;
                                                                                         }
                                                                                         if (/^https?:\/\/[^\s]+$/.test(part)) {
-                                                                                            return <a key={j} href={part} target="_blank" rel="noopener noreferrer" className={`underline font-bold ${isMe ? 'text-white/90' : 'text-[#279da6]'}`}>{part}</a>;
+                                                                                            return <a key={j} href={part} target="_blank" rel="noopener noreferrer" className="underline font-bold text-[#279da6]">{part}</a>;
                                                                                         }
                                                                                         return part;
                                                                                     })}
@@ -1229,11 +1297,31 @@ export default function RequestDetailsPage() {
                                                 </div>
                                             ) : requestFiles.length === 0 ? (
                                                 <div className="flex flex-col items-center justify-center py-20 text-center">
-                                                    <div className="w-16 h-16 rounded-2xl bg-shark/30 border border-shark flex items-center justify-center mb-4">
-                                                        <FolderOpen size={28} className="text-storm-gray/50" />
+                                                    <div className="w-20 h-20 rounded-3xl bg-shark/30 border border-shark flex items-center justify-center mb-6 shadow-inner ring-1 ring-white/5">
+                                                        <FolderOpen size={32} className="text-storm-gray/50" />
                                                     </div>
-                                                    <p className="text-sm font-bold text-iron mb-1">No files found</p>
-                                                    <p className="text-[11px] text-storm-gray">Files uploaded via chat will appear here</p>
+                                                    <h3 className="text-xl font-bold text-iron mb-2 uppercase tracking-tight">No Folder Linked</h3>
+                                                    <p className="text-sm text-storm-gray mb-10 max-w-xs mx-auto">
+                                                        Connect a Google Drive folder to manage this request&apos;s project files directly from this dashboard.
+                                                    </p>
+
+                                                    <div className="flex flex-col gap-3 w-full max-w-[280px]">
+                                                        <button
+                                                            onClick={handleCreateFolder}
+                                                            disabled={isCreatingRequestedFolder || isLoadingFiles}
+                                                            className="w-full flex items-center justify-center gap-2 px-6 py-3 rounded-xl bg-[#279da6] text-white text-xs font-black uppercase tracking-widest hover:bg-[#279da6]/90 transition-all shadow-[0_10px_20px_rgba(39,157,166,0.2)] disabled:opacity-50"
+                                                        >
+                                                            {isCreatingRequestedFolder ? <Loader2 size={14} className="animate-spin" /> : <Plus size={14} />}
+                                                            Create New Folder
+                                                        </button>
+                                                        <button
+                                                            onClick={() => alert('Folder linking coming soon - currently you can create the standard folder structure.')}
+                                                            className="w-full flex items-center justify-center gap-2 px-6 py-3 rounded-xl bg-shark/30 border border-shark text-storm-gray text-xs font-black uppercase tracking-widest hover:text-white hover:border-shark/80 transition-all"
+                                                        >
+                                                            <LinkIcon size={14} />
+                                                            Link Existing Folder
+                                                        </button>
+                                                    </div>
                                                 </div>
                                             ) : (
                                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">

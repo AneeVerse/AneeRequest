@@ -46,7 +46,7 @@ export default function LoginPage() {
             <div className="w-full max-w-md animate-slide-up">
                 {/* Logo Section */}
                 <div className="flex flex-col items-center mb-10">
-                    <div className="relative w-16 h-16 mb-4">
+                    <div className="relative w-24 h-24 mb-4">
                         <Image
                             src="/images/Artboard 7@2x.png"
                             alt="Aneeverse Logo"
@@ -54,11 +54,11 @@ export default function LoginPage() {
                             className="object-contain"
                         />
                     </div>
-                    <h1 className="text-3xl font-black tracking-tighter text-[#279da6] select-none">
+                    <h1 className="text-[20px] font-black tracking-tighter text-[#279da6] select-none uppercase">
                         aneeverse
                     </h1>
-                    <p className="text-storm-gray text-xs mt-2 font-medium uppercase tracking-[0.2em]">
-                        Unified Request Management
+                    <p className="text-storm-gray text-[10px] mt-1 font-black uppercase tracking-[0.55em] opacity-80">
+                        Request hub
                     </p>
                 </div>
 

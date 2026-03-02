@@ -28,7 +28,8 @@ import {
     X,
     CircleDashed,
     RefreshCcw,
-    Flag
+    Flag,
+    Pencil
 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/context/AuthContext';
@@ -101,6 +102,8 @@ export default function TaskDetailsPage() {
     const dateInputRef = useRef<HTMLInputElement>(null);
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const editorRef = useRef<HTMLDivElement>(null);
+    const [isEditingDescription, setIsEditingDescription] = useState(false);
+    const [editedDescription, setEditedDescription] = useState('');
 
     // Delete state
     const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
@@ -452,7 +455,7 @@ export default function TaskDetailsPage() {
                                                 <div className="bg-shark/20 border border-shark/50 rounded-2xl p-6 shadow-sm">
                                                     <div className="flex items-center justify-between mb-4">
                                                         <span className="text-[11px] font-black text-[#279da6] uppercase tracking-widest">Task Created</span>
-                                                        <span className="text-[10px] text-storm-gray font-bold">
+                                                        <span className="text-[10px] text-rose-500 font-black uppercase tracking-widest">
                                                             {new Date(task.created_at).toLocaleString('en-US', {
                                                                 month: 'short',
                                                                 day: 'numeric',
@@ -461,9 +464,51 @@ export default function TaskDetailsPage() {
                                                             })}
                                                         </span>
                                                     </div>
-                                                    <p className="text-iron text-sm leading-relaxed whitespace-pre-wrap">
-                                                        {task.description || 'No description provided.'}
-                                                    </p>
+                                                    {isEditingDescription ? (
+                                                        <div className="space-y-3">
+                                                            <textarea
+                                                                value={editedDescription}
+                                                                onChange={(e) => setEditedDescription(e.target.value)}
+                                                                className="w-full bg-black/40 border border-[#279da6]/30 rounded-xl p-4 text-sm text-iron focus:outline-none focus:border-[#279da6] min-h-[120px] transition-all resize-none font-bold"
+                                                                placeholder="Enter task description..."
+                                                            />
+                                                            <div className="flex items-center gap-2 justify-end">
+                                                                <button
+                                                                    onClick={() => setIsEditingDescription(false)}
+                                                                    className="px-4 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest text-storm-gray hover:text-white transition-all"
+                                                                >
+                                                                    Cancel
+                                                                </button>
+                                                                <button
+                                                                    onClick={async () => {
+                                                                        await handleUpdateField('description', editedDescription);
+                                                                        setIsEditingDescription(false);
+                                                                    }}
+                                                                    className="px-4 py-1.5 rounded-lg bg-[#279da6] text-white text-[10px] font-black uppercase tracking-widest hover:bg-[#20838b] transition-all shadow-lg shadow-[#279da6]/20"
+                                                                >
+                                                                    Save Changes
+                                                                </button>
+                                                            </div>
+                                                        </div>
+                                                    ) : (
+                                                        <div className="group relative">
+                                                            <p className="text-iron text-sm leading-relaxed whitespace-pre-wrap font-bold pr-10">
+                                                                {task.description || 'No description provided.'}
+                                                            </p>
+                                                            {isAdmin && (
+                                                                <button
+                                                                    onClick={() => {
+                                                                        setEditedDescription(task.description || '');
+                                                                        setIsEditingDescription(true);
+                                                                    }}
+                                                                    className="absolute top-0 right-0 p-2 text-storm-gray hover:text-[#279da6] opacity-0 group-hover:opacity-100 transition-all rounded-lg hover:bg-[#279da6]/10"
+                                                                    title="Edit Description"
+                                                                >
+                                                                    <Pencil size={14} />
+                                                                </button>
+                                                            )}
+                                                        </div>
+                                                    )}
                                                 </div>
                                             </div>
                                         </div>
@@ -484,7 +529,7 @@ export default function TaskDetailsPage() {
                                                 const isMe = msg.sender_id === profile?.id;
                                                 return (
                                                     <div key={msg.id} className={`flex gap-4 ${isMe ? 'flex-row-reverse' : ''}`}>
-                                                        <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 border border-white/5 shadow-lg relative overflow-hidden ${isMe ? 'bg-[#279da6] text-white' : 'bg-shark text-[#279da6]'
+                                                        <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 border border-white/5 shadow-lg relative overflow-hidden ${isMe ? 'bg-shark text-[#279da6]' : 'bg-shark text-[#279da6]'
                                                             }`}>
                                                             {isMe ? (
                                                                 profile?.avatar_url ? (
@@ -522,7 +567,7 @@ export default function TaskDetailsPage() {
                                                                 </span>
                                                             </div>
                                                             <div className={`px-5 py-3 rounded-2xl text-sm leading-relaxed shadow-lg ${isMe
-                                                                ? 'bg-[#279da6] text-white rounded-tr-none'
+                                                                ? 'bg-shark text-white rounded-tr-none border border-[#279da6]/30'
                                                                 : 'bg-shark text-iron rounded-tl-none border border-white/5'
                                                                 }`}>
                                                                 {isHtmlContent(msg.message) ? (
@@ -532,7 +577,26 @@ export default function TaskDetailsPage() {
                                                                     />
                                                                 ) : (
                                                                     msg.message.split('\n').map((line, i) => (
-                                                                        <div key={i}>{line}</div>
+                                                                        <div key={i}>
+                                                                            {line.split(/(\*\*.*?\*\*|__.*?__|\*.*?\*|_.*?_|https?:\/\/[^\s]+)/).map((part, j) => {
+                                                                                if (part.startsWith('**') && part.endsWith('**')) {
+                                                                                    return <strong key={j}>{part.slice(2, -2)}</strong>;
+                                                                                }
+                                                                                if (part.startsWith('__') && part.endsWith('__')) {
+                                                                                    return <u key={j}>{part.slice(2, -2)}</u>;
+                                                                                }
+                                                                                if (part.startsWith('*') && part.endsWith('*') && part.length > 2) {
+                                                                                    return <em key={j}>{part.slice(1, -1)}</em>;
+                                                                                }
+                                                                                if (part.startsWith('_') && part.endsWith('_') && part.length > 2) {
+                                                                                    return <em key={j}>{part.slice(1, -1)}</em>;
+                                                                                }
+                                                                                if (/^https?:\/\/[^\s]+$/.test(part)) {
+                                                                                    return <a key={j} href={part} target="_blank" rel="noopener noreferrer" className="underline font-bold text-[#279da6]">{part}</a>;
+                                                                                }
+                                                                                return part;
+                                                                            })}
+                                                                        </div>
                                                                     ))
                                                                 )}
                                                             </div>

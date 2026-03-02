@@ -84,24 +84,28 @@ input[type="reset"],
 }
 
 .custom-scrollbar::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+  width: 8px;
+  height: 8px;
 }
 
 .custom-scrollbar::-webkit-scrollbar-track {
-  background: rgba(39, 39, 42, 0.1);
+  background: rgba(39, 39, 42, 0.05);
   border-radius: 10px;
 }
 
 .custom-scrollbar::-webkit-scrollbar-thumb {
-  background: var(--color-tuna);
+  background: var(--color-storm-gray);
   border-radius: 10px;
-  border: 1px solid transparent;
+  border: 2px solid #121214;
   background-clip: padding-box;
 }
 
 .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-  background: var(--color-storm-gray);
+  background: var(--color-santas-gray);
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:active {
+  background: var(--color-iron);
 }
 
 @keyframes fade-in {
