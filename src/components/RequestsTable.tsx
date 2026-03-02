@@ -140,25 +140,6 @@ export default function RequestsTable({
 
     return (
         <div className="space-y-6">
-            <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                    <h2 className="text-lg font-black text-iron tracking-tight uppercase">Recent Requests</h2>
-                    <span className="px-2 py-0.5 bg-shark text-storm-gray rounded-md text-[10px] font-black">{sortedRequests.length}</span>
-                </div>
-                <div className="flex items-center gap-2">
-                    <div className="relative w-72 group">
-                        <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-storm-gray group-focus-within:text-[#279da6] transition-colors" size={16} />
-                        <input
-                            type="text"
-                            placeholder="Search requests..."
-                            value={searchQuery}
-                            onChange={(e) => onSearchChange ? onSearchChange(e.target.value) : null}
-                            className="w-full bg-[#09090B] border border-shark/50 rounded-lg py-1.5 pl-12 pr-4 text-[11px] text-iron focus:outline-none focus:border-[#279da6]/40 transition-all font-bold"
-                        />
-                    </div>
-                </div>
-            </div>
-
             <div className="border border-shark/60 rounded-xl overflow-hidden bg-black/20">
                 <div className="overflow-x-auto custom-scrollbar">
                     <table className="w-full text-left border-collapse table-auto">

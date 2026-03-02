@@ -129,3 +129,52 @@ export async function GET(
         return NextResponse.json({ error: error.message }, { status: 500 });
     }
 }
+
+// POST: Create folder structure for a specific request on Google Drive
+export async function POST(
+    request: Request,
+    { params }: { params: Promise<{ id: string }> }
+) {
+    try {
+        const { id: idOrSlug } = await params;
+        const id = await resolveRequestSlug(idOrSlug);
+        const supabase = createServiceClient();
+        const { ensureFolderPath } = await import('@/lib/googleDrive');
+
+        // 1. Get request details
+        const { data: req, error: reqErr } = await supabase
+            .from('requests')
+            .select('title, client_id')
+            .eq('id', id)
+            .single();
+
+        if (reqErr || !req) {
+            return NextResponse.json({ error: 'Request not found' }, { status: 404 });
+        }
+
+        // 2. Get client info
+        const { data: clientProfile } = await supabase
+            .from('profiles')
+            .select('email, full_name')
+            .eq('id', req.client_id)
+            .single();
+
+        const { data: client } = await supabase
+            .from('clients')
+            .select('organization, name, drive_folder_id')
+            .ilike('email', clientProfile?.email || '')
+            .maybeSingle();
+
+        const clientName = client?.organization || client?.name || clientProfile?.full_name || 'Unknown';
+
+        // 3. Ensure folder path exists
+        // This will create Client Folder > Request Folder > production & distributed
+        await ensureFolderPath(clientName, req.title, 'production', client?.drive_folder_id);
+        const distributedFolderId = await ensureFolderPath(clientName, req.title, 'distributed', client?.drive_folder_id);
+
+        return NextResponse.json({ success: true, folderId: distributedFolderId });
+    } catch (error: any) {
+        console.error('Create Request Folder Error:', error);
+        return NextResponse.json({ error: error.message }, { status: 500 });
+    }
+}

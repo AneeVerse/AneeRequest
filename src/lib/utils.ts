@@ -12,14 +12,8 @@ export function slugify(text: string): string {
         .replace(/-+$/, '');            // Trim - from end of text
 }
 
-export function generateSlug(title: string, id?: string): string {
-    const baseSlug = slugify(title);
-    if (id) {
-        // Add a short hash of the ID to ensure uniqueness but keep it readable
-        const hash = id.split('-')[0];
-        return `${baseSlug}-${hash}`;
-    }
-    return baseSlug;
+export function generateSlug(title: string): string {
+    return slugify(title);
 }
 
 export async function resolveRequestSlug(idOrSlug: string): Promise<string> {

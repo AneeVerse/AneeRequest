@@ -2,17 +2,36 @@ import { google, drive_v3 } from 'googleapis';
 import { Readable } from 'stream';
 import { createServiceClient } from '@/lib/supabase';
 
-// ─── Auth (OAuth2 — uses your Google account's storage quota) ───
+// ─── Auth (Prefers Service Account, falls back to OAuth2) ───
+const serviceAccountKey = process.env.GOOGLE_SERVICE_ACCOUNT_KEY;
 const clientId = process.env.GOOGLE_OAUTH_CLIENT_ID;
 const clientSecret = process.env.GOOGLE_OAUTH_CLIENT_SECRET;
 const refreshToken = process.env.GOOGLE_OAUTH_REFRESH_TOKEN;
 
-if (!clientId || !clientSecret || !refreshToken) {
-    throw new Error('Google OAuth2 credentials are not set. Required: GOOGLE_OAUTH_CLIENT_ID, GOOGLE_OAUTH_CLIENT_SECRET, GOOGLE_OAUTH_REFRESH_TOKEN');
+let googleAuth: any;
+
+if (serviceAccountKey) {
+    try {
+        const credentials = typeof serviceAccountKey === 'string' ? JSON.parse(serviceAccountKey) : serviceAccountKey;
+        googleAuth = new google.auth.GoogleAuth({
+            credentials,
+            scopes: ['https://www.googleapis.com/auth/drive'],
+        });
+        console.log('Google Drive: Initialized with Service Account');
+    } catch (e) {
+        console.error('Failed to initialize Service Account:', e);
+    }
 }
 
-const oauth2Client = new google.auth.OAuth2(clientId, clientSecret);
-oauth2Client.setCredentials({ refresh_token: refreshToken });
+if (!googleAuth) {
+    if (!clientId || !clientSecret || !refreshToken) {
+        throw new Error('No Google credentials found. Set GOOGLE_SERVICE_ACCOUNT_KEY or GOOGLE_OAUTH_* env vars.');
+    }
+    const oauth2Client = new google.auth.OAuth2(clientId, clientSecret);
+    oauth2Client.setCredentials({ refresh_token: refreshToken });
+    googleAuth = oauth2Client;
+    console.log('Google Drive: Initialized with OAuth2 (Refresh Token)');
+}
 
 // --- Server-Side TTL Cache ---
 class SimpleCache {
@@ -56,7 +75,7 @@ export function clearDriveCache() {
 }
 
 function getDrive(): drive_v3.Drive {
-    return google.drive({ version: 'v3', auth: oauth2Client });
+    return google.drive({ version: 'v3', auth: googleAuth });
 }
 
 // ─── Root Folder Resolution (DB first, env fallback) ───
@@ -218,16 +237,20 @@ export async function ensureFolderPath(
     let baseFolderId: string;
 
     if (clientFolderId) {
-        // Use the client-specific folder directly (skip Root > ClientName)
+        console.log(`Google Drive: Using linked client folder ${clientFolderId}`);
         baseFolderId = clientFolderId;
     } else {
-        // Standard path: Root > ClientName
         const rootId = await getRootFolderId();
+        console.log(`Google Drive: Resolving client folder for "${clientName}" in root ${rootId}`);
         baseFolderId = await getOrCreateFolder(rootId, clientName);
     }
 
+    console.log(`Google Drive: Resolving request folder for "${requestTitle}" in base ${baseFolderId}`);
     const requestFolderId = await getOrCreateFolder(baseFolderId, requestTitle);
+
+    console.log(`Google Drive: Resolving subfolder "${folder}" in request folder ${requestFolderId}`);
     const targetFolderId = await getOrCreateFolder(requestFolderId, folder);
+
     return targetFolderId;
 }
 

@@ -41,13 +41,13 @@ export default function FilePreviewModal({ isOpen, onClose, file }: FilePreviewM
                                     <FileIcon size={20} />}
                         </div>
                         <div className="min-w-0">
-                            <h3 className="text-sm font-black text-iron truncate">{file.name}</h3>
+                            <h3 className="text-[14px] font-black text-iron truncate">{file.name}</h3>
                             <div className="flex items-center gap-3 mt-0.5">
                                 {file.uploaded_by && (
-                                    <span className="text-[10px] font-bold text-storm-gray uppercase tracking-wider">By {file.uploaded_by}</span>
+                                    <span className="text-[14px] font-bold text-storm-gray uppercase tracking-wider">By {file.uploaded_by}</span>
                                 )}
                                 {file.uploaded_at && (
-                                    <span className="text-[10px] font-bold text-storm-gray">
+                                    <span className="text-[14px] font-bold text-storm-gray">
                                         {new Date(file.uploaded_at).toLocaleString('en-US', {
                                             month: 'short', day: 'numeric', year: 'numeric',
                                             hour: '2-digit', minute: '2-digit'
@@ -62,7 +62,7 @@ export default function FilePreviewModal({ isOpen, onClose, file }: FilePreviewM
                             href={file.url}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="flex items-center gap-2 px-3 py-2 rounded-xl bg-shark/40 hover:bg-shark text-iron text-xs font-bold transition-all"
+                            className="flex items-center gap-2 px-3 py-2 rounded-xl bg-shark/40 hover:bg-shark text-iron text-[14px] font-bold transition-all"
                         >
                             <ExternalLink size={14} />
                             <span>Open</span>
@@ -70,7 +70,7 @@ export default function FilePreviewModal({ isOpen, onClose, file }: FilePreviewM
                         <a
                             href={file.url}
                             download={file.name}
-                            className="flex items-center gap-2 px-3 py-2 rounded-xl bg-[#279da6] hover:bg-[#20838b] text-white text-xs font-bold transition-all shadow-lg shadow-[#279da6]/20"
+                            className="flex items-center gap-2 px-3 py-2 rounded-xl bg-[#279da6] hover:bg-[#20838b] text-white text-[14px] font-bold transition-all shadow-lg shadow-[#279da6]/20"
                         >
                             <Download size={14} />
                             <span>Download</span>
@@ -110,14 +110,14 @@ export default function FilePreviewModal({ isOpen, onClose, file }: FilePreviewM
                                 <FileIcon size={48} />
                             </div>
                             <div>
-                                <p className="text-lg font-black text-iron mb-1">{file.name}</p>
-                                <p className="text-sm text-storm-gray font-bold uppercase tracking-wider mb-6">
+                                <p className="text-[14px] font-black text-iron mb-1">{file.name}</p>
+                                <p className="text-[14px] text-storm-gray font-bold uppercase tracking-wider mb-6">
                                     {file.type || 'Unknown file type'}
                                 </p>
                                 <a
                                     href={file.url}
                                     download={file.name}
-                                    className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-[#279da6] hover:bg-[#20838b] text-white font-bold text-sm transition-all shadow-lg shadow-[#279da6]/20"
+                                    className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-[#279da6] hover:bg-[#20838b] text-white font-bold text-[14px] transition-all shadow-lg shadow-[#279da6]/20"
                                 >
                                     <Download size={16} />
                                     Download File

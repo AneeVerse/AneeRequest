@@ -104,7 +104,7 @@ export default function CreateTaskModal({ isOpen, onClose, onSuccess, profiles, 
 
     return (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-fade-in">
-            <div className="bg-[#18181B] border border-shark/60 rounded-3xl w-full max-w-xl shadow-2xl relative overflow-hidden animate-slide-up">
+            <div className="bg-[#18181B] border border-shark/60 rounded-3xl w-full max-w-xl shadow-2xl relative overflow-y-auto max-h-[90vh] custom-scrollbar animate-slide-up">
                 {/* Header Decoration */}
                 <div className="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-[#279da6] via-[#279da6]/60 to-[#279da6]" />
 

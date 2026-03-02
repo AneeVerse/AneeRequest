@@ -491,7 +491,7 @@ export default function ClientsClient({ initialClients }: ClientsClientProps) {
                                                     currentAvatarUrl={formData.avatarUrl}
                                                     onUploadSuccess={(url) => setFormData(prev => ({ ...prev, avatarUrl: url }))}
                                                     onRemove={() => setFormData(prev => ({ ...prev, avatarUrl: '' }))}
-                                                    name={formData.name}
+                                                    name={formData.organization || formData.name}
                                                     email={formData.email}
                                                 />
                                                 <p className="text-[10px] font-black text-storm-gray uppercase tracking-widest">Client Photo</p>
@@ -743,7 +743,7 @@ export default function ClientsClient({ initialClients }: ClientsClientProps) {
                                                                     {client.avatar_url ? (
                                                                         <img src={client.avatar_url} alt={client.organization} className="w-full h-full object-cover" />
                                                                     ) : (
-                                                                        client.organization.split(' ').map((n: string) => n[0]).join('').slice(0, 2)
+                                                                        (client.organization || client.name).split(' ').map((n: string) => n[0]).join('').slice(0, 2)
                                                                     )}
                                                                 </div>
                                                                 <span className="text-iron font-black group-hover/cell:text-[#279da6] transition-colors uppercase tracking-tight">{client.organization}</span>
@@ -857,7 +857,8 @@ export default function ClientsClient({ initialClients }: ClientsClientProps) {
                                         id: selectedClient.profile_id || selectedClient.id,
                                         email: selectedClient.email,
                                         full_name: selectedClient.name,
-                                        role: 'client'
+                                        role: 'client',
+                                        organization: selectedClient.organization
                                     }, '/clients');
                                     setActiveDropdown(null);
                                 }}
@@ -904,7 +905,7 @@ export default function ClientsClient({ initialClients }: ClientsClientProps) {
                                                 currentAvatarUrl={formData.avatarUrl}
                                                 onUploadSuccess={(url) => setFormData(prev => ({ ...prev, avatarUrl: url }))}
                                                 onRemove={() => setFormData(prev => ({ ...prev, avatarUrl: '' }))}
-                                                name={formData.name || formData.organization}
+                                                name={formData.organization || formData.name}
                                                 email={formData.email}
                                             />
                                             <p className="text-[10px] font-bold text-storm-gray uppercase tracking-widest mt-1">Client Photo</p>
@@ -1043,7 +1044,7 @@ export default function ClientsClient({ initialClients }: ClientsClientProps) {
                                                 currentAvatarUrl={formData.avatarUrl}
                                                 onUploadSuccess={(url) => setFormData(prev => ({ ...prev, avatarUrl: url }))}
                                                 onRemove={() => setFormData(prev => ({ ...prev, avatarUrl: '' }))}
-                                                name={formData.name || formData.organization}
+                                                name={formData.organization || formData.name}
                                                 email={formData.email}
                                             />
                                             <p className="text-[10px] font-bold text-storm-gray uppercase tracking-widest mt-1">Client Photo</p>

@@ -5,6 +5,7 @@ import Sidebar from '@/components/Sidebar';
 import Header from '@/components/Header';
 import {
     Search,
+    LayoutGrid,
     ChevronDown,
     Calendar,
     Filter,
@@ -70,7 +71,7 @@ export default function TasksClient({ initialTasks, profiles, teamMembers, reque
         key: 'created_at',
         direction: 'desc'
     });
-    const [activeFilterHeader, setActiveFilterHeader] = useState<string | null>(null);
+    const [viewMode, setViewMode] = useState<'grid' | 'list'>('list');
     const dateInputRefs = React.useRef<{ [key: string]: HTMLInputElement | null }>({});
 
     const taskTabs = ['All Tasks', 'My Tasks', 'In Progress', 'Done'];
@@ -219,16 +220,7 @@ export default function TasksClient({ initialTasks, profiles, teamMembers, reque
         return 0;
     });
 
-    // Handle clicks outside to close filter dropdowns
-    React.useEffect(() => {
-        const handleClickOutside = (event: MouseEvent) => {
-            if (activeFilterHeader && !(event.target as Element).closest('.header-filter-container')) {
-                setActiveFilterHeader(null);
-            }
-        };
-        document.addEventListener('mousedown', handleClickOutside);
-        return () => document.removeEventListener('mousedown', handleClickOutside);
-    }, [activeFilterHeader]);
+
 
     // Compute counts per tab for notification badges
     const tabCounts = React.useMemo(() => {
@@ -331,9 +323,10 @@ export default function TasksClient({ initialTasks, profiles, teamMembers, reque
                                                                 ...teamMembers.map((m: any) => ({
                                                                     label: m.full_name || (m as any).name,
                                                                     value: m.profile_id || m.id,
-                                                                    icon: <UserCog size={14} className="text-[#279da6]" />
+                                                                    icon: <UserCog size={14} className={taskFormData.assigned_to === (m.profile_id || m.id) ? 'text-[#279da6]' : 'text-storm-gray'} />
                                                                 }))
                                                             ]}
+                                                            showSearch={true}
                                                         />
                                                     </div>
                                                 </div>
@@ -381,6 +374,7 @@ export default function TasksClient({ initialTasks, profiles, teamMembers, reque
                                                                     icon: <FileText size={14} className={taskFormData.request_ids.includes(r.id) ? 'text-[#279da6]' : 'text-storm-gray'} />
                                                                 }))
                                                             ]}
+                                                            showSearch={true}
                                                         />
                                                         {taskFormData.request_ids.length > 0 && (
                                                             <div className="flex flex-wrap gap-1 mt-1">
@@ -406,26 +400,28 @@ export default function TasksClient({ initialTasks, profiles, teamMembers, reque
                             </div>
 
                             {/* Toolbar */}
-                            <div className="flex items-center justify-between mb-6">
-                                <div className="flex items-center gap-2">
+                            <div className="flex items-center justify-between mb-8">
+                                <div className="flex items-center gap-4">
                                     <div className="relative w-80">
-                                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-santas-gray" size={14} />
+                                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-santas-gray" size={16} />
                                         <input
                                             type="text"
                                             value={searchQuery}
                                             onChange={(e) => setSearchQuery(e.target.value)}
                                             placeholder="Search tasks..."
-                                            className="w-full bg-[#09090B] border border-shark/50 rounded-lg py-2 pl-9 pr-4 text-xs text-iron placeholder:text-storm-gray focus:outline-none focus:border-[#279da6]/40 transition-all font-bold"
+                                            className="w-full bg-[#09090B] border border-shark/50 rounded-lg py-2.5 pl-10 pr-4 text-xs text-iron placeholder:text-storm-gray focus:outline-none focus:border-[#279da6]/40 transition-all font-bold"
                                         />
                                     </div>
                                 </div>
-                                <div className="flex items-center gap-1">
+
+                                <div className="flex items-center gap-2">
+                                    {/* Filters Dropdown */}
                                     <div className="relative">
                                         <button
                                             onClick={() => setIsFilterOpen(!isFilterOpen)}
-                                            className={`relative flex items-center gap-2 px-3 py-1.5 rounded-lg border transition-all text-xs font-bold z-10 ${Object.values(filters).some(v => v !== '') || searchQuery !== '' || (sortConfig.key !== '' && !(sortConfig.key === 'created_at' && sortConfig.direction === 'desc')) ? 'bg-[#279da6]/20 border-[#279da6]/60 text-[#279da6] active:scale-95' : 'border-shark bg-[#121214] text-santas-gray hover:text-white hover:bg-shark/40'}`}
+                                            className={`flex items-center gap-2 px-3 py-1.5 rounded-lg border transition-all text-[11px] font-bold uppercase tracking-tight z-10 ${Object.values(filters).some(v => v !== '') || searchQuery !== '' || (sortConfig.key !== '' && !(sortConfig.key === 'created_at' && sortConfig.direction === 'desc')) ? 'bg-[#279da6]/10 border-[#279da6]/40 text-[#279da6]' : 'border-shark/60 bg-[#121214] text-santas-gray hover:text-white hover:bg-white/5'}`}
                                         >
-                                            <Filter size={14} className={Object.values(filters).some(v => v !== '') || searchQuery !== '' || (sortConfig.key !== '' && !(sortConfig.key === 'created_at' && sortConfig.direction === 'desc')) ? 'fill-[#279da6]/20' : ''} />
+                                            <Filter size={14} className={Object.values(filters).some(v => v !== '') || searchQuery !== '' || (sortConfig.key !== '' && !(sortConfig.key === 'created_at' && sortConfig.direction === 'desc')) ? 'text-[#279da6]' : ''} />
                                             <span>Filters</span>
                                             <ChevronDown size={14} className={isFilterOpen ? 'rotate-180 transition-transform' : 'transition-transform'} />
                                         </button>
@@ -515,19 +511,27 @@ export default function TasksClient({ initialTasks, profiles, teamMembers, reque
                                         )}
                                     </div>
 
-                                    <div className="w-[1px] h-4 bg-shark/60 mx-1" />
+                                    <div className="h-4 w-[1px] bg-shark/60 mx-1" />
 
-                                    <button className="p-2 rounded-lg border border-shark bg-[#121214] text-santas-gray hover:text-white transition-all hover:bg-shark/40">
-                                        <SlidersHorizontal size={14} />
-                                    </button>
-
-                                    <div className="w-[1px] h-4 bg-shark/60 mx-1" />
-
-                                    <button className="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-shark bg-[#121214] text-[11px] font-bold text-santas-gray hover:text-white transition-all hover:bg-shark/40">
-                                        <LayoutList size={14} />
-                                        <span>List</span>
-                                        <ChevronDown size={14} />
-                                    </button>
+                                    {/* View Mode Switcher */}
+                                    <div className="flex items-center bg-[#09090B] border border-shark/60 rounded-xl p-0.5 overflow-hidden">
+                                        <button
+                                            onClick={() => setViewMode('list')}
+                                            className={`p-1.5 rounded-lg transition-all flex items-center gap-2 ${viewMode === 'list' ? 'bg-[#279da6] text-white shadow-lg shadow-[#279da6]/20' : 'text-santas-gray hover:text-white hover:bg-white/5'}`}
+                                            title="List view"
+                                        >
+                                            <LayoutList size={14} />
+                                            {viewMode === 'list' && <span className="text-[10px] font-black uppercase pr-1">List</span>}
+                                        </button>
+                                        <button
+                                            onClick={() => setViewMode('grid')}
+                                            className={`p-1.5 rounded-lg transition-all flex items-center gap-2 ${viewMode === 'grid' ? 'bg-[#279da6] text-white shadow-lg shadow-[#279da6]/20' : 'text-santas-gray hover:text-white hover:bg-white/5'}`}
+                                            title="Grid view"
+                                        >
+                                            <LayoutGrid size={14} />
+                                            {viewMode === 'grid' && <span className="text-[10px] font-black uppercase pr-1">Grid</span>}
+                                        </button>
+                                    </div>
                                 </div>
                             </div>
 

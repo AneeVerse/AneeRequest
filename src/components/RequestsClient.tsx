@@ -12,7 +12,15 @@ import {
     Loader2,
     Calendar,
     FileText,
-    Building
+    Building,
+    Search,
+    Filter,
+    ChevronDown,
+    User as UserIcon,
+    Circle,
+    Eye,
+    Flag,
+    LayoutGrid
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
@@ -51,6 +59,15 @@ export default function RequestsClient({
         due_date: '',
         client_id: '',
         create_folder: false
+    });
+
+    const [viewMode, setViewMode] = useState<'grid' | 'list'>('list');
+    const [isFilterOpen, setIsFilterOpen] = useState(false);
+    const [filters, setFilters] = useState({
+        assigned_to: '',
+        status: '',
+        priority: '',
+        due_date: ''
     });
 
     const inlineRequestInputRef = React.useRef<HTMLInputElement>(null);
@@ -159,17 +176,6 @@ export default function RequestsClient({
         return requests;
     })();
 
-    const tabFilteredRequests = visibleRequests.filter((req: RequestItem) => {
-        // Tab filters
-        let matchesTab = true;
-        if (activeTab === 'Assigned') matchesTab = !!req.assigned_to;
-        else if (activeTab === 'Unassigned') matchesTab = !req.assigned_to;
-        else if (activeTab === 'Open') matchesTab = req.status !== 'Done';
-        else if (activeTab === 'Completed') matchesTab = req.status === 'Done';
-
-        return matchesTab;
-    });
-
     // Compute counts per tab for notification badges
     const tabCounts = React.useMemo(() => {
         const counts: Record<string, number> = {};
@@ -185,6 +191,32 @@ export default function RequestsClient({
         });
         return counts;
     }, [visibleRequests, subTabs]);
+
+    const filteredRequestsBySearchAndFilter = visibleRequests.filter(req => {
+        const searchLower = searchQuery.toLowerCase();
+        const matchesSearch = !searchQuery ||
+            req.title?.toLowerCase().includes(searchLower) ||
+            req.client?.full_name?.toLowerCase().includes(searchLower) ||
+            (req.client as any)?.organization?.toLowerCase().includes(searchLower);
+
+        const matchesAssignee = !filters.assigned_to || req.assigned_to === filters.assigned_to;
+        const matchesStatus = !filters.status || req.status === filters.status;
+        const matchesPriority = !filters.priority || req.priority === filters.priority;
+        const matchesDate = !filters.due_date || (req.due_date && req.due_date.startsWith(filters.due_date));
+
+        return matchesSearch && matchesAssignee && matchesStatus && matchesPriority && matchesDate;
+    });
+
+    const finalRequests = filteredRequestsBySearchAndFilter.filter((req: RequestItem) => {
+        // Tab filters
+        let matchesTab = true;
+        if (activeTab === 'Assigned') matchesTab = !!req.assigned_to;
+        else if (activeTab === 'Unassigned') matchesTab = !req.assigned_to;
+        else if (activeTab === 'Open') matchesTab = req.status !== 'Done';
+        else if (activeTab === 'Completed') matchesTab = req.status === 'Done';
+
+        return matchesTab;
+    });
 
     return (
         <div className={`flex h-screen bg-[#09090B] text-iron font-sans overflow-hidden transition-all duration-500 ${isImpersonating ? 'p-1.5' : ''}`} style={isImpersonating ? { backgroundColor: '#0f2b1a' } : undefined}>
@@ -275,6 +307,7 @@ export default function RequestsClient({
                                                                     icon: <Building size={14} className="text-[#279da6]" />
                                                                 }))
                                                             ]}
+                                                            showSearch={true}
                                                         />
                                                     </div>
                                                 </div>
@@ -330,8 +363,143 @@ export default function RequestsClient({
                                 </div>
                             </div>
 
+                            {/* Toolbar */}
+                            <div className="flex items-center justify-between mb-8">
+                                <div className="flex items-center gap-4">
+                                    <div className="relative w-80">
+                                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-santas-gray" size={16} />
+                                        <input
+                                            type="text"
+                                            value={searchQuery}
+                                            onChange={(e) => setSearchQuery(e.target.value)}
+                                            placeholder="Search requests..."
+                                            className="w-full bg-[#09090B] border border-shark/50 rounded-lg py-2.5 pl-10 pr-4 text-xs text-iron placeholder:text-storm-gray focus:outline-none focus:border-[#279da6]/40 transition-all font-bold"
+                                        />
+                                    </div>
+                                </div>
+
+                                <div className="flex items-center gap-2">
+                                    {/* Filters Dropdown */}
+                                    <div className="relative">
+                                        <button
+                                            onClick={() => setIsFilterOpen(!isFilterOpen)}
+                                            className={`flex items-center gap-2 px-3 py-1.5 rounded-lg border transition-all text-[11px] font-bold uppercase tracking-tight z-10 ${Object.values(filters).some(v => v !== '') || searchQuery !== '' ? 'bg-[#279da6]/10 border-[#279da6]/40 text-[#279da6]' : 'border-shark/60 bg-[#121214] text-santas-gray hover:text-white hover:bg-white/5'}`}
+                                        >
+                                            <Filter size={14} className={Object.values(filters).some(v => v !== '') || searchQuery !== '' ? 'text-[#279da6]' : ''} />
+                                            <span>Filters</span>
+                                            <ChevronDown size={14} className={isFilterOpen ? 'rotate-180 transition-transform' : 'transition-transform'} />
+                                        </button>
+
+                                        {isFilterOpen && (
+                                            <div className="absolute right-0 mt-2 w-72 bg-[#121214] border border-shark rounded-xl shadow-2xl p-5 z-50 space-y-4 animate-in fade-in slide-in-from-top-2 duration-200">
+                                                <div className="flex items-center justify-between mb-1">
+                                                    <h4 className="text-[12px] font-black uppercase tracking-widest text-[#279da6]">Advanced Filters</h4>
+                                                    <button
+                                                        onClick={() => {
+                                                            setFilters({
+                                                                assigned_to: '',
+                                                                status: '',
+                                                                priority: '',
+                                                                due_date: ''
+                                                            });
+                                                            setSearchQuery('');
+                                                            setIsFilterOpen(false);
+                                                        }}
+                                                        className="text-[10px] font-bold text-storm-gray hover:text-white underline underline-offset-4"
+                                                    >
+                                                        Reset all
+                                                    </button>
+                                                </div>
+
+                                                <div className="space-y-3">
+                                                    <div className="grid grid-cols-2 gap-3">
+                                                        <div className="space-y-1.5">
+                                                            <label className="text-[10px] font-bold text-storm-gray uppercase">Assigned To</label>
+                                                            <CustomDropdown
+                                                                value={filters.assigned_to}
+                                                                onChange={(val) => setFilters(f => ({ ...f, assigned_to: val }))}
+                                                                options={[
+                                                                    { label: 'All Members', value: '' },
+                                                                    ...teamMembers.map((m: any) => ({
+                                                                        label: m.full_name || (m as any).name,
+                                                                        value: m.profile_id || m.id,
+                                                                        icon: <UserIcon size={12} className="text-storm-gray" />
+                                                                    }))
+                                                                ]}
+                                                            />
+                                                        </div>
+                                                        <div className="space-y-1.5">
+                                                            <label className="text-[10px] font-bold text-storm-gray uppercase">Status</label>
+                                                            <CustomDropdown
+                                                                value={filters.status}
+                                                                onChange={(val) => setFilters(f => ({ ...f, status: val }))}
+                                                                options={[
+                                                                    { label: 'All Statuses', value: '' },
+                                                                    { label: 'Todo', value: 'Todo', icon: <Circle size={12} className="text-[#279da6]" />, color: 'text-[#279da6]' },
+                                                                    { label: 'In Progress', value: 'In Progress', icon: <Loader2 size={12} className="text-amber-500 animate-spin" />, color: 'text-amber-500' },
+                                                                    { label: 'Review', value: 'Review', icon: <Eye size={12} className="text-blue-400" />, color: 'text-blue-400' },
+                                                                    { label: 'Done', value: 'Done', icon: <Check size={12} className="text-emerald-500" />, color: 'text-emerald-500' },
+                                                                ]}
+                                                            />
+                                                        </div>
+                                                    </div>
+
+                                                    <div className="grid grid-cols-2 gap-3">
+                                                        <div className="space-y-1.5">
+                                                            <label className="text-[10px] font-bold text-storm-gray uppercase">Priority</label>
+                                                            <CustomDropdown
+                                                                value={filters.priority}
+                                                                onChange={(val) => setFilters(f => ({ ...f, priority: val }))}
+                                                                options={[
+                                                                    { label: 'All Priorities', value: '' },
+                                                                    { label: 'Low', value: 'Low', icon: <Flag size={12} className="text-storm-gray" />, color: 'text-storm-gray' },
+                                                                    { label: 'Medium', value: 'Medium', icon: <Flag size={12} className="text-blue-400" />, color: 'text-blue-400' },
+                                                                    { label: 'High', value: 'High', icon: <Flag size={12} className="text-amber-500" />, color: 'text-amber-500' },
+                                                                    { label: 'Critical', value: 'Critical', icon: <Flag size={12} className="text-rose-500" />, color: 'text-rose-500' },
+                                                                ]}
+                                                            />
+                                                        </div>
+                                                        <div className="space-y-1.5">
+                                                            <label className="text-[10px] font-bold text-storm-gray uppercase">Due Date</label>
+                                                            <input
+                                                                type="date"
+                                                                value={filters.due_date}
+                                                                onChange={(e) => setFilters(f => ({ ...f, due_date: e.target.value }))}
+                                                                className="w-full bg-[#09090B] border border-shark rounded-lg px-2 py-1.5 text-[11px] font-bold focus:outline-none focus:border-[#279da6]/40 text-iron [color-scheme:dark]"
+                                                            />
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    <div className="h-4 w-[1px] bg-shark/60 mx-1" />
+
+                                    {/* View Mode Switcher */}
+                                    <div className="flex items-center bg-[#09090B] border border-shark/60 rounded-xl p-0.5 overflow-hidden">
+                                        <button
+                                            onClick={() => setViewMode('list')}
+                                            className={`p-1.5 rounded-lg transition-all flex items-center gap-2 ${viewMode === 'list' ? 'bg-[#279da6] text-white shadow-lg shadow-[#279da6]/20' : 'text-santas-gray hover:text-white hover:bg-white/5'}`}
+                                            title="List view"
+                                        >
+                                            <LayoutList size={14} />
+                                            {viewMode === 'list' && <span className="text-[10px] font-black uppercase pr-1">List</span>}
+                                        </button>
+                                        <button
+                                            onClick={() => setViewMode('grid')}
+                                            className={`p-1.5 rounded-lg transition-all flex items-center gap-2 ${viewMode === 'grid' ? 'bg-[#279da6] text-white shadow-lg shadow-[#279da6]/20' : 'text-santas-gray hover:text-white hover:bg-white/5'}`}
+                                            title="Grid view"
+                                        >
+                                            <LayoutGrid size={14} />
+                                            {viewMode === 'grid' && <span className="text-[10px] font-black uppercase pr-1">Grid</span>}
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+
                             <RequestsTable
-                                requests={tabFilteredRequests}
+                                requests={finalRequests}
                                 profiles={profiles}
                                 teamMembers={teamMembers}
                                 showClientColumn={true}

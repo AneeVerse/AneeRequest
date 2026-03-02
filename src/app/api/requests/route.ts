@@ -180,7 +180,7 @@ export async function POST(request: Request) {
         const numberedTitle = `${prefix}-${title}`;
 
         // 2. Insert the request with the numbered title and slug
-        const initialSlug = generateSlug(title);
+        const initialSlug = generateSlug(numberedTitle);
         const { data, error } = await supabase
             .from('requests')
             .insert([
@@ -198,15 +198,6 @@ export async function POST(request: Request) {
             .single();
 
         if (error) throw error;
-
-        // 2.1 Update slug with ID hash for uniqueness
-        const finalSlug = generateSlug(title, data.id);
-        await supabase
-            .from('requests')
-            .update({ slug: finalSlug })
-            .eq('id', data.id);
-
-        data.slug = finalSlug;
 
         // Auto-create Google Drive folder for this request (only if requested)
         if (body.create_folder !== false) {

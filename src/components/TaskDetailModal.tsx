@@ -525,13 +525,13 @@ export default function TaskDetailModal({
                                         </div>
                                     )}
                                     <div className={`max-w-[85%] px-4 py-3 rounded-2xl text-sm font-medium leading-relaxed group relative ${isMe
-                                        ? 'bg-[#279da6] text-white rounded-tr-none shadow-lg shadow-[#279da6]/10'
+                                        ? 'bg-shark text-white rounded-tr-none border border-[#279da6]/30'
                                         : 'bg-[#18181B] text-iron border border-shark rounded-tl-none'
                                         }`}>
                                         <Linkify
                                             options={{
                                                 target: '_blank',
-                                                className: isMe ? 'text-white underline font-bold' : 'text-[#279da6] underline font-bold'
+                                                className: 'text-[#279da6] underline font-bold'
                                             }}
                                         >
                                             {msg.message}

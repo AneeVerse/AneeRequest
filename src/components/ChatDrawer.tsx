@@ -300,13 +300,13 @@ export default function ChatDrawer({ isOpen, onClose, requestId, requestTitle }:
                                         </div>
                                     )}
                                     <div className={`max-w-[85%] px-4 py-3 rounded-2xl text-sm font-medium leading-relaxed group relative ${isMe
-                                        ? 'bg-[#279da6] text-white rounded-tr-none shadow-lg shadow-[#279da6]/10'
+                                        ? 'bg-shark text-white rounded-tl-none border border-[#279da6]/40'
                                         : 'bg-[#18181B] text-iron border border-shark rounded-tl-none'
                                         }`}>
                                         <Linkify
                                             options={{
                                                 target: '_blank',
-                                                className: isMe ? 'text-white underline font-bold' : 'text-[#279da6] underline font-bold'
+                                                className: 'text-[#279da6] underline font-bold'
                                             }}
                                         >
                                             {msg.message}

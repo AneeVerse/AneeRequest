@@ -1,34 +1,50 @@
 import { NextResponse } from 'next/server';
 import { createServiceClient } from '@/lib/supabase';
-import { generateSlug, resolveTaskSlug } from '@/lib/utils';
+import { generateSlug, resolveTaskSlug, resolveRequestSlug } from '@/lib/utils';
 
 export async function GET(request: Request) {
     try {
         const { searchParams } = new URL(request.url);
         const requestId = searchParams.get('request_id');
+        const taskId = searchParams.get('id');
 
         const supabase = createServiceClient();
-        let query = supabase
-            .from('tasks')
-            .select(`
+
+        let selectStr = `
+            *,
+            assignee:assigned_to (id, full_name),
+            creator:created_by (id, full_name),
+            request_links:task_request_links (
+                request:request_id (id, slug, title)
+            )
+        `;
+
+        // If filtering by a specific request, we use !inner to restrict the results to linked tasks
+        if (requestId) {
+            selectStr = `
                 *,
                 assignee:assigned_to (id, full_name),
                 creator:created_by (id, full_name),
-                request_links:task_request_links (
+                request_links:task_request_links!inner (
                     request:request_id (id, slug, title)
                 )
-            `)
+            `;
+        }
+
+        let query = supabase
+            .from('tasks')
+            .select(selectStr)
             .order('created_at', { ascending: false });
 
         if (requestId) {
-            // ... (keep existing requestId filtering)
+            const resolvedRequestId = await resolveRequestSlug(requestId);
+            query = query.eq('task_request_links.request_id', resolvedRequestId);
         }
 
         // If 'id' is provided as a search param, filter by id or slug
-        const id = searchParams.get('id');
-        if (id) {
-            const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
-            query = query.eq(isUuid ? 'id' : 'slug', id);
+        if (taskId) {
+            const resolvedId = await resolveTaskSlug(taskId);
+            query = query.eq('id', resolvedId);
         }
 
         const { data, error } = await query;
@@ -61,19 +77,14 @@ export async function POST(request: Request) {
 
         if (taskError) throw taskError;
 
-        // 1.1 Update slug with ID hash for uniqueness
-        if (newTask) {
-            const finalSlug = generateSlug(newTask.title || 'task', newTask.id);
-            await supabase
-                .from('tasks')
-                .update({ slug: finalSlug })
-                .eq('id', newTask.id);
-            newTask.slug = finalSlug;
-        }
-
         // 2. Create request links if provided
         if (request_ids && Array.isArray(request_ids) && request_ids.length > 0) {
-            const links = request_ids.map(rid => ({
+            // Resolve all request IDs (slugs or UUIDs)
+            const resolvedRequestIds = await Promise.all(
+                request_ids.map(rid => resolveRequestSlug(rid))
+            );
+
+            const links = resolvedRequestIds.map(rid => ({
                 task_id: newTask.id,
                 request_id: rid
             }));
@@ -116,12 +127,17 @@ export async function PATCH(request: Request) {
             await supabase
                 .from('task_request_links')
                 .delete()
-                .eq('task_id', id);
+                .eq('task_id', resolvedId);
 
             // Add new links
             if (request_ids.length > 0) {
-                const links = request_ids.map(rid => ({
-                    task_id: id,
+                // Resolve all request IDs (slugs or UUIDs)
+                const resolvedRequestIds = await Promise.all(
+                    request_ids.map(rid => resolveRequestSlug(rid))
+                );
+
+                const links = resolvedRequestIds.map(rid => ({
+                    task_id: resolvedId,
                     request_id: rid
                 }));
 

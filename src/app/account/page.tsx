@@ -112,7 +112,10 @@ export default function AccountPage() {
             const valData = await valRes.json();
 
             if (!valData.valid) {
-                setFolderStatus({ type: 'error', message: valData.error || 'Cannot access this folder' });
+                const errorMsg = valData.error === 'invalid_grant'
+                    ? 'Folder Loading Error: Access token expired or revoked.'
+                    : `Folder Loading Error: ${valData.error || 'Check folder ID and permissions'}`;
+                setFolderStatus({ type: 'error', message: errorMsg });
                 setIsValidatingFolder(false);
                 return;
             }
@@ -135,10 +138,10 @@ export default function AccountPage() {
                 setFolderStatus({ type: 'success', message: `Root folder set to "${saveData.folderName}"` });
             } else {
                 const err = await saveRes.json();
-                setFolderStatus({ type: 'error', message: err.error });
+                setFolderStatus({ type: 'error', message: err.error || 'Failed to save settings' });
             }
         } catch (e: any) {
-            setFolderStatus({ type: 'error', message: e.message });
+            setFolderStatus({ type: 'error', message: `System Error: ${e.message || 'Operation failed'}` });
         } finally {
             setIsValidatingFolder(false);
             setIsSavingFolder(false);
