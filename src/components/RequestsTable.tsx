@@ -56,14 +56,15 @@ export default function RequestsTable({
     const dateInputRefs = React.useRef<{ [key: string]: HTMLInputElement | null }>({});
 
     const handleUpdate = async (requestId: string, field: string, value: any) => {
+        const finalValue = (field === 'assigned_to' && value === '') ? null : value;
         if (onUpdateField) {
-            await onUpdateField(requestId, field, value);
+            await onUpdateField(requestId, field, finalValue);
         } else {
             try {
                 const response = await fetch(`/api/requests?id=${requestId}`, {
                     method: 'PATCH',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ [field]: value })
+                    body: JSON.stringify({ [field]: finalValue })
                 });
 
                 if (!response.ok) {

@@ -578,15 +578,15 @@ export default function TasksClient({ initialTasks, profiles, teamMembers, reque
                                 </div>
                             </div>
 
+                            {/* Table */}
+                            <TasksTable
+                                tasks={sortedTasks}
+                                profiles={profiles}
+                                teamMembers={teamMembers}
+                                searchQuery={searchQuery}
+                            />
                         </div>
 
-                        {/* Table */}
-                        <TasksTable
-                            tasks={sortedTasks}
-                            profiles={profiles}
-                            teamMembers={teamMembers}
-                            searchQuery={searchQuery}
-                        />
                     </main>
                 </div>
             </div>

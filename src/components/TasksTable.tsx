@@ -56,8 +56,9 @@ export default function TasksTable({
     const dateInputRefs = React.useRef<{ [key: string]: HTMLInputElement | null }>({});
 
     const handleUpdate = async (taskId: string, field: string, value: any) => {
+        const finalValue = (field === 'assigned_to' && value === '') ? null : value;
         if (onUpdateField) {
-            await onUpdateField(taskId, field, value);
+            await onUpdateField(taskId, field, finalValue);
         } else {
             try {
                 const response = await fetch(`/api/tasks`, {
@@ -65,7 +66,7 @@ export default function TasksTable({
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                         id: taskId,
-                        [field]: value
+                        [field]: finalValue
                     })
                 });
 
