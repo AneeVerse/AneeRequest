@@ -139,7 +139,7 @@ export default function TasksTable({
                             <tr className="border-b border-shark text-storm-gray text-sm uppercase font-black tracking-widest bg-[#17171a]">
                                 <th className="px-5 py-3 w-12 border-r border-shark/60 text-center font-black text-storm-gray">#</th>
                                 {[
-                                    { label: 'Request', key: 'title', filter: 'title', width: 'w-[24%]' },
+                                    { label: 'TASK', key: 'title', filter: 'title', width: 'w-[24%]' },
                                     ...(showRequestColumn ? [{ label: 'Request', key: 'request', filter: 'request', width: 'w-[15%] min-w-[120px]' }] : []),
                                     { label: 'Status', key: 'status', filter: 'status', width: 'w-[10%]' },
                                     { label: 'Assignee', key: 'assignee', filter: 'assigned_to', width: 'w-[12%]' },
@@ -157,7 +157,7 @@ export default function TasksTable({
                                                         type="text"
                                                         value={filters.title}
                                                         onChange={(e) => setFilters(f => ({ ...f, title: e.target.value }))}
-                                                        placeholder="REQUEST"
+                                                        placeholder="TASK"
                                                         className="w-full bg-transparent border-none py-1.5 pl-8 pr-6 text-sm font-black uppercase tracking-widest text-iron placeholder:text-storm-gray focus:outline-none transition-all font-bold"
                                                     />
                                                     {filters.title && (
