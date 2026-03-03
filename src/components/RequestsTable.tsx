@@ -149,7 +149,7 @@ export default function RequestsTable({
                             <tr className="border-b border-shark text-storm-gray text-sm uppercase font-black tracking-widest bg-[#17171a]">
                                 <th className="px-5 py-3 w-12 border-r border-shark/60 text-center">#</th>
                                 {[
-                                    { label: 'Title', key: 'title', filter: 'title', width: 'w-[24%]' },
+                                    { label: 'Request', key: 'title', filter: 'title', width: 'w-[24%]' },
                                     ...(showClientColumn ? [{ label: 'ORGANIZATION', key: 'client', filter: 'client', width: 'w-[15%] min-w-[120px]' }] : []),
                                     { label: 'Status', key: 'status', filter: 'status', width: 'w-[10%]' },
                                     { label: 'Assignee', key: 'assignee', filter: 'assigned_to', width: 'w-[12%]' },
