@@ -1,4 +1,5 @@
 import { createServiceClient } from '@/lib/supabase';
+import { slugify } from '@/lib/utils';
 
 export interface TaskItem {
     id: string;
@@ -16,6 +17,13 @@ export interface TaskItem {
             id: string;
             slug: string | null;
             title: string;
+            client?: {
+                id: string;
+                full_name: string;
+                email: string;
+                avatar_url?: string;
+                organization?: string;
+            } | null;
         } | null;
     }[] | null;
     due_date: string | null;
@@ -38,15 +46,20 @@ export async function getTasksData() {
                 full_name,
                 team_members!team_members_profile_id_fkey (name)
             ),
-                creator:created_by (
+            creator:created_by (
+                id, 
+                full_name,
+                team_members!team_members_profile_id_fkey (name)
+            ),
+            request_links:task_request_links (
+                request:request_id (
                     id, 
-                    full_name,
-                    team_members!team_members_profile_id_fkey (name)
-                ),
-                request_links:task_request_links (
-                    request:request_id (id, slug, title)
+                    slug, 
+                    title,
+                    client:client_id (id, full_name, email, avatar_url)
                 )
-            `)
+            )
+        `)
         .order('created_at', { ascending: false });
 
     if (error) {
@@ -54,7 +67,36 @@ export async function getTasksData() {
         return [];
     }
 
-    return (data || []) as TaskItem[];
+    const tasks = (data || []) as any[];
+
+    // Fetch organizations for all clients linked to these tasks
+    const clientEmails = tasks
+        .flatMap(t => t.request_links || [])
+        .map(rl => rl.request?.client?.email)
+        .filter(Boolean) as string[];
+
+    if (clientEmails.length > 0) {
+        const { data: clientsData } = await supabase
+            .from('clients')
+            .select('email, organization')
+            .in('email', clientEmails);
+
+        if (clientsData) {
+            tasks.forEach(t => {
+                t.request_links?.forEach((rl: any) => {
+                    const client = rl.request?.client;
+                    if (client?.email) {
+                        const c = clientsData.find(cd => cd.email === client.email);
+                        if (c) {
+                            client.organization = c.organization;
+                        }
+                    }
+                });
+            });
+        }
+    }
+
+    return tasks as TaskItem[];
 }
 
 /**

@@ -2,7 +2,7 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { Calendar as CalendarIcon, ChevronLeft, ChevronRight, X } from 'lucide-react';
+import { Calendar as CalendarIcon, ChevronLeft, ChevronRight, X, Trash2 } from 'lucide-react';
 import { formatDate as formatDateStandard } from '@/lib/dateUtils';
 
 interface CustomDatePickerProps {
@@ -101,6 +101,11 @@ export default function CustomDatePicker({
     };
 
     const handleCancel = () => {
+        setIsOpen(false);
+    };
+
+    const handleClear = () => {
+        onChange('');
         setIsOpen(false);
     };
 
@@ -207,19 +212,30 @@ export default function CustomDatePicker({
                 >
                     {renderCalendar()}
 
-                    <div className="flex items-center justify-end gap-2 pt-3 border-t border-shark/50">
+                    <div className="flex items-center justify-between pt-3 border-t border-shark/50">
                         <button
-                            onClick={handleCancel}
-                            className="px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest text-storm-gray hover:text-white hover:bg-shark/30 transition-all"
+                            onClick={handleClear}
+                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest text-[#ef4444] hover:bg-[#ef4444]/10 transition-all group/clear"
+                            title="Clear date"
                         >
-                            Cancel
+                            <Trash2 size={12} className="opacity-60 group-hover/clear:opacity-100 transition-opacity" />
+                            <span>Clear</span>
                         </button>
-                        <button
-                            onClick={handleApply}
-                            className="px-4 py-1.5 rounded-lg bg-[#279da6] text-[10px] font-black uppercase tracking-widest text-white hover:bg-[#2fc4cf] transition-all shadow-[0_0_15px_rgba(39,157,166,0.3)]"
-                        >
-                            Apply
-                        </button>
+
+                        <div className="flex items-center gap-2">
+                            <button
+                                onClick={handleCancel}
+                                className="px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest text-storm-gray hover:text-white hover:bg-shark/30 transition-all"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                onClick={handleApply}
+                                className="px-4 py-1.5 rounded-lg bg-[#279da6] text-[10px] font-black uppercase tracking-widest text-white hover:bg-[#2fc4cf] transition-all shadow-[0_0_15px_rgba(39,157,166,0.3)]"
+                            >
+                                Apply
+                            </button>
+                        </div>
                     </div>
                 </div>,
                 document.body

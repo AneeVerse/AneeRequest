@@ -283,9 +283,9 @@ export default function TasksTable({
                                             </div>
                                         </td>
                                         {showRequestColumn && (
-                                            <td className="px-3 py-2.5 relative text-center text-santas-gray border-r border-shark/60 whitespace-nowrap hover:bg-white/5 transition-colors">
+                                            <td className="px-3 py-2.5 relative text-left text-santas-gray border-r border-shark/60 whitespace-nowrap hover:bg-white/5 transition-colors">
                                                 {item.request_links && item.request_links.length > 0 ? (
-                                                    <div className="flex flex-col gap-0.5">
+                                                    <div className="flex flex-col gap-1 ml-1">
                                                         {item.request_links.map((link, idx) => (
                                                             <div
                                                                 key={idx}
@@ -293,15 +293,31 @@ export default function TasksTable({
                                                                     e.stopPropagation();
                                                                     router.push(`/requests/${link.request?.slug || link.request?.id}`);
                                                                 }}
-                                                                className="flex flex-col cursor-pointer hover:text-[#279da6] transition-colors leading-tight"
+                                                                className="flex items-center gap-2.5 cursor-pointer hover:text-[#279da6] transition-colors leading-tight group/req"
                                                             >
-                                                                <span className="text-iron font-black truncate max-w-[150px] text-xs uppercase tracking-tight">{link.request?.title}</span>
-                                                                {idx === 0 && <span className="text-[10px] text-storm-gray uppercase font-black tracking-tighter truncate block opacity-60 mt-0.5">Internal Request</span>}
+                                                                <div className="w-[46px] h-[46px] rounded-full bg-shark/80 border border-white/5 overflow-hidden flex items-center justify-center text-[11px] text-white font-black bg-gradient-to-br from-[#279da6]/20 to-transparent group-hover/req:scale-110 transition-transform shrink-0">
+                                                                    {link.request?.client?.avatar_url ? (
+                                                                        <img src={link.request.client.avatar_url} alt={link.request.client.organization || link.request.client.full_name} className="w-full h-full object-cover" />
+                                                                    ) : (
+                                                                        (link.request?.client?.organization || link.request?.client?.full_name || 'U').split(' ').map((n: string) => n[0]).join('').slice(0, 2)
+                                                                    )}
+                                                                </div>
+                                                                <div className="flex flex-col min-w-0">
+                                                                    <span className="text-sm text-iron font-black truncate max-w-[120px] uppercase tracking-tight">{link.request?.title}</span>
+                                                                    <span className="text-sm text-storm-gray uppercase font-black tracking-tighter truncate block opacity-60 mt-0.5">
+                                                                        {link.request?.client?.organization || 'Internal Request'}
+                                                                    </span>
+                                                                </div>
                                                             </div>
                                                         ))}
                                                     </div>
                                                 ) : (
-                                                    <span className="opacity-30 italic text-xs uppercase">None</span>
+                                                    <div className="flex items-center gap-2.5 ml-1">
+                                                        <div className="w-7 h-7 rounded-full bg-shark/40 border border-white/5 flex items-center justify-center text-[8px] text-storm-gray font-black shrink-0">
+                                                            -
+                                                        </div>
+                                                        <span className="opacity-30 italic text-xs uppercase">None</span>
+                                                    </div>
                                                 )}
                                             </td>
                                         )}
@@ -354,7 +370,7 @@ export default function TasksTable({
                                         </td>
                                         <td className="px-6 py-2.5 text-storm-gray border-r border-shark/60 whitespace-nowrap hover:bg-white/5 transition-colors leading-tight">
                                             <CustomDatePicker
-                                                value={item.due_date}
+                                                value={item.due_date || undefined}
                                                 onChange={(val) => handleUpdate(item.id, 'due_date', val)}
                                                 variant="minimal"
                                                 className="w-full text-center"

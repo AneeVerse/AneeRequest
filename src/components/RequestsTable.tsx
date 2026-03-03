@@ -323,7 +323,7 @@ export default function RequestsTable({
                                                 }}
                                             >
                                                 <div className="flex items-center gap-3">
-                                                    <div className="w-10 h-10 rounded-full bg-shark/80 border border-white/5 overflow-hidden flex items-center justify-center text-[10px] text-white font-black bg-gradient-to-br from-[#279da6]/20 to-transparent group-hover/cell:scale-110 transition-transform shrink-0">
+                                                    <div className="w-[46px] h-[46px] rounded-full bg-shark/80 border border-white/5 overflow-hidden flex items-center justify-center text-[11px] text-white font-black bg-gradient-to-br from-[#279da6]/20 to-transparent group-hover/cell:scale-110 transition-transform shrink-0">
                                                         {item.client?.avatar_url ? (
                                                             <img src={item.client.avatar_url} alt={item.client.organization || item.client.full_name} className="w-full h-full object-cover" />
                                                         ) : (
@@ -331,11 +331,11 @@ export default function RequestsTable({
                                                         )}
                                                     </div>
                                                     <div className="flex flex-col min-w-0">
-                                                        <span className="text-iron font-black group-hover/cell:text-[#279da6] transition-colors uppercase tracking-tight truncate block">
+                                                        <span className="text-sm text-iron font-black group-hover/cell:text-[#279da6] transition-colors uppercase tracking-tight truncate block">
                                                             {item.client?.organization || item.client?.full_name || 'UNKNOWN'}
                                                         </span>
                                                         {item.client?.organization && (
-                                                            <span className="text-[9px] text-storm-gray uppercase font-black tracking-tighter truncate block opacity-60">
+                                                            <span className="text-sm text-storm-gray uppercase font-black tracking-tighter truncate block opacity-60">
                                                                 {item.client.full_name}
                                                             </span>
                                                         )}
@@ -399,7 +399,7 @@ export default function RequestsTable({
                                         </td>
                                         <td className="px-6 py-2.5 text-santas-gray border-r border-shark/60 whitespace-nowrap hover:bg-white/5 transition-colors uppercase">
                                             <CustomDatePicker
-                                                value={item.due_date}
+                                                value={item.due_date || undefined}
                                                 onChange={(val) => handleUpdate(item.id, 'due_date', val)}
                                                 variant="minimal"
                                                 className="w-full text-center"

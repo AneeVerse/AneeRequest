@@ -2,7 +2,7 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { Calendar as CalendarIcon, ChevronLeft, ChevronRight, X } from 'lucide-react';
+import { Calendar as CalendarIcon, ChevronLeft, ChevronRight, X, Trash2 } from 'lucide-react';
 import { formatDate as formatDateStandard } from '@/lib/dateUtils';
 
 interface CustomDateRangePickerProps {
@@ -97,6 +97,11 @@ export default function CustomDateRangePicker({ from, to, onChange, placeholder 
     };
 
     const handleCancel = () => {
+        setIsOpen(false);
+    };
+
+    const handleClear = () => {
+        onChange('', '');
         setIsOpen(false);
     };
 
@@ -201,19 +206,30 @@ export default function CustomDateRangePicker({ from, to, onChange, placeholder 
                         {renderCalendar(1)}
                     </div>
 
-                    <div className="flex items-center justify-end gap-3 pt-4 border-t border-shark/50">
+                    <div className="flex items-center justify-between pt-4 border-t border-shark/50">
                         <button
-                            onClick={handleCancel}
-                            className="px-4 py-2 rounded-xl text-[11px] font-black uppercase tracking-widest text-storm-gray hover:text-white hover:bg-shark/30 transition-all"
+                            onClick={handleClear}
+                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-black uppercase tracking-widest text-[#ef4444] hover:bg-[#ef4444]/10 transition-all group/clear"
+                            title="Clear date range"
                         >
-                            Cancel
+                            <Trash2 size={13} className="opacity-60 group-hover/clear:opacity-100 transition-opacity" />
+                            <span>Clear</span>
                         </button>
-                        <button
-                            onClick={handleApply}
-                            className="px-6 py-2 rounded-xl bg-[#279da6] text-[11px] font-black uppercase tracking-widest text-white hover:bg-[#2fc4cf] transition-all shadow-[0_0_15px_rgba(39,157,166,0.3)]"
-                        >
-                            Apply
-                        </button>
+
+                        <div className="flex items-center gap-3">
+                            <button
+                                onClick={handleCancel}
+                                className="px-4 py-2 rounded-xl text-[11px] font-black uppercase tracking-widest text-storm-gray hover:text-white hover:bg-shark/30 transition-all"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                onClick={handleApply}
+                                className="px-6 py-2 rounded-xl bg-[#279da6] text-[11px] font-black uppercase tracking-widest text-white hover:bg-[#2fc4cf] transition-all shadow-[0_0_15px_rgba(39,157,166,0.3)]"
+                            >
+                                Apply
+                            </button>
+                        </div>
                     </div>
                 </div>,
                 document.body
