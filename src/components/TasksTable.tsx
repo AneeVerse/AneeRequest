@@ -20,6 +20,7 @@ import {
     Search
 } from 'lucide-react';
 import CustomDropdown from '@/components/CustomDropdown';
+import CustomDatePicker from '@/components/CustomDatePicker';
 import { TaskItem } from '@/lib/data/tasks';
 import { formatDate, formatTime } from '@/lib/dateUtils';
 
@@ -351,20 +352,13 @@ export default function TasksTable({
                                                 className="w-full"
                                             />
                                         </td>
-                                        <td className="px-6 py-2.5 text-storm-gray border-r border-shark/60 whitespace-nowrap hover:bg-white/5 transition-colors">
-                                            <div className="flex items-center gap-2 group/date relative">
-                                                <input
-                                                    ref={el => { dateInputRefs.current[item.id] = el; }}
-                                                    type="date"
-                                                    value={item.due_date ? new Date(item.due_date).toISOString().split('T')[0] : ''}
-                                                    onChange={(e) => handleUpdate(item.id, 'due_date', e.target.value)}
-                                                    className="bg-transparent text-iron border border-transparent hover:border-shark/60 focus:border-[#279da6]/60 rounded px-1.5 py-0.5 focus:outline-none cursor-pointer hover:text-white transition-all text-[11px] font-black uppercase w-28 [color-scheme:dark]"
-                                                />
-                                                <CalendarIcon
-                                                    size={12}
-                                                    className="text-storm-gray opacity-30 group-hover/date:opacity-100 transition-opacity cursor-pointer absolute right-2 pointer-events-none"
-                                                />
-                                            </div>
+                                        <td className="px-6 py-2.5 text-storm-gray border-r border-shark/60 whitespace-nowrap hover:bg-white/5 transition-colors leading-tight">
+                                            <CustomDatePicker
+                                                value={item.due_date}
+                                                onChange={(val) => handleUpdate(item.id, 'due_date', val)}
+                                                variant="minimal"
+                                                className="w-full text-center"
+                                            />
                                         </td>
                                         <td className="px-6 py-2.5 text-storm-gray border-r border-shark/60 whitespace-nowrap text-xs text-center uppercase">
                                             {item.updated_at ? (

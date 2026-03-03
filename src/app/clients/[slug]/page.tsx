@@ -59,6 +59,7 @@ import { TaskItem } from '@/lib/data/tasks';
 import CreateRequestModal from '@/components/CreateRequestModal';
 import CreateTaskModal from '@/components/CreateTaskModal';
 import CustomDropdown from '@/components/CustomDropdown';
+import { formatDate } from '@/lib/dateUtils';
 
 interface Client {
     id: string;
@@ -1003,7 +1004,7 @@ export default function ClientDetailPage() {
                                                         <Calendar size={12} className="text-[#279da6]" /> Joined Date
                                                     </p>
                                                     <p className="text-iron font-bold text-sm tracking-tight">
-                                                        {new Date(client.created_at).toLocaleDateString(undefined, { month: 'long', day: 'numeric', year: 'numeric' })}
+                                                        {formatDate(client.created_at)}
                                                     </p>
                                                 </div>
                                                 <div className="space-y-2">
@@ -1232,7 +1233,7 @@ export default function ClientDetailPage() {
                                                                 <p className="text-sm font-bold text-iron truncate">{item.name}</p>
                                                                 <p className="text-[10px] text-storm-gray">
                                                                     {item.isFolder ? 'Folder' : formatFileSize(item.size)}
-                                                                    {item.createdTime && ` · ${new Date(item.createdTime).toLocaleDateString()}`}
+                                                                    {item.createdTime && ` · ${formatDate(item.createdTime)}`}
                                                                 </p>
                                                             </div>
                                                             <div className="opacity-0 group-hover:opacity-100 flex items-center gap-1 transition-opacity">

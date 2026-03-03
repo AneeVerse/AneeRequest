@@ -1,11 +1,12 @@
 import { createServiceClient } from '@/lib/supabase';
+import { slugify } from '@/lib/utils';
 
 export interface RequestItem {
     id: string;
     slug: string | null;
     title: string;
     description: string;
-    client: { id: string; full_name: string; email: string; organization?: string } | null;
+    client: { id: string; full_name: string; email: string; organization?: string; avatar_url?: string; slug?: string } | null;
     status: string;
     priority: string;
     assigned_to: string | null;
@@ -65,7 +66,7 @@ export async function getRequestsData(
         .from('requests')
         .select(`
             *,
-            client:client_id (id, full_name, email),
+            client:client_id (id, full_name, email, avatar_url),
             assignee:assigned_to (id, full_name)
         `);
 
@@ -110,6 +111,9 @@ export async function getRequestsData(
                     const c = clientsData.find(cd => cd.email === r.client!.email);
                     if (c) {
                         (r.client as any).organization = c.organization;
+                        (r.client as any).slug = slugify(c.organization || r.client!.full_name);
+                    } else {
+                        (r.client as any).slug = slugify(r.client!.full_name);
                     }
                 }
             });

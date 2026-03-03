@@ -10,6 +10,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { TaskItem } from '@/lib/data/tasks';
+import { formatDate } from '@/lib/dateUtils';
 import { supabase } from '@/lib/supabase';
 import CustomDropdown from '@/components/CustomDropdown';
 
@@ -472,7 +473,7 @@ export default function TaskDetailModal({
                             <div className="w-[1px] h-3 bg-shark/60" />
                             <div className="flex items-center gap-1">
                                 <Calendar size={9} />
-                                <span>{new Date(task.created_at).toLocaleDateString()}</span>
+                                <span>{formatDate(task.created_at)}</span>
                             </div>
                         </div>
                     </div>

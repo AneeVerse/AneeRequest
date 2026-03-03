@@ -29,6 +29,7 @@ import ChatDrawer from '@/components/ChatDrawer';
 import RequestsTable from '@/components/RequestsTable';
 import CustomDropdown from '@/components/CustomDropdown';
 import CustomDateRangePicker from '@/components/CustomDateRangePicker';
+import CustomDatePicker from '@/components/CustomDatePicker';
 import type { RequestItem, Profile, TeamMember } from '@/lib/data/requests';
 
 interface RequestsClientProps {
@@ -514,12 +515,9 @@ export default function RequestsClient({
                                                     <div className="space-y-1.5">
                                                         <label className="text-[10px] font-black text-storm-gray uppercase tracking-widest ml-1">Due Date</label>
                                                         <div className="relative group/input">
-                                                            <Calendar size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-storm-gray group-focus-within/input:text-[#279da6] transition-colors z-10" />
-                                                            <input
-                                                                type="date"
+                                                            <CustomDatePicker
                                                                 value={requestFormData.due_date}
-                                                                onChange={(e) => setRequestFormData({ ...requestFormData, due_date: e.target.value })}
-                                                                className="w-full bg-black/40 border border-shark/50 rounded-xl py-2.5 pl-10 pr-4 text-xs text-iron focus:outline-none focus:border-[#279da6]/40 transition-all font-bold [color-scheme:dark]"
+                                                                onChange={(val) => setRequestFormData({ ...requestFormData, due_date: val })}
                                                             />
                                                         </div>
                                                     </div>

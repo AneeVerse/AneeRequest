@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { X, Download, FileText, File as FileIcon, Image as ImageIcon, ExternalLink } from 'lucide-react';
+import { formatDate } from '@/lib/dateUtils';
 
 interface FilePreviewModalProps {
     isOpen: boolean;
@@ -48,10 +49,7 @@ export default function FilePreviewModal({ isOpen, onClose, file }: FilePreviewM
                                 )}
                                 {file.uploaded_at && (
                                     <span className="text-[14px] font-bold text-storm-gray">
-                                        {new Date(file.uploaded_at).toLocaleString('en-US', {
-                                            month: 'short', day: 'numeric', year: 'numeric',
-                                            hour: '2-digit', minute: '2-digit'
-                                        })}
+                                        {formatDate(file.uploaded_at)}
                                     </span>
                                 )}
                             </div>

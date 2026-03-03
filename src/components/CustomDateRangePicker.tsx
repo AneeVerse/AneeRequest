@@ -3,6 +3,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { Calendar as CalendarIcon, ChevronLeft, ChevronRight, X } from 'lucide-react';
+import { formatDate as formatDateStandard } from '@/lib/dateUtils';
 
 interface CustomDateRangePickerProps {
     from?: string;
@@ -11,7 +12,7 @@ interface CustomDateRangePickerProps {
     placeholder?: string;
 }
 
-export default function CustomDateRangePicker({ from, to, onChange, placeholder = 'Select date' }: CustomDateRangePickerProps) {
+export default function CustomDateRangePicker({ from, to, onChange, placeholder = 'NOT SET' }: CustomDateRangePickerProps) {
     const [isOpen, setIsOpen] = useState(false);
     const containerRef = useRef<HTMLDivElement>(null);
     const [popoverCoords, setPopoverCoords] = useState({ top: 0, left: 0 });
@@ -64,11 +65,16 @@ export default function CustomDateRangePicker({ from, to, onChange, placeholder 
 
     const getDisplayValue = () => {
         if (!from && !to) return placeholder;
-        const options: Intl.DateTimeFormatOptions = { day: '2-digit', month: 'short', year: 'numeric' };
-        if (from && !to) return `From ${new Date(from as string).toLocaleDateString(undefined, options)}`;
-        if (!from && to) return `Until ${new Date(to as string).toLocaleDateString(undefined, options)}`;
-        if (from === to) return new Date(from as string).toLocaleDateString(undefined, options);
-        return `${new Date(from as string).toLocaleDateString(undefined, { day: '2-digit', month: 'short' })} - ${new Date(to as string).toLocaleDateString(undefined, options)}`;
+        if (from && !to) return `FROM ${formatDateStandard(from)}`;
+        if (!from && to) return `UNTIL ${formatDateStandard(to)}`;
+        if (from === to) return formatDateStandard(from);
+
+        const fromDate = formatDateStandard(from);
+        // For the "from" part in a range, we might want to omit the year if it's the same, 
+        // but user asked for "04 MAR 26", so I'll keep it simple and consistent.
+        // Actually, the previous implementation did: 28 FEB - 04 MAR 2026
+        // Let's stick to the requested format for both.
+        return `${fromDate} - ${formatDateStandard(to)}`;
     };
 
     const handleDateClick = (date: Date) => {

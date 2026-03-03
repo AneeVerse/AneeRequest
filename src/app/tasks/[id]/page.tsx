@@ -34,6 +34,7 @@ import {
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/context/AuthContext';
 import ImpersonationWarning from '@/components/ImpersonationWarning';
+import { formatDate } from '@/lib/dateUtils';
 
 interface Message {
     id: string;
@@ -456,12 +457,7 @@ export default function TaskDetailsPage() {
                                                     <div className="flex items-center justify-between mb-4">
                                                         <span className="text-[11px] font-black text-[#279da6] uppercase tracking-widest">Task Created</span>
                                                         <span className="text-[10px] text-rose-500 font-black uppercase tracking-widest">
-                                                            {new Date(task.created_at).toLocaleString('en-US', {
-                                                                month: 'short',
-                                                                day: 'numeric',
-                                                                hour: '2-digit',
-                                                                minute: '2-digit'
-                                                            })}
+                                                            {formatDate(task.created_at)}
                                                         </span>
                                                     </div>
                                                     {isEditingDescription ? (
@@ -665,13 +661,7 @@ export default function TaskDetailsPage() {
                                     <div>
                                         <h4 className="text-sm font-bold text-white mb-1 uppercase tracking-tight">{task.title}</h4>
                                         <div className="text-[12px] text-storm-gray">
-                                            <span className="font-bold">Created:</span> {new Date(task.created_at).toLocaleString('en-US', {
-                                                month: 'long',
-                                                day: 'numeric',
-                                                year: 'numeric',
-                                                hour: 'numeric',
-                                                minute: '2-digit'
-                                            })}
+                                            <span className="font-bold">Created:</span> {formatDate(task.created_at)}
                                         </div>
                                     </div>
 

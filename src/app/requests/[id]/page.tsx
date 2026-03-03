@@ -1356,7 +1356,7 @@ export default function RequestDetailsPage() {
                                                                         <>
                                                                             <span className="text-storm-gray/30">·</span>
                                                                             <span className="text-[9px] text-storm-gray/60">
-                                                                                {new Date(file.createdTime).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                                                                                {formatDate(file.createdTime)}
                                                                             </span>
                                                                         </>
                                                                     )}
@@ -1391,13 +1391,7 @@ export default function RequestDetailsPage() {
                                         <div>
                                             <h4 className="text-sm font-bold text-white mb-1 uppercase tracking-tight">{request.title}</h4>
                                             <div className="text-[12px] text-storm-gray">
-                                                <span className="font-bold">Created:</span> {new Date(request.created_at).toLocaleString('en-US', {
-                                                    month: 'long',
-                                                    day: 'numeric',
-                                                    year: 'numeric',
-                                                    hour: 'numeric',
-                                                    minute: '2-digit'
-                                                })}
+                                                <span className="font-bold">Created:</span> {formatDate(request.created_at)}
                                             </div>
                                         </div>
 

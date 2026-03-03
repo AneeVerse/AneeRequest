@@ -17,12 +17,15 @@ import {
     Search,
     X,
     Download,
-    LayoutList
+    LayoutList,
+    Copy,
+    Check as CheckIcon
 } from 'lucide-react';
 import { RequestItem, Profile, TeamMember } from '@/lib/data/requests';
 import { formatDate, formatTime } from '@/lib/dateUtils';
 import { useRouter } from 'next/navigation';
 import CustomDropdown from '@/components/CustomDropdown';
+import CustomDatePicker from '@/components/CustomDatePicker';
 
 interface RequestsTableProps {
     requests?: RequestItem[];
@@ -53,7 +56,15 @@ export default function RequestsTable({
         priority: '',
         due_date: ''
     });
+    const [copiedId, setCopiedId] = useState<string | null>(null);
     const dateInputRefs = React.useRef<{ [key: string]: HTMLInputElement | null }>({});
+
+    const handleCopy = (e: React.MouseEvent, text: string, id: string) => {
+        e.stopPropagation();
+        navigator.clipboard.writeText(text);
+        setCopiedId(id);
+        setTimeout(() => setCopiedId(null), 2000);
+    };
 
     const handleUpdate = async (requestId: string, field: string, value: any) => {
         const finalValue = (field === 'assigned_to' && value === '') ? null : value;
@@ -139,7 +150,7 @@ export default function RequestsTable({
                                 <th className="px-5 py-3 w-12 border-r border-shark/60 text-center">#</th>
                                 {[
                                     { label: 'Title', key: 'title', filter: 'title', width: 'w-[24%]' },
-                                    ...(showClientColumn ? [{ label: 'Client', key: 'client', filter: 'client', width: 'w-[15%] min-w-[120px]' }] : []),
+                                    ...(showClientColumn ? [{ label: 'ORGANIZATION', key: 'client', filter: 'client', width: 'w-[15%] min-w-[120px]' }] : []),
                                     { label: 'Status', key: 'status', filter: 'status', width: 'w-[10%]' },
                                     { label: 'Assignee', key: 'assignee', filter: 'assigned_to', width: 'w-[12%]' },
                                     { label: 'Priority', key: 'priority', filter: 'priority', width: 'w-[10%]' },
@@ -149,19 +160,19 @@ export default function RequestsTable({
                                 ].map((header, idx) => (
                                     <th key={header.label} className={`px-3 py-3 border-r border-shark/60 group/header relative header-filter-container ${header.width || ''}`}>
                                         <div className={`flex items-center gap-2 ${(header.key === 'updated_at' || header.key === 'created_at') ? 'justify-center' : 'justify-between'}`}>
-                                            {header.filter === 'title' ? (
+                                            {header.filter === 'title' || header.filter === 'client' ? (
                                                 <div className="relative flex-1 group -ml-1">
                                                     <Search size={16} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-storm-gray group-focus-within:text-[#279da6] transition-colors" />
                                                     <input
                                                         type="text"
-                                                        value={filters.title}
-                                                        onChange={(e) => setFilters(f => ({ ...f, title: e.target.value }))}
-                                                        placeholder="TITLE"
+                                                        value={filters[header.filter as keyof typeof filters]}
+                                                        onChange={(e) => setFilters(f => ({ ...f, [header.filter]: e.target.value }))}
+                                                        placeholder={header.label}
                                                         className="w-full bg-transparent border-none py-1.5 pl-8 pr-6 text-sm font-black uppercase tracking-widest text-iron placeholder:text-storm-gray focus:outline-none transition-all font-bold"
                                                     />
-                                                    {filters.title && (
+                                                    {filters[header.filter as keyof typeof filters] && (
                                                         <button
-                                                            onClick={() => setFilters(f => ({ ...f, title: '' }))}
+                                                            onClick={() => setFilters(f => ({ ...f, [header.filter]: '' }))}
                                                             className="absolute right-2 top-1/2 -translate-y-1/2 text-storm-gray hover:text-white"
                                                         >
                                                             <X size={10} />
@@ -295,7 +306,7 @@ export default function RequestsTable({
                                             {(index + 1).toString().padStart(2, '0')}
                                         </td>
                                         <td
-                                            className="px-6 py-2.5 font-black text-iron border-r border-shark/60 group-hover:text-[#279da6] cursor-pointer transition-colors hover:bg-white/5"
+                                            className="px-6 py-2.5 font-black text-iron border-r border-shark/60 hover:text-[#279da6] cursor-pointer transition-colors hover:bg-white/5"
                                             onClick={() => router.push(`/requests/${item.slug || item.id}`)}
                                         >
                                             <div className="flex flex-col uppercase tracking-tight font-black">
@@ -303,16 +314,39 @@ export default function RequestsTable({
                                             </div>
                                         </td>
                                         {showClientColumn && (
-                                            <td className="px-4 py-2.5 border-r border-shark/60 hover:bg-white/5 transition-colors">
-                                                <div className="flex flex-col gap-0.5 min-w-[120px] uppercase tracking-tight">
-                                                    {item.client?.organization ? (
-                                                        <>
-                                                            <span className="text-iron font-black truncate block uppercase">{item.client.organization}</span>
-                                                            <span className="text-[10px] text-storm-gray uppercase font-black tracking-tighter truncate block opacity-60">{item.client.full_name || 'Unknown'}</span>
-                                                        </>
-                                                    ) : (
-                                                        <span className="text-iron font-black truncate block uppercase">{item.client?.full_name || 'Unknown'}</span>
-                                                    )}
+                                            <td
+                                                className="pl-3 pr-4 py-2.5 border-r border-shark/60 hover:bg-white/5 transition-colors group/cell cursor-pointer"
+                                                onClick={() => {
+                                                    if (item.client?.slug) {
+                                                        router.push(`/clients/${item.client.slug}`);
+                                                    }
+                                                }}
+                                            >
+                                                <div className="flex items-center gap-3">
+                                                    <div className="w-10 h-10 rounded-full bg-shark/80 border border-white/5 overflow-hidden flex items-center justify-center text-[10px] text-white font-black bg-gradient-to-br from-[#279da6]/20 to-transparent group-hover/cell:scale-110 transition-transform shrink-0">
+                                                        {item.client?.avatar_url ? (
+                                                            <img src={item.client.avatar_url} alt={item.client.organization || item.client.full_name} className="w-full h-full object-cover" />
+                                                        ) : (
+                                                            (item.client?.organization || item.client?.full_name || 'U').split(' ').map((n: string) => n[0]).join('').slice(0, 2)
+                                                        )}
+                                                    </div>
+                                                    <div className="flex flex-col min-w-0">
+                                                        <span className="text-iron font-black group-hover/cell:text-[#279da6] transition-colors uppercase tracking-tight truncate block">
+                                                            {item.client?.organization || item.client?.full_name || 'UNKNOWN'}
+                                                        </span>
+                                                        {item.client?.organization && (
+                                                            <span className="text-[9px] text-storm-gray uppercase font-black tracking-tighter truncate block opacity-60">
+                                                                {item.client.full_name}
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                    <button
+                                                        onClick={(e) => handleCopy(e, item.client?.organization || item.client?.full_name || '', item.id)}
+                                                        className="p-1 rounded-md text-storm-gray hover:text-[#279da6] hover:bg-[#279da6]/10 transition-all opacity-0 group-hover/cell:opacity-100 focus:opacity-100 ml-auto shrink-0"
+                                                        title="Copy organization name"
+                                                    >
+                                                        {copiedId === item.id ? <CheckIcon size={14} className="text-emerald-500" /> : <Copy size={14} />}
+                                                    </button>
                                                 </div>
                                             </td>
                                         )}
@@ -364,19 +398,12 @@ export default function RequestsTable({
                                             />
                                         </td>
                                         <td className="px-6 py-2.5 text-santas-gray border-r border-shark/60 whitespace-nowrap hover:bg-white/5 transition-colors uppercase">
-                                            <div className="flex items-center gap-2 group/date relative">
-                                                <input
-                                                    ref={el => { dateInputRefs.current[item.id] = el; }}
-                                                    type="date"
-                                                    value={item.due_date ? new Date(item.due_date).toISOString().split('T')[0] : ''}
-                                                    onChange={(e) => handleUpdate(item.id, 'due_date', e.target.value)}
-                                                    className="bg-transparent text-iron border border-transparent hover:border-shark/60 focus:border-[#279da6]/60 rounded px-1.5 py-0.5 focus:outline-none cursor-pointer hover:text-white transition-all text-[11px] font-black uppercase w-28 [color-scheme:dark]"
-                                                />
-                                                <CalendarIcon
-                                                    size={12}
-                                                    className="text-storm-gray opacity-30 group-hover/date:opacity-100 transition-opacity cursor-pointer absolute right-2 pointer-events-none"
-                                                />
-                                            </div>
+                                            <CustomDatePicker
+                                                value={item.due_date}
+                                                onChange={(val) => handleUpdate(item.id, 'due_date', val)}
+                                                variant="minimal"
+                                                className="w-full text-center"
+                                            />
                                         </td>
                                         <td className="px-6 py-2.5 text-storm-gray border-r border-shark/60 whitespace-nowrap text-xs text-center uppercase">
                                             {item.updated_at ? (
