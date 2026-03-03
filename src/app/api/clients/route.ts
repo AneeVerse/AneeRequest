@@ -7,7 +7,7 @@ export async function GET() {
         // Fetch from both tables to bridge the gap
         const [clientsRes, profilesRes] = await Promise.all([
             supabase.from('clients').select('*').order('created_at', { ascending: false }),
-            supabase.from('profiles').select('id, email, full_name, role, avatar_url')
+            supabase.from('profiles').select('id, email, full_name, role, avatar_url, phone, country_code')
         ]);
 
         if (clientsRes.error) throw clientsRes.error;
@@ -19,7 +19,9 @@ export async function GET() {
             return {
                 ...client,
                 profile_id: profile?.id || null,
-                avatar_url: profile?.avatar_url || null
+                avatar_url: profile?.avatar_url || null,
+                phone: profile?.phone || null,
+                country_code: profile?.country_code || null
             };
         });
 
@@ -32,7 +34,7 @@ export async function GET() {
 export async function POST(request: Request) {
     try {
         const body = await request.json();
-        const { name, organization, email, password, status, avatarUrl, website } = body;
+        const { name, organization, email, password, status, avatarUrl, website, phone, country_code } = body;
 
         if (!email || !password || !name) {
             return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
@@ -59,7 +61,12 @@ export async function POST(request: Request) {
         if (avatarUrl && authData.user) {
             await serviceClient
                 .from('profiles')
-                .update({ avatar_url: avatarUrl })
+                .update({
+                    avatar_url: avatarUrl,
+                    phone: phone || null,
+                    country_code: country_code || '+91',
+                    role: 'client'
+                })
                 .eq('id', authData.user.id);
         }
 
@@ -109,7 +116,7 @@ export async function POST(request: Request) {
 export async function PATCH(request: Request) {
     try {
         const body = await request.json();
-        const { id, name, organization, email, password, oldEmail, drive_folder_id, status, avatarUrl, website } = body;
+        const { id, name, organization, email, password, oldEmail, drive_folder_id, status, avatarUrl, website, phone, country_code } = body;
 
         if (!id) {
             return NextResponse.json({ error: "Missing client ID" }, { status: 400 });
@@ -156,6 +163,9 @@ export async function PATCH(request: Request) {
         if (email) profileUpdateData.email = email;
         if (name) profileUpdateData.full_name = name;
         if (avatarUrl !== undefined) profileUpdateData.avatar_url = avatarUrl;
+        if (phone !== undefined) profileUpdateData.phone = phone;
+        if (country_code !== undefined) profileUpdateData.country_code = country_code;
+        profileUpdateData.role = 'client';
 
         if (Object.keys(profileUpdateData).length > 0) {
             // Update profile by matching email (case-insensitive if needed, but exact is fine if we use the original email)

@@ -14,7 +14,7 @@ export async function GET() {
 export async function POST(request: Request) {
     try {
         const body = await request.json();
-        const { name, email, department, position, password, role, accessible_sections, avatarUrl } = body;
+        const { name, email, department, position, password, role, accessible_sections, avatarUrl, phone, country_code } = body;
 
         if (!email || !name) {
             return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
@@ -46,7 +46,9 @@ export async function POST(request: Request) {
                     role: (role || 'viewer').toLowerCase().includes('admin') ? 'admin' : 'team_member',
                     avatar_url: avatarUrl || undefined,
                     full_name: name,
-                    accessible_sections: accessible_sections || []
+                    accessible_sections: accessible_sections || [],
+                    phone: phone || null,
+                    country_code: country_code || '+91'
                 })
                 .eq('id', authUserId);
 
@@ -66,6 +68,8 @@ export async function POST(request: Request) {
                     email: cleanEmail,
                     full_name: name,
                     avatar_url: avatarUrl,
+                    phone: phone || null,
+                    country_code: country_code || '+91',
                     role: (role || 'viewer').toLowerCase().includes('admin') ? 'admin' : 'team_member'
                 }).select().single();
 
@@ -77,6 +81,8 @@ export async function POST(request: Request) {
                 const { error: upError } = await serviceClient.from('profiles').update({
                     avatar_url: avatarUrl,
                     full_name: name,
+                    phone: phone || null,
+                    country_code: country_code || '+91',
                     role: (role || 'viewer').toLowerCase().includes('admin') ? 'admin' : 'team_member'
                 }).eq('id', authUserId);
                 if (upError) console.error('POST Profile update existing error:', upError);
@@ -120,7 +126,7 @@ export async function POST(request: Request) {
 export async function PATCH(request: Request) {
     try {
         const body = await request.json();
-        const { id, name, email, department, position, password, oldEmail, role, accessible_sections, avatarUrl } = body;
+        const { id, name, email, department, position, password, oldEmail, role, accessible_sections, avatarUrl, phone, country_code } = body;
 
         if (!id) {
             return NextResponse.json({ error: "Missing team member ID" }, { status: 400 });
@@ -189,6 +195,8 @@ export async function PATCH(request: Request) {
             if (name) profileUpdateData.full_name = name;
             if (avatarUrl !== undefined) profileUpdateData.avatar_url = avatarUrl;
             if (accessible_sections !== undefined) profileUpdateData.accessible_sections = accessible_sections;
+            if (phone !== undefined) profileUpdateData.phone = phone;
+            if (country_code !== undefined) profileUpdateData.country_code = country_code;
 
             // Ensure role is correct for team members
             if (role) {

@@ -9,6 +9,17 @@ export async function GET() {
         const sql = `
             ALTER TABLE public.clients DROP CONSTRAINT IF EXISTS clients_status_check;
             ALTER TABLE public.clients ADD CONSTRAINT clients_status_check CHECK (status IN ('Ongoing', 'Leads', 'Closed', 'Archive'));
+            
+            -- Add phone and country_code to profiles if they don't exist
+            DO $$ 
+            BEGIN 
+                IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'profiles' AND column_name = 'phone') THEN
+                    ALTER TABLE public.profiles ADD COLUMN phone TEXT;
+                END IF;
+                IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'profiles' AND column_name = 'country_code') THEN
+                    ALTER TABLE public.profiles ADD COLUMN country_code TEXT DEFAULT '+91';
+                END IF;
+            END $$;
         `;
 
         // Call the Supabase pg endpoint to execute raw SQL

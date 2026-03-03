@@ -33,7 +33,8 @@ import {
     LayoutList,
     ShieldAlert,
     UserIcon,
-    ChevronDown
+    ChevronDown,
+    Phone
 } from 'lucide-react';
 import AvatarUpload from '@/components/AvatarUpload';
 import { useRouter } from 'next/navigation';
@@ -47,6 +48,8 @@ interface TeamMember {
     profile_id?: string | null;
     name: string;
     email: string;
+    phone?: string | null;
+    country_code?: string | null;
     role: 'admin' | 'editor' | 'viewer';
     status: string;
     created_at: string;
@@ -56,6 +59,7 @@ interface TeamMember {
     task_count?: number;
     tasks?: string[];
     accessible_sections?: string[];
+    position?: string | null;
 }
 
 interface TeamClientProps {
@@ -64,6 +68,18 @@ interface TeamClientProps {
 }
 
 
+const COUNTRY_CODES = [
+    { code: '+91', country: 'India' },
+    { code: '+1', country: 'USA' },
+    { code: '+44', country: 'UK' },
+    { code: '+971', country: 'UAE' },
+    { code: '+61', country: 'Australia' },
+    { code: '+65', country: 'Singapore' },
+    { code: '+49', country: 'Germany' },
+    { code: '+33', country: 'France' },
+    { code: '+81', country: 'Japan' },
+    { code: '+86', country: 'China' },
+];
 
 export default function TeamClient({ initialMembers, initialCounts }: TeamClientProps) {
     const router = useRouter();
@@ -98,11 +114,14 @@ export default function TeamClient({ initialMembers, initialCounts }: TeamClient
     const [formData, setFormData] = useState({
         name: '',
         email: '',
+        phone: '',
+        country_code: '+91',
         password: '',
         confirmPassword: '',
-        department: '',
+        role: 'viewer' as 'admin' | 'editor' | 'viewer',
         position: '',
-        accessible_sections: [] as string[],
+        accessible_sections: ['dashboard', 'requests', 'tasks'] as string[],
+        status: 'Active',
         avatarUrl: ''
     });
 
@@ -119,7 +138,7 @@ export default function TeamClient({ initialMembers, initialCounts }: TeamClient
 
 
     const resetForm = () => {
-        setFormData({ name: '', email: '', password: '', confirmPassword: '', department: '', position: '', accessible_sections: [], avatarUrl: '' });
+        setFormData({ name: '', email: '', phone: '', country_code: '+91', password: '', confirmPassword: '', role: 'viewer', position: '', accessible_sections: ['dashboard', 'requests', 'tasks'], status: 'Active', avatarUrl: '' });
         setSelectedMember(null);
     };
 
@@ -147,8 +166,11 @@ export default function TeamClient({ initialMembers, initialCounts }: TeamClient
                         ...m,
                         name: formData.name,
                         email: formData.email,
-                        avatar_url: formData.avatarUrl,
-                        accessible_sections: formData.accessible_sections
+                        phone: formData.phone,
+                        country_code: formData.country_code,
+                        role: formData.role,
+                        position: formData.position,
+                        avatar_url: formData.avatarUrl
                     }
                     : m
             );
@@ -162,10 +184,14 @@ export default function TeamClient({ initialMembers, initialCounts }: TeamClient
                     id: selectedMember?.id,
                     name: formData.name,
                     email: formData.email,
+                    phone: formData.phone,
+                    country_code: formData.country_code,
+                    role: formData.role,
+                    position: formData.position,
+                    avatarUrl: formData.avatarUrl,
                     password: formData.password || undefined,
-                    oldEmail: selectedMember?.email,
                     accessible_sections: formData.accessible_sections,
-                    avatarUrl: formData.avatarUrl
+                    oldEmail: selectedMember?.email
                 }
                 : formData;
 
@@ -196,11 +222,14 @@ export default function TeamClient({ initialMembers, initialCounts }: TeamClient
         setFormData({
             name: member.name,
             email: member.email,
+            phone: member.phone || '',
+            country_code: member.country_code || '+91',
             password: '',
             confirmPassword: '',
-            department: (member as any).department || '',
-            position: (member as any).position || '',
-            accessible_sections: member.accessible_sections || [],
+            role: member.role || 'viewer',
+            position: member.position || '',
+            accessible_sections: member.accessible_sections || ['dashboard', 'requests', 'tasks'],
+            status: member.status || 'Active',
             avatarUrl: member.avatar_url || ''
         });
         setPanelMode('edit');
@@ -486,7 +515,7 @@ export default function TeamClient({ initialMembers, initialCounts }: TeamClient
                                                             />
                                                         </div>
                                                     </div>
-                                                    <div className="space-y-1.5 flex-1">
+                                                    <div className="space-y-1.5 flex-1 col-span-2">
                                                         <label className="text-[10px] font-black text-storm-gray uppercase tracking-widest ml-1">Email Address</label>
                                                         <div className="relative group">
                                                             <Mail size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-storm-gray group-focus-within:text-[#279da6] transition-colors" />
@@ -497,6 +526,34 @@ export default function TeamClient({ initialMembers, initialCounts }: TeamClient
                                                                 placeholder="email@example.com"
                                                                 className="w-full bg-black/40 border border-shark/50 rounded-xl py-2.5 pl-10 pr-4 text-xs text-iron placeholder:text-storm-gray focus:outline-none focus:border-[#279da6]/40 transition-all font-bold"
                                                             />
+                                                        </div>
+                                                    </div>
+                                                    <div className="space-y-1.5 flex-1 col-span-2">
+                                                        <label className="text-[10px] font-black text-storm-gray uppercase tracking-widest ml-1">Phone Number</label>
+                                                        <div className="flex gap-2">
+                                                            <div className="w-[100px] shrink-0">
+                                                                <select
+                                                                    value={formData.country_code}
+                                                                    onChange={(e) => setFormData({ ...formData, country_code: e.target.value })}
+                                                                    className="w-full bg-black/40 border border-shark/50 rounded-xl py-2.5 px-3 text-xs text-iron focus:outline-none focus:border-[#279da6]/40 transition-all font-bold appearance-none cursor-pointer"
+                                                                >
+                                                                    {COUNTRY_CODES.map(c => (
+                                                                        <option key={c.code} value={c.code} className="bg-[#121214]">
+                                                                            {c.code} ({c.country})
+                                                                        </option>
+                                                                    ))}
+                                                                </select>
+                                                            </div>
+                                                            <div className="relative flex-1 group">
+                                                                <Phone size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-storm-gray group-focus-within:text-[#279da6] transition-colors" />
+                                                                <input
+                                                                    type="text"
+                                                                    value={formData.phone}
+                                                                    onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                                                                    placeholder="Phone Number"
+                                                                    className="w-full bg-black/40 border border-shark/50 rounded-xl py-2.5 pl-10 pr-4 text-xs text-iron placeholder:text-storm-gray focus:outline-none focus:border-[#279da6]/40 transition-all font-bold"
+                                                                />
+                                                            </div>
                                                         </div>
                                                     </div>
                                                     <div className="space-y-1.5 flex-1 col-span-2">
@@ -578,7 +635,7 @@ export default function TeamClient({ initialMembers, initialCounts }: TeamClient
                                                 <th className="px-5 py-3 w-12 border-r border-shark/60 text-center">#</th>
                                                 {[
                                                     { label: 'NAME', key: 'name', width: 'w-[24%]' },
-                                                    { label: 'EMAIL', key: 'email', width: 'w-[16%]' },
+                                                    { label: 'CONTACT', key: 'email', width: 'w-[16%]' },
                                                     { label: 'REQUESTS', key: 'request_count', width: 'w-[10%]' },
                                                     { label: 'TASKS', key: 'task_count', width: 'w-[10%]' },
                                                     { label: 'LAST LOGIN', key: 'last_login', width: 'w-[15%]' },

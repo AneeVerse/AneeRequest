@@ -5,6 +5,8 @@ export interface TeamMember {
     profile_id?: string | null;
     name: string;
     email: string;
+    phone?: string | null;
+    country_code?: string | null;
     position: string;
     status: string;
     created_at: string;
@@ -21,12 +23,22 @@ export interface TeamMember {
 export async function getTeamMembers(): Promise<TeamMember[]> {
     const supabase = createServiceClient();
 
-    // Fetch from both tables and Auth to replicate the API route logic
-    const [teamRes, profilesRes, authRes] = await Promise.all([
-        supabase.from('team_members').select('*').order('created_at', { ascending: false }),
-        supabase.from('profiles').select('id, email, full_name, role, avatar_url'),
-        supabase.auth.admin.listUsers()
-    ]);
+    let teamRes, profilesRes, authRes;
+    try {
+        [teamRes, profilesRes, authRes] = await Promise.all([
+            supabase.from('team_members').select('*').order('created_at', { ascending: false }),
+            supabase.from('profiles').select('id, email, full_name, role, avatar_url, phone, country_code'),
+            supabase.auth.admin.listUsers()
+        ]);
+
+        if (profilesRes.error && (profilesRes.error.message.includes('column') || profilesRes.error.code === '42703')) {
+            console.warn('Profiles fetch failed in team, trying fallback without phone columns:', profilesRes.error.message);
+            profilesRes = await supabase.from('profiles').select('id, email, full_name, role, avatar_url');
+        }
+    } catch (err) {
+        console.error('Promise.all failed in getTeamMembers:', err);
+        return [];
+    }
 
     if (teamRes.error) console.error('Error fetching team members:', teamRes.error);
     if (profilesRes.error) console.error('Error fetching profiles:', profilesRes.error);
@@ -59,6 +71,8 @@ export async function getTeamMembers(): Promise<TeamMember[]> {
             ...member,
             profile_id: profile?.id || member.profile_id || null,
             avatar_url: avatarUrl,
+            phone: profile?.phone || null,
+            country_code: profile?.country_code || null,
             role: profile?.role || member.role || null,
             last_login: authUser?.last_sign_in_at || member.last_login || null
         };

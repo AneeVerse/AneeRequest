@@ -33,7 +33,8 @@ import {
     MessageSquare,
     Copy,
     SlidersHorizontal,
-    LayoutList
+    LayoutList,
+    Phone
 } from 'lucide-react';
 import AvatarUpload from '@/components/AvatarUpload';
 import { useRouter } from 'next/navigation';
@@ -48,6 +49,8 @@ interface ClientItem {
     profile_id?: string | null;
     name: string;
     email: string;
+    phone?: string | null;
+    country_code?: string | null;
     organization: string;
     createdAt: string;
     createdAtRaw: string | null;
@@ -55,7 +58,7 @@ interface ClientItem {
     lastLoginTime: string;
     lastLoginRaw: string | null;
     avatar_url?: string | null;
-    status: string;
+    status: 'Ongoing' | 'Leads' | 'Closed' | 'Archive';
     request_count?: number;
     task_count?: number;
     website?: string | null;
@@ -76,6 +79,18 @@ interface ClientsClientProps {
 }
 
 
+const COUNTRY_CODES = [
+    { code: '+91', country: 'India' },
+    { code: '+1', country: 'USA' },
+    { code: '+44', country: 'UK' },
+    { code: '+971', country: 'UAE' },
+    { code: '+61', country: 'Australia' },
+    { code: '+65', country: 'Singapore' },
+    { code: '+49', country: 'Germany' },
+    { code: '+33', country: 'France' },
+    { code: '+81', country: 'Japan' },
+    { code: '+86', country: 'China' },
+];
 
 export default function ClientsClient({ initialClients }: ClientsClientProps) {
     const router = useRouter();
@@ -118,10 +133,12 @@ export default function ClientsClient({ initialClients }: ClientsClientProps) {
         name: '',
         organization: '',
         email: '',
+        phone: '',
+        country_code: '+91',
         password: '',
         confirmPassword: '',
         create_folder: false,
-        status: 'Ongoing',
+        status: 'Ongoing' as 'Ongoing' | 'Leads' | 'Closed' | 'Archive',
         avatarUrl: '',
         website: ''
     });
@@ -151,7 +168,7 @@ export default function ClientsClient({ initialClients }: ClientsClientProps) {
     }, [clients]);
 
     const resetForm = () => {
-        setFormData({ name: '', organization: '', email: '', password: '', confirmPassword: '', create_folder: false, status: 'Ongoing', avatarUrl: '', website: '' });
+        setFormData({ name: '', organization: '', email: '', phone: '', country_code: '+91', password: '', confirmPassword: '', create_folder: false, status: 'Ongoing', avatarUrl: '', website: '' });
         setSelectedClient(null);
         setPanelMode('create');
     };
@@ -179,12 +196,15 @@ export default function ClientsClient({ initialClients }: ClientsClientProps) {
                         name: formData.name,
                         organization: formData.organization,
                         email: formData.email,
+                        phone: formData.phone,
+                        country_code: formData.country_code,
                         avatar_url: formData.avatarUrl,
-                        status: formData.status
+                        status: formData.status,
+                        website: formData.website
                     }
                     : c
             );
-            setClients(updatedClients);
+            setClients(updatedClients as ClientItem[]);
         }
 
         try {
@@ -196,10 +216,13 @@ export default function ClientsClient({ initialClients }: ClientsClientProps) {
                     name: formData.name,
                     organization: formData.organization,
                     email: formData.email,
+                    phone: formData.phone,
+                    country_code: formData.country_code,
                     status: formData.status,
                     avatarUrl: formData.avatarUrl,
                     password: formData.password || undefined,
-                    oldEmail: selectedClient?.email
+                    oldEmail: selectedClient?.email,
+                    website: formData.website
                 }
                 : formData;
 
@@ -234,6 +257,8 @@ export default function ClientsClient({ initialClients }: ClientsClientProps) {
             name: client.name,
             organization: client.organization,
             email: client.email,
+            phone: client.phone || '',
+            country_code: client.country_code || '+91',
             password: '',
             confirmPassword: '',
             create_folder: true,
@@ -287,7 +312,7 @@ export default function ClientsClient({ initialClients }: ClientsClientProps) {
         const originalClients = [...clients];
 
         // Optimistic update
-        setClients(clients.map(c => c.id === clientId ? { ...c, status: newStatus } : c));
+        setClients(clients.map(c => c.id === clientId ? { ...c, status: newStatus as any } : c) as ClientItem[]);
 
         try {
             const response = await fetch('/api/clients', {
@@ -666,6 +691,34 @@ export default function ClientsClient({ initialClients }: ClientsClientProps) {
                                                             />
                                                         </div>
                                                     </div>
+                                                    <div className="space-y-1.5 flex-1">
+                                                        <label className="text-[10px] font-black text-storm-gray uppercase tracking-widest ml-1">Phone Number</label>
+                                                        <div className="flex gap-2">
+                                                            <div className="w-[100px] shrink-0">
+                                                                <select
+                                                                    value={formData.country_code}
+                                                                    onChange={(e) => setFormData({ ...formData, country_code: e.target.value })}
+                                                                    className="w-full bg-black/40 border border-shark/50 rounded-xl py-2.5 px-3 text-xs text-iron focus:outline-none focus:border-[#279da6]/40 transition-all font-bold appearance-none cursor-pointer"
+                                                                >
+                                                                    {COUNTRY_CODES.map(c => (
+                                                                        <option key={c.code} value={c.code} className="bg-[#121214]">
+                                                                            {c.code} ({c.country})
+                                                                        </option>
+                                                                    ))}
+                                                                </select>
+                                                            </div>
+                                                            <div className="relative flex-1 group">
+                                                                <Phone size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-storm-gray group-focus-within:text-[#279da6] transition-colors" />
+                                                                <input
+                                                                    type="text"
+                                                                    value={formData.phone}
+                                                                    onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                                                                    placeholder="Phone Number"
+                                                                    className="w-full bg-black/40 border border-shark/50 rounded-xl py-2.5 pl-10 pr-4 text-xs text-iron placeholder:text-storm-gray focus:outline-none focus:border-[#279da6]/40 transition-all font-bold"
+                                                                />
+                                                            </div>
+                                                        </div>
+                                                    </div>
                                                 </div>
 
                                                 <div className="grid grid-cols-1 md:grid-cols-4 gap-x-5 gap-y-8">
@@ -699,7 +752,7 @@ export default function ClientsClient({ initialClients }: ClientsClientProps) {
                                                         <label className="text-[10px] font-black text-storm-gray uppercase tracking-widest ml-1">Status</label>
                                                         <CustomDropdown
                                                             value={formData.status}
-                                                            onChange={(val) => setFormData({ ...formData, status: val })}
+                                                            onChange={(val) => setFormData({ ...formData, status: val as any })}
                                                             options={[
                                                                 { label: 'Ongoing', value: 'Ongoing', icon: <CheckCircle2 size={14} className="text-emerald-500" /> },
                                                                 { label: 'Leads', value: 'Leads', icon: <UsersIcon size={14} className="text-[#279da6]" /> },
@@ -745,7 +798,7 @@ export default function ClientsClient({ initialClients }: ClientsClientProps) {
                                                 {[
                                                     { label: 'Organization', key: 'organization', filter: 'organization', width: 'w-[24%]' },
                                                     { label: 'User', key: 'name', filter: 'name', width: 'w-[11%]' },
-                                                    { label: 'Email', key: 'email', filter: 'email', width: 'w-[16%]' },
+                                                    { label: 'CONTACT', key: 'email', filter: 'email', width: 'w-[16%]' },
                                                     { label: 'Requests', key: 'request_count', filter: 'request_count', width: 'w-[9%]' },
                                                     { label: 'Tasks', key: 'task_count', filter: 'task_count', width: 'w-[7%]' },
                                                     { label: 'Status', key: 'status', filter: 'status', width: 'w-[10%]' },
@@ -753,7 +806,7 @@ export default function ClientsClient({ initialClients }: ClientsClientProps) {
                                                     { label: 'Created At', key: 'createdAt', filter: 'createdAt', width: 'w-[7%]' }
                                                 ].map((header, idx) => (
                                                     <th key={header.label} className={`px-3 py-3 border-r border-shark/60 group/header relative header-filter-container ${header.width}`}>
-                                                        <div className={`flex items-center gap-2 ${(header.key === 'lastLoginDate' || header.key === 'createdAt') ? 'justify-center' : 'justify-between'}`}>
+                                                        <div className={`flex items-center gap-2 ${(header.key === 'lastLoginDate' || header.key === 'createdAt' || header.key === 'email') ? 'justify-center' : 'justify-between'}`}>
                                                             {header.filter === 'organization' ? (
                                                                 <div className="relative flex-1 group -ml-1">
                                                                     <Search size={16} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-storm-gray group-focus-within:text-[#279da6] transition-colors" />
@@ -776,12 +829,14 @@ export default function ClientsClient({ initialClients }: ClientsClientProps) {
                                                             ) : (
                                                                 <>
                                                                     <span className="cursor-default text-sm">{header.label}</span>
-                                                                    <button
-                                                                        onClick={() => setActiveFilterHeader(activeFilterHeader === header.filter ? null : header.filter)}
-                                                                        className={`p-1 rounded hover:bg-shark/40 transition-colors ${(filters as any)[header.filter] || sortConfig.key === header.key ? 'text-[#279da6]' : 'text-storm-gray'}`}
-                                                                    >
-                                                                        <Filter size={10} />
-                                                                    </button>
+                                                                    {header.key !== 'email' && ( // Only show filter button if not the email column
+                                                                        <button
+                                                                            onClick={() => setActiveFilterHeader(activeFilterHeader === header.filter ? null : header.filter)}
+                                                                            className={`p-1 rounded hover:bg-shark/40 transition-colors ${(filters as any)[header.filter] || sortConfig.key === header.key ? 'text-[#279da6]' : 'text-storm-gray'}`}
+                                                                        >
+                                                                            <Filter size={10} />
+                                                                        </button>
+                                                                    )}
                                                                 </>
                                                             )}
                                                         </div>
@@ -868,8 +923,17 @@ export default function ClientsClient({ initialClients }: ClientsClientProps) {
                                                             </div>
                                                         </td>
                                                         <td className="px-6 py-2.5 border-r border-shark/60 text-iron font-black tracking-tight uppercase">{client.name}</td>
-                                                        <td className="px-6 py-2.5 text-santas-gray border-r border-shark/60 font-black">
-                                                            {client.email}
+                                                        <td className="px-3 py-2.5 border-r border-shark/60">
+                                                            <div className="flex flex-col gap-0.5">
+                                                                <span className="text-iron font-bold truncate max-w-[180px]" title={client.email}>
+                                                                    {client.email}
+                                                                </span>
+                                                                {client.phone && (
+                                                                    <span className="text-[10px] text-storm-gray font-medium tracking-wider">
+                                                                        {client.country_code || '+91'} {client.phone}
+                                                                    </span>
+                                                                )}
+                                                            </div>
                                                         </td>
                                                         <td
                                                             className="px-4 py-2.5 border-r border-shark/60 cursor-pointer hover:bg-white/5 transition-colors"
