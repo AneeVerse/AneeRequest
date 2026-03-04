@@ -27,7 +27,7 @@ import {
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import CustomDropdown from '@/components/CustomDropdown';
-import CustomDatePicker from '@/components/CustomDatePicker';
+
 import CustomDateRangePicker from '@/components/CustomDateRangePicker';
 import TasksTable from '@/components/TasksTable';
 import { TaskItem } from '@/lib/data/tasks';
@@ -45,6 +45,7 @@ export default function TasksClient({ initialTasks, profiles, teamMembers, reque
     const displayProfile = viewAsProfile || profile;
 
     const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+    const [isMobileOpen, setIsMobileOpen] = useState(false);
     const [activeTab, setActiveTab] = useState('UNASSIGNED');
     const [tasks, setTasks] = useState<TaskItem[]>(initialTasks);
     const [searchQuery, setSearchQuery] = useState('');
@@ -126,6 +127,11 @@ export default function TasksClient({ initialTasks, profiles, teamMembers, reque
     };
 
     useEffect(() => {
+        // Initial check for mobile to auto-collapse
+        if (window.innerWidth < 1024) {
+            setIsSidebarCollapsed(true);
+        }
+
         if (isCreating && inlineTaskInputRef.current) {
             inlineTaskInputRef.current.focus();
         }
@@ -420,13 +426,14 @@ export default function TasksClient({ initialTasks, profiles, teamMembers, reque
 
     return (
         <div className={`flex h-screen bg-[#09090B] text-iron font-sans overflow-hidden transition-all duration-500 ${isImpersonating ? 'p-1.5' : ''}`} style={isImpersonating ? { backgroundColor: '#0f2b1a' } : undefined}>
-            <Sidebar isCollapsed={isSidebarCollapsed} />
+            <Sidebar isCollapsed={isSidebarCollapsed} isMobileOpen={isMobileOpen} onMobileClose={() => setIsMobileOpen(false)} />
 
             <div className="flex-1 flex flex-col min-w-0 bg-[#09090B] relative">
-                <div className={`flex-1 flex flex-col min-w-0 bg-[#121214] rounded-t-2xl overflow-hidden border-t border-l border-r mt-6 mr-6 transition-all duration-500 ${isImpersonating ? 'border-[#22c55e]/60 shadow-[0_0_15px_rgba(34,197,94,0.15),0_0_40px_rgba(34,197,94,0.08),inset_0_0_20px_rgba(34,197,94,0.03)]' : 'border-shark'}`}>
+                <div className={`flex-1 flex flex-col min-w-0 bg-[#121214] rounded-t-2xl overflow-hidden border-t border-l border-r mt-6 mr-6 responsive-content-wrapper transition-all duration-500 ${isImpersonating ? 'border-[#22c55e]/60 shadow-[0_0_15px_rgba(34,197,94,0.15),0_0_40px_rgba(34,197,94,0.08),inset_0_0_20px_rgba(34,197,94,0.03)]' : 'border-shark'}`}>
                     <div className="border-b border-shark">
                         <Header
-                            onToggleSidebar={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
+
+                            onMobileMenuToggle={() => setIsMobileOpen(true)}
                             label="Team Tasks"
                             labelIcon={<CheckSquare size={16} className="text-[#279da6]" />}
                             tabs={taskTabs}
@@ -456,8 +463,8 @@ export default function TasksClient({ initialTasks, profiles, teamMembers, reque
                                     }`}
                             >
                                 <div className="p-1 bg-[#121214]/90 backdrop-blur-2xl border border-[#279da6]/30 rounded-[2rem] shadow-[0_25px_60px_rgba(0,0,0,0.4),0_0_40px_rgba(39,157,166,0.08)] ring-1 ring-white/5 relative overflow-hidden">
-                                    <div className="p-6 space-y-6">
-                                        <div className="flex items-start gap-6">
+                                    <div className="p-3 sm:p-6 space-y-6">
+                                        <div className="flex items-start gap-4 sm:gap-6">
                                             <div className="flex flex-col items-center gap-3 shrink-0">
                                                 <div className="w-14 h-14 rounded-2xl bg-amber-400/10 flex items-center justify-center text-amber-400 shadow-inner ring-1 ring-amber-400/20">
                                                     <CheckSquare size={28} />
@@ -529,9 +536,12 @@ export default function TasksClient({ initialTasks, profiles, teamMembers, reque
                                                     <div className="space-y-1.5">
                                                         <label className="text-[10px] font-black text-storm-gray uppercase tracking-widest ml-1">Due Date</label>
                                                         <div className="relative group/input">
-                                                            <CustomDatePicker
+                                                            <Calendar size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-storm-gray group-focus-within/input:text-[#279da6] transition-colors z-10" />
+                                                            <input
+                                                                type="date"
                                                                 value={taskFormData.due_date}
-                                                                onChange={(val) => setTaskFormData({ ...taskFormData, due_date: val })}
+                                                                onChange={(e) => setTaskFormData({ ...taskFormData, due_date: e.target.value })}
+                                                                className="w-full bg-black/40 border border-shark/50 rounded-xl py-2.5 pl-10 pr-4 text-xs text-iron focus:outline-none focus:border-[#279da6]/40 transition-all font-bold [color-scheme:dark]"
                                                             />
                                                         </div>
                                                     </div>

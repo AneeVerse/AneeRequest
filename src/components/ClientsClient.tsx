@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import React, { useState, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
@@ -33,8 +33,7 @@ import {
     MessageSquare,
     Copy,
     SlidersHorizontal,
-    LayoutList,
-    Phone
+    LayoutList
 } from 'lucide-react';
 import AvatarUpload from '@/components/AvatarUpload';
 import { useRouter } from 'next/navigation';
@@ -49,8 +48,6 @@ interface ClientItem {
     profile_id?: string | null;
     name: string;
     email: string;
-    phone?: string | null;
-    country_code?: string | null;
     organization: string;
     createdAt: string;
     createdAtRaw: string | null;
@@ -58,7 +55,7 @@ interface ClientItem {
     lastLoginTime: string;
     lastLoginRaw: string | null;
     avatar_url?: string | null;
-    status: 'Ongoing' | 'Leads' | 'Closed' | 'Archive';
+    status: string;
     request_count?: number;
     task_count?: number;
     website?: string | null;
@@ -79,23 +76,12 @@ interface ClientsClientProps {
 }
 
 
-const COUNTRY_CODES = [
-    { code: '+91', country: 'India' },
-    { code: '+1', country: 'USA' },
-    { code: '+44', country: 'UK' },
-    { code: '+971', country: 'UAE' },
-    { code: '+61', country: 'Australia' },
-    { code: '+65', country: 'Singapore' },
-    { code: '+49', country: 'Germany' },
-    { code: '+33', country: 'France' },
-    { code: '+81', country: 'Japan' },
-    { code: '+86', country: 'China' },
-];
 
 export default function ClientsClient({ initialClients }: ClientsClientProps) {
     const router = useRouter();
     const { impersonate, isImpersonating } = useAuth();
     const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+    const [isMobileOpen, setIsMobileOpen] = useState(false);
     const [activeTab, setActiveTab] = useState('Ongoing');
     const [isCreating, setIsCreating] = useState(false);
     const [panelMode, setPanelMode] = useState<'create' | 'edit'>('create');
@@ -117,6 +103,30 @@ export default function ClientsClient({ initialClients }: ClientsClientProps) {
         direction: 'desc'
     });
     const [activeFilterHeader, setActiveFilterHeader] = useState<string | null>(null);
+    const [filterCoords, setFilterCoords] = useState({ top: 0, left: 0, width: 0 });
+    const headerRefs = useRef<{ [key: string]: HTMLTableCellElement | null }>({});
+
+    const updateFilterPosition = (filterKey: string) => {
+        const el = headerRefs.current[filterKey];
+        if (el) {
+            const rect = el.getBoundingClientRect();
+            setFilterCoords({
+                top: rect.bottom + window.scrollY,
+                left: rect.left + window.scrollX,
+                width: rect.width
+            });
+        }
+    };
+
+    const toggleFilter = (filterKey: string) => {
+        if (activeFilterHeader === filterKey) {
+            setActiveFilterHeader(null);
+        } else {
+            updateFilterPosition(filterKey);
+            setActiveFilterHeader(filterKey);
+        }
+    };
+
     const [copiedId, setCopiedId] = useState<string | null>(null);
 
     const [clients, setClients] = useState<ClientItem[]>(initialClients);
@@ -133,12 +143,10 @@ export default function ClientsClient({ initialClients }: ClientsClientProps) {
         name: '',
         organization: '',
         email: '',
-        phone: '',
-        country_code: '+91',
         password: '',
         confirmPassword: '',
         create_folder: false,
-        status: 'Ongoing' as 'Ongoing' | 'Leads' | 'Closed' | 'Archive',
+        status: 'Ongoing',
         avatarUrl: '',
         website: ''
     });
@@ -147,6 +155,11 @@ export default function ClientsClient({ initialClients }: ClientsClientProps) {
     const inlineInputRef = useRef<HTMLInputElement>(null);
 
     useEffect(() => {
+        // Initial check for mobile to auto-collapse
+        if (window.innerWidth < 1024) {
+            setIsSidebarCollapsed(true);
+        }
+
         if (isCreating) {
             setTimeout(() => inlineInputRef.current?.focus(), 100);
         }
@@ -168,7 +181,7 @@ export default function ClientsClient({ initialClients }: ClientsClientProps) {
     }, [clients]);
 
     const resetForm = () => {
-        setFormData({ name: '', organization: '', email: '', phone: '', country_code: '+91', password: '', confirmPassword: '', create_folder: false, status: 'Ongoing', avatarUrl: '', website: '' });
+        setFormData({ name: '', organization: '', email: '', password: '', confirmPassword: '', create_folder: false, status: 'Ongoing', avatarUrl: '', website: '' });
         setSelectedClient(null);
         setPanelMode('create');
     };
@@ -196,15 +209,12 @@ export default function ClientsClient({ initialClients }: ClientsClientProps) {
                         name: formData.name,
                         organization: formData.organization,
                         email: formData.email,
-                        phone: formData.phone,
-                        country_code: formData.country_code,
                         avatar_url: formData.avatarUrl,
-                        status: formData.status,
-                        website: formData.website
+                        status: formData.status
                     }
                     : c
             );
-            setClients(updatedClients as ClientItem[]);
+            setClients(updatedClients);
         }
 
         try {
@@ -216,13 +226,10 @@ export default function ClientsClient({ initialClients }: ClientsClientProps) {
                     name: formData.name,
                     organization: formData.organization,
                     email: formData.email,
-                    phone: formData.phone,
-                    country_code: formData.country_code,
                     status: formData.status,
                     avatarUrl: formData.avatarUrl,
                     password: formData.password || undefined,
-                    oldEmail: selectedClient?.email,
-                    website: formData.website
+                    oldEmail: selectedClient?.email
                 }
                 : formData;
 
@@ -257,8 +264,6 @@ export default function ClientsClient({ initialClients }: ClientsClientProps) {
             name: client.name,
             organization: client.organization,
             email: client.email,
-            phone: client.phone || '',
-            country_code: client.country_code || '+91',
             password: '',
             confirmPassword: '',
             create_folder: true,
@@ -312,7 +317,7 @@ export default function ClientsClient({ initialClients }: ClientsClientProps) {
         const originalClients = [...clients];
 
         // Optimistic update
-        setClients(clients.map(c => c.id === clientId ? { ...c, status: newStatus as any } : c) as ClientItem[]);
+        setClients(clients.map(c => c.id === clientId ? { ...c, status: newStatus } : c));
 
         try {
             const response = await fetch('/api/clients', {
@@ -425,7 +430,7 @@ export default function ClientsClient({ initialClients }: ClientsClientProps) {
             </button>
 
             {isFilterOpen && (
-                <div className="absolute right-0 mt-2 w-[500px] bg-[#121214] border border-shark rounded-xl shadow-2xl p-5 z-50 space-y-4 animate-in fade-in slide-in-from-top-2 duration-200">
+                <div className="absolute right-0 mt-2 w-[calc(100vw-2rem)] sm:w-[500px] bg-[#121214] border border-shark rounded-xl shadow-2xl p-4 sm:p-5 z-50 space-y-4 animate-in fade-in slide-in-from-top-2 duration-200">
                     <div className="flex items-center justify-between mb-1">
                         <h4 className="text-[12px] font-black uppercase tracking-widest text-[#279da6]">Advanced Filters</h4>
                         <button
@@ -549,13 +554,18 @@ export default function ClientsClient({ initialClients }: ClientsClientProps) {
 
     return (
         <div className={`flex h-screen bg-[#09090B] text-iron font-sans overflow-hidden transition-[padding,background-color] duration-500 ${isImpersonating ? 'p-1.5' : ''}`} style={isImpersonating ? { backgroundColor: '#0f2b1a' } : undefined}>
-            <Sidebar isCollapsed={isSidebarCollapsed} />
+            <Sidebar
+                isCollapsed={isSidebarCollapsed}
+                isMobileOpen={isMobileOpen}
+                onMobileClose={() => setIsMobileOpen(false)}
+            />
 
             <div className="flex-1 flex flex-col min-w-0 bg-[#09090B] relative">
-                <div className={`flex-1 flex flex-col min-w-0 bg-[#121214] rounded-t-2xl overflow-hidden border-t border-l border-r mt-6 mr-6 transition-[border-color,box-shadow] duration-500 ${isImpersonating ? 'border-[#22c55e]/60 shadow-[0_0_15px_rgba(34,197,94,0.15),0_0_40px_rgba(34,197,94,0.08),inset_0_0_20px_rgba(34,197,94,0.03)]' : 'border-shark'}`}>
+                <div className={`flex-1 flex flex-col min-w-0 bg-[#121214] rounded-t-2xl overflow-hidden border-t border-l border-r mt-6 mr-6 responsive-content-wrapper transition-[border-color,box-shadow] duration-500 ${isImpersonating ? 'border-[#22c55e]/60 shadow-[0_0_15px_rgba(34,197,94,0.15),0_0_40px_rgba(34,197,94,0.08),inset_0_0_20px_rgba(34,197,94,0.03)]' : 'border-shark'}`}>
                     <div className="border-b border-shark">
                         <Header
-                            onToggleSidebar={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
+
+                            onMobileMenuToggle={() => setIsMobileOpen(true)}
                             label={panelMode === 'edit' ? 'Edit Client' : 'Users'}
                             labelIcon={<UsersIcon size={16} className="text-[#279da6]" />}
                             tabs={clientCategories}
@@ -624,9 +634,9 @@ export default function ClientsClient({ initialClients }: ClientsClientProps) {
                                                 <p className="text-[10px] font-black text-storm-gray uppercase tracking-widest">Client Photo</p>
                                             </div>
 
-                                            <div className="flex-1 space-y-8">
+                                            <div className="flex-1 space-y-4 sm:space-y-8 min-w-0">
                                                 {/* Fields Grid: Perfectly aligned 4-column layout */}
-                                                <div className="grid grid-cols-1 md:grid-cols-4 gap-x-5 gap-y-8">
+                                                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-x-5 gap-y-4 sm:gap-y-8">
                                                     <div className="space-y-1.5 flex-1">
                                                         <label className="text-[10px] font-black text-storm-gray uppercase tracking-widest ml-1">Organization</label>
                                                         <div className="relative group">
@@ -691,37 +701,9 @@ export default function ClientsClient({ initialClients }: ClientsClientProps) {
                                                             />
                                                         </div>
                                                     </div>
-                                                    <div className="space-y-1.5 flex-1">
-                                                        <label className="text-[10px] font-black text-storm-gray uppercase tracking-widest ml-1">Phone Number</label>
-                                                        <div className="flex gap-2">
-                                                            <div className="w-[100px] shrink-0">
-                                                                <select
-                                                                    value={formData.country_code}
-                                                                    onChange={(e) => setFormData({ ...formData, country_code: e.target.value })}
-                                                                    className="w-full bg-black/40 border border-shark/50 rounded-xl py-2.5 px-3 text-xs text-iron focus:outline-none focus:border-[#279da6]/40 transition-all font-bold appearance-none cursor-pointer"
-                                                                >
-                                                                    {COUNTRY_CODES.map(c => (
-                                                                        <option key={c.code} value={c.code} className="bg-[#121214]">
-                                                                            {c.code} ({c.country})
-                                                                        </option>
-                                                                    ))}
-                                                                </select>
-                                                            </div>
-                                                            <div className="relative flex-1 group">
-                                                                <Phone size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-storm-gray group-focus-within:text-[#279da6] transition-colors" />
-                                                                <input
-                                                                    type="text"
-                                                                    value={formData.phone}
-                                                                    onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                                                                    placeholder="Phone Number"
-                                                                    className="w-full bg-black/40 border border-shark/50 rounded-xl py-2.5 pl-10 pr-4 text-xs text-iron placeholder:text-storm-gray focus:outline-none focus:border-[#279da6]/40 transition-all font-bold"
-                                                                />
-                                                            </div>
-                                                        </div>
-                                                    </div>
                                                 </div>
 
-                                                <div className="grid grid-cols-1 md:grid-cols-4 gap-x-5 gap-y-8">
+                                                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-x-5 gap-y-4 sm:gap-y-8">
                                                     <div className="space-y-1.5 flex-1">
                                                         <label className="text-[10px] font-black text-storm-gray uppercase tracking-widest ml-1">Password</label>
                                                         <div className="relative group">
@@ -730,7 +712,7 @@ export default function ClientsClient({ initialClients }: ClientsClientProps) {
                                                                 type="password"
                                                                 value={formData.password}
                                                                 onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                                                                placeholder="••••••••"
+                                                                placeholder="ÔÇóÔÇóÔÇóÔÇóÔÇóÔÇóÔÇóÔÇó"
                                                                 className="w-full bg-black/40 border border-shark/50 rounded-xl py-2.5 pl-10 pr-4 text-xs text-iron placeholder:text-storm-gray focus:outline-none focus:border-[#279da6]/40 transition-all font-bold"
                                                             />
                                                         </div>
@@ -743,7 +725,7 @@ export default function ClientsClient({ initialClients }: ClientsClientProps) {
                                                                 type="password"
                                                                 value={formData.confirmPassword}
                                                                 onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
-                                                                placeholder="••••••••"
+                                                                placeholder="ÔÇóÔÇóÔÇóÔÇóÔÇóÔÇóÔÇóÔÇó"
                                                                 className="w-full bg-black/40 border border-shark/50 rounded-xl py-2.5 pl-10 pr-4 text-xs text-iron placeholder:text-storm-gray focus:outline-none focus:border-[#279da6]/40 transition-all font-bold"
                                                             />
                                                         </div>
@@ -752,7 +734,7 @@ export default function ClientsClient({ initialClients }: ClientsClientProps) {
                                                         <label className="text-[10px] font-black text-storm-gray uppercase tracking-widest ml-1">Status</label>
                                                         <CustomDropdown
                                                             value={formData.status}
-                                                            onChange={(val) => setFormData({ ...formData, status: val as any })}
+                                                            onChange={(val) => setFormData({ ...formData, status: val })}
                                                             options={[
                                                                 { label: 'Ongoing', value: 'Ongoing', icon: <CheckCircle2 size={14} className="text-emerald-500" /> },
                                                                 { label: 'Leads', value: 'Leads', icon: <UsersIcon size={14} className="text-[#279da6]" /> },
@@ -790,32 +772,135 @@ export default function ClientsClient({ initialClients }: ClientsClientProps) {
 
                             {/* Clients Table */}
                             <div className="border border-shark/60 rounded-xl bg-black/20 overflow-hidden">
-                                <div className="overflow-x-auto custom-scrollbar">
-                                    <table className="w-full text-left border-collapse table-fixed min-w-[1200px]">
+                                {/* Mobile View: Stacked Cards */}
+                                <div className="sm:hidden flex flex-col divide-y divide-shark/60 max-h-[70vh] overflow-y-auto custom-scrollbar">
+                                    {sortedClients.length === 0 ? (
+                                        <div className="px-6 py-20 text-center text-storm-gray uppercase text-[10px] font-black tracking-widest opacity-40">
+                                            No clients found matching your criteria.
+                                        </div>
+                                    ) : (
+                                        sortedClients.map((client: ClientItem, index: number) => (
+                                            <div key={client.id} className="p-4 bg-shark/5 flex flex-col gap-4 animate-zoom-in">
+                                                {/* Card Header: Avatar & Organization */}
+                                                <div className="flex items-start gap-3">
+                                                    <div className="w-12 h-12 rounded-2xl bg-shark/80 border border-white/5 overflow-hidden flex items-center justify-center text-[12px] text-white font-black bg-gradient-to-br from-[#279da6]/20 to-transparent shrink-0">
+                                                        {client.avatar_url ? (
+                                                            <img src={client.avatar_url} alt={client.organization} className="w-full h-full object-cover" />
+                                                        ) : (
+                                                            client.organization.split(' ').map((n: string) => n[0]).join('').slice(0, 2)
+                                                        )}
+                                                    </div>
+                                                    <div className="flex flex-col flex-1 min-w-0">
+                                                        <div className="flex items-center justify-between">
+                                                            <h3
+                                                                className="text-[13px] font-black text-white hover:text-[#279da6] cursor-pointer transition-colors uppercase leading-tight truncate"
+                                                                onClick={() => router.push(`/clients/${client.slug}`)}
+                                                            >
+                                                                {client.organization}
+                                                            </h3>
+                                                            <div className="flex gap-1 shrink-0">
+                                                                <button
+                                                                    onClick={() => impersonate({
+                                                                        id: client.profile_id || client.id,
+                                                                        email: client.email,
+                                                                        full_name: client.name,
+                                                                        role: 'client',
+                                                                        organization: client.organization,
+                                                                        avatar_url: client.avatar_url
+                                                                    } as any, '/clients')}
+                                                                    className="p-1.5 rounded-lg text-storm-gray hover:bg-shark hover:text-white transition-all"
+                                                                >
+                                                                    <UserCog size={14} />
+                                                                </button>
+                                                                <button
+                                                                    onClick={() => handleEditClick(client)}
+                                                                    className="p-1.5 rounded-lg text-storm-gray hover:bg-shark hover:text-white transition-all"
+                                                                >
+                                                                    <Edit2 size={14} />
+                                                                </button>
+                                                            </div>
+                                                        </div>
+                                                        <div className="mt-1 flex flex-col gap-0.5">
+                                                            <span className="text-[9px] text-storm-gray font-black uppercase opacity-40">ID: {client.id.slice(0, 8)}</span>
+                                                            <p className="text-[10px] font-bold text-storm-gray uppercase tracking-tight truncate opacity-60">
+                                                                {client.name}
+                                                            </p>
+                                                            <p className="text-[9px] font-black text-[#279da6] tracking-widest break-all">
+                                                                {client.email}
+                                                            </p>
+                                                        </div>
+                                                    </div>
+                                                </div>
+
+                                                {/* Card Stats & Status */}
+                                                <div className="grid grid-cols-2 gap-3 pt-1">
+                                                    <div className="flex items-center gap-4 bg-black/20 rounded-xl p-2 px-3 self-center justify-center">
+                                                        <div
+                                                            className="flex items-center gap-1.5 cursor-pointer"
+                                                            onClick={() => router.push(`/clients/${client.slug}`)}
+                                                        >
+                                                            <MessageSquare size={12} className="text-[#279da6]" />
+                                                            <span className="text-[11px] font-black text-white">{client.request_count || 0}</span>
+                                                        </div>
+                                                        <div className="w-px h-3 bg-shark/60" />
+                                                        <div
+                                                            className="flex items-center gap-1.5 cursor-pointer"
+                                                            onClick={() => router.push(`/clients/${client.slug}?tab=Tasks`)}
+                                                        >
+                                                            <CheckSquare size={12} className="text-amber-400" />
+                                                            <span className="text-[11px] font-black text-white">{client.task_count || 0}</span>
+                                                        </div>
+                                                    </div>
+                                                    <div className="space-y-1">
+                                                        <CustomDropdown
+                                                            value={client.status || 'Ongoing'}
+                                                            onChange={(val) => handleStatusUpdate(client.id, val)}
+                                                            options={[
+                                                                { label: 'ONGOING', value: 'Ongoing', icon: <CheckCircle2 size={10} className="text-emerald-400" />, color: 'text-emerald-400' },
+                                                                { label: 'LEADS', value: 'Leads', icon: <UsersIcon size={10} className="text-[#279da6]" />, color: 'text-[#279da6]' },
+                                                                { label: 'CLOSED', value: 'Closed', icon: <XCircle size={10} className="text-rose-400" />, color: 'text-rose-400' },
+                                                                { label: 'ARCHIVE', value: 'Archive', icon: <Archive size={10} className="text-[#F28C28]" />, color: 'text-[#F28C28]' },
+                                                            ]}
+                                                            variant="minimal"
+                                                            className="w-full"
+                                                        />
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        ))
+                                    )}
+                                </div>
+
+                                {/* Desktop View: Standard Table */}
+                                <div className="hidden sm:block overflow-x-auto custom-scrollbar">
+                                    <table className="w-full text-left border-collapse">
                                         <thead>
-                                            <tr className="border-b border-shark text-storm-gray text-sm uppercase font-black tracking-widest bg-[#17171a]">
-                                                <th className="px-5 py-3 w-[4%] border-r border-shark/60 text-center">#</th>
+                                            <tr className="border-b border-shark text-storm-gray text-xs uppercase font-black tracking-widest bg-[#17171a]">
+                                                <th className="px-5 py-3 w-10 sm:w-16 border-r border-shark/60 text-center text-storm-gray font-black">#</th>
                                                 {[
-                                                    { label: 'Organization', key: 'organization', filter: 'organization', width: 'w-[24%]' },
-                                                    { label: 'User', key: 'name', filter: 'name', width: 'w-[11%]' },
-                                                    { label: 'CONTACT', key: 'email', filter: 'email', width: 'w-[16%]' },
-                                                    { label: 'Requests', key: 'request_count', filter: 'request_count', width: 'w-[9%]' },
-                                                    { label: 'Tasks', key: 'task_count', filter: 'task_count', width: 'w-[7%]' },
-                                                    { label: 'Status', key: 'status', filter: 'status', width: 'w-[10%]' },
-                                                    { label: 'Last Login', key: 'lastLoginDate', filter: 'lastLoginDate', width: 'w-[7%]' },
-                                                    { label: 'Created At', key: 'createdAt', filter: 'createdAt', width: 'w-[7%]' }
+                                                    { label: 'Organization', key: 'organization', filter: 'organization', width: 'min-w-[200px]' },
+                                                    { label: 'User', key: 'name', filter: 'name', width: 'min-w-[180px]' },
+                                                    { label: 'Email', key: 'email', filter: 'email', width: 'min-w-[220px]' },
+                                                    { label: 'Stats', key: 'request_count', filter: 'request_count', width: 'min-w-[100px]' },
+                                                    { label: 'Status', key: 'status', filter: 'status', width: 'min-w-[140px]' },
+                                                    { label: 'Last Login', key: 'lastLoginDate', filter: 'lastLoginDate', width: 'min-w-[140px]' },
+                                                    { label: 'Created', key: 'createdAt', filter: 'createdAt', width: 'min-w-[140px]' }
                                                 ].map((header, idx) => (
-                                                    <th key={header.label} className={`px-3 py-3 border-r border-shark/60 group/header relative header-filter-container ${header.width}`}>
-                                                        <div className={`flex items-center gap-2 ${(header.key === 'lastLoginDate' || header.key === 'createdAt' || header.key === 'email') ? 'justify-center' : 'justify-between'}`}>
+                                                    <th
+                                                        key={header.label}
+                                                        ref={el => { headerRefs.current[header.filter] = el; }}
+                                                        className={`px-3 py-3 border-r border-shark/60 group/header relative header-filter-container ${header.width}`}
+                                                    >
+                                                        <div className={`flex items-center gap-2 ${(header.key === 'lastLoginDate' || header.key === 'createdAt') ? 'justify-center' : 'justify-between'}`}>
                                                             {header.filter === 'organization' ? (
                                                                 <div className="relative flex-1 group -ml-1">
-                                                                    <Search size={16} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-storm-gray group-focus-within:text-[#279da6] transition-colors" />
+                                                                    <Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-storm-gray group-focus-within:text-[#279da6] transition-colors" />
                                                                     <input
                                                                         type="text"
                                                                         value={(filters as any).organization}
                                                                         onChange={(e) => setFilters(f => ({ ...f, organization: e.target.value }))}
                                                                         placeholder="ORGANIZATION"
-                                                                        className="w-full bg-transparent border-none py-1.5 pl-8 pr-6 text-sm font-black uppercase tracking-widest text-iron placeholder:text-storm-gray focus:outline-none transition-all font-bold"
+                                                                        className="w-full bg-transparent border-none py-1.5 pl-8 pr-6 text-[11px] font-black uppercase tracking-widest text-iron placeholder:text-storm-gray focus:outline-none transition-all font-bold"
                                                                     />
                                                                     {(filters as any).organization && (
                                                                         <button
@@ -828,200 +913,196 @@ export default function ClientsClient({ initialClients }: ClientsClientProps) {
                                                                 </div>
                                                             ) : (
                                                                 <>
-                                                                    <span className="cursor-default text-sm">{header.label}</span>
-                                                                    {header.key !== 'email' && ( // Only show filter button if not the email column
-                                                                        <button
-                                                                            onClick={() => setActiveFilterHeader(activeFilterHeader === header.filter ? null : header.filter)}
-                                                                            className={`p-1 rounded hover:bg-shark/40 transition-colors ${(filters as any)[header.filter] || sortConfig.key === header.key ? 'text-[#279da6]' : 'text-storm-gray'}`}
-                                                                        >
-                                                                            <Filter size={10} />
-                                                                        </button>
-                                                                    )}
+                                                                    <span className="cursor-default text-[10px] font-black">{header.label}</span>
+                                                                    <button
+                                                                        onClick={() => toggleFilter(header.filter)}
+                                                                        className={`p-1 rounded hover:bg-shark/40 transition-colors ${(filters as any)[header.filter] || sortConfig.key === header.key ? 'text-[#279da6]' : 'text-storm-gray'}`}
+                                                                    >
+                                                                        <Filter size={10} />
+                                                                    </button>
                                                                 </>
                                                             )}
                                                         </div>
-                                                        {activeFilterHeader === header.filter && header.filter !== 'organization' && (
-                                                            <div className={`absolute top-full ${idx > 2 ? 'right-0' : 'left-0'} mt-1 w-48 bg-[#121214] border border-shark rounded-lg shadow-2xl p-2 z-[60] normal-case tracking-normal`}>
+                                                        {activeFilterHeader === header.filter && header.filter !== 'organization' && typeof document !== 'undefined' && createPortal(
+                                                            <div
+                                                                style={{
+                                                                    position: 'absolute',
+                                                                    top: `${filterCoords.top + 4}px`,
+                                                                    left: idx > 3 ? `${filterCoords.left + filterCoords.width - 192}px` : `${filterCoords.left}px`,
+                                                                }}
+                                                                className={`w-48 bg-[#121214] border border-shark rounded-xl shadow-2xl p-2 z-[9999] normal-case tracking-normal animate-zoom-in`}
+                                                                onClick={(e) => e.stopPropagation()}
+                                                            >
                                                                 <div className="mb-2 border-b border-shark/40 pb-2">
-                                                                    <div className="text-[10px] font-bold text-storm-gray uppercase mb-1 px-1">Sort</div>
+                                                                    <div className="text-[9px] font-black text-storm-gray uppercase mb-1 px-1 tracking-widest">Sort</div>
                                                                     <button
                                                                         onClick={() => { setSortConfig({ key: header.key, direction: 'asc' }); setActiveFilterHeader(null); }}
-                                                                        className={`flex items-center gap-2 w-full px-2 py-1.5 rounded-md text-[11px] hover:bg-shark/40 transition-colors ${sortConfig.key === header.key && sortConfig.direction === 'asc' ? 'text-[#279da6] bg-shark/20' : 'text-iron'}`}
+                                                                        className={`flex items-center gap-2 w-full px-2 py-1.5 rounded-lg text-[10px] uppercase font-black tracking-wider hover:bg-[#279da6]/10 hover:text-white transition-all ${sortConfig.key === header.key && sortConfig.direction === 'asc' ? 'text-[#279da6] bg-[#279da6]/5' : 'text-storm-gray'}`}
                                                                     >
                                                                         <SortAsc size={12} />
-                                                                        <span>Sort A-Z</span>
+                                                                        <span>Ascending</span>
                                                                     </button>
                                                                     <button
                                                                         onClick={() => { setSortConfig({ key: header.key, direction: 'desc' }); setActiveFilterHeader(null); }}
-                                                                        className={`flex items-center gap-2 w-full px-2 py-1.5 rounded-md text-[11px] hover:bg-shark/40 transition-colors ${sortConfig.key === header.key && sortConfig.direction === 'desc' ? 'text-[#279da6] bg-shark/20' : 'text-iron'}`}
+                                                                        className={`flex items-center gap-2 w-full px-2 py-1.5 rounded-lg text-[10px] uppercase font-black tracking-wider hover:bg-[#279da6]/10 hover:text-white transition-all ${sortConfig.key === header.key && sortConfig.direction === 'desc' ? 'text-[#279da6] bg-[#279da6]/5' : 'text-storm-gray'}`}
                                                                     >
                                                                         <SortDesc size={12} />
-                                                                        <span>Sort Z-A</span>
+                                                                        <span>Descending</span>
                                                                     </button>
                                                                 </div>
                                                                 <div>
-                                                                    <div className="text-[10px] font-bold text-storm-gray uppercase mb-1 px-1">Filter</div>
+                                                                    <div className="text-[9px] font-black text-storm-gray uppercase mb-1 px-1 tracking-widest">Filter</div>
                                                                     {!['createdAt', 'lastLoginDate', 'organization'].includes(header.filter) && (
-                                                                        <input
-                                                                            type="text"
-                                                                            placeholder={`Filter by ${header.label.toLowerCase()}...`}
-                                                                            value={(filters as any)[header.filter]}
-                                                                            onChange={(e) => setFilters(f => ({ ...f, [header.filter]: e.target.value }))}
-                                                                            className="w-full bg-[#09090B] border border-shark/50 rounded-md py-1.5 px-2 text-[10px] text-iron focus:outline-none"
-                                                                            autoFocus
-                                                                        />
+                                                                        <div className="px-1 pb-1">
+                                                                            <input
+                                                                                type="text"
+                                                                                placeholder={`Filter...`}
+                                                                                value={(filters as any)[header.filter]}
+                                                                                onChange={(e) => setFilters(f => ({ ...f, [header.filter]: e.target.value }))}
+                                                                                className="w-full bg-[#09090B] border border-shark/50 rounded-lg py-1.5 px-2 text-[10px] font-bold text-iron focus:outline-none focus:border-[#279da6]/40 transition-all"
+                                                                                autoFocus
+                                                                            />
+                                                                        </div>
                                                                     )}
                                                                     {['createdAt', 'lastLoginDate'].includes(header.filter) && (
-                                                                        <input
-                                                                            type="date"
-                                                                            value={(filters as any)[header.filter]}
-                                                                            onChange={(e) => setFilters(f => ({ ...f, [header.filter]: e.target.value }))}
-                                                                            className="w-full bg-[#09090B] border border-shark/50 rounded-md py-1.5 px-2 text-[10px] text-iron focus:outline-none [color-scheme:dark]"
-                                                                        />
+                                                                        <div className="px-1 pb-1">
+                                                                            <input
+                                                                                type="date"
+                                                                                value={(filters as any)[header.filter]}
+                                                                                onChange={(e) => setFilters(f => ({ ...f, [header.filter]: e.target.value }))}
+                                                                                className="w-full bg-[#09090B] border border-shark/50 rounded-lg py-1.5 px-2 text-[10px] font-black text-iron focus:outline-none focus:border-[#279da6]/40 [color-scheme:dark]"
+                                                                            />
+                                                                        </div>
                                                                     )}
                                                                 </div>
-                                                            </div>
+                                                            </div>,
+                                                            document.body
                                                         )}
                                                     </th>
                                                 ))}
-                                                <th className="px-3 py-5 w-[5%] text-center"></th>
+                                                <th className="px-3 py-5 w-24 text-center"></th>
                                             </tr>
                                         </thead>
                                         <tbody className="divide-y divide-shark/60">
                                             {sortedClients.length === 0 ? (
                                                 <tr>
-                                                    <td colSpan={10} className="px-6 py-12 text-center text-storm-gray font-medium uppercase tracking-widest opacity-40">
+                                                    <td colSpan={10} className="px-6 py-20 text-center text-storm-gray uppercase text-[10px] font-black tracking-widest opacity-40">
                                                         No clients found matching your criteria.
                                                     </td>
                                                 </tr>
                                             ) : (
                                                 sortedClients.map((client: ClientItem, index: number) => (
                                                     <tr key={client.id} className="hover:bg-shark/10 transition-colors group text-sm">
-                                                        <td className="px-5 py-2.5 border-r border-shark/60 text-center font-black text-storm-gray">
+                                                        <td className="px-5 py-3 border-r border-shark/60 text-center font-black text-storm-gray">
                                                             {(index + 1).toString().padStart(2, '0')}
                                                         </td>
                                                         <td
-                                                            className="pl-3 pr-4 py-2.5 border-r border-shark/60 cursor-pointer hover:bg-white/5 transition-colors group/cell"
+                                                            className="pl-4 pr-4 py-3 border-r border-shark/60 cursor-pointer hover:bg-white/5 transition-colors group/cell"
                                                             onClick={() => router.push(`/clients/${client.slug}`)}
                                                         >
-                                                            <div className="flex items-center gap-3">
-                                                                <div className="w-12 h-12 rounded-full bg-shark/80 border border-white/5 overflow-hidden flex items-center justify-center text-[12px] text-white font-black bg-gradient-to-br from-[#279da6]/20 to-transparent group-hover/cell:scale-110 transition-transform shrink-0">
+                                                            <div className="flex items-center gap-4">
+                                                                <div className="w-10 h-10 rounded-xl bg-shark/80 border border-white/5 overflow-hidden flex items-center justify-center text-[11px] text-white font-black bg-gradient-to-br from-[#279da6]/20 to-transparent group-hover/cell:scale-105 transition-transform shrink-0">
                                                                     {client.avatar_url ? (
                                                                         <img src={client.avatar_url} alt={client.organization} className="w-full h-full object-cover" />
                                                                     ) : (
                                                                         client.organization.split(' ').map((n: string) => n[0]).join('').slice(0, 2)
                                                                     )}
                                                                 </div>
-                                                                <span className="text-iron font-black group-hover/cell:text-[#279da6] transition-colors uppercase tracking-tight">{client.organization}</span>
-                                                                <button
-                                                                    onClick={(e) => handleCopy(e, client.organization, client.id)}
-                                                                    className="p-1 rounded-md text-storm-gray hover:text-[#279da6] hover:bg-[#279da6]/10 transition-all opacity-0 group-hover/cell:opacity-100 focus:opacity-100 ml-auto"
-                                                                    title="Copy organization name"
+                                                                <div className="flex flex-col min-w-0">
+                                                                    <span className="text-iron font-black group-hover/cell:text-[#279da6] transition-colors uppercase tracking-tight truncate leading-tight text-[12px]">{client.organization}</span>
+                                                                    <div className="flex items-center gap-2">
+                                                                        <span className="text-[9px] text-storm-gray font-black uppercase opacity-40">ID: {client.id.slice(0, 8)}</span>
+                                                                        <button
+                                                                            onClick={(e) => handleCopy(e, client.organization, client.id)}
+                                                                            className="p-1 rounded-md text-storm-gray hover:text-[#279da6] hover:bg-[#279da6]/10 transition-all opacity-0 group-hover:opacity-100"
+                                                                        >
+                                                                            {copiedId === client.id ? <Check size={10} className="text-emerald-500" /> : <Copy size={10} />}
+                                                                        </button>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                        </td>
+                                                        <td className="px-6 py-3 border-r border-shark/60 text-iron font-black tracking-tight uppercase text-xs opacity-70 truncate">{client.name}</td>
+                                                        <td className="px-6 py-3 text-santas-gray border-r border-shark/60 font-black text-[11px] truncate opacity-50">
+                                                            {client.email}
+                                                        </td>
+                                                        <td className="px-4 py-3 border-r border-shark/60 hover:bg-white/5 transition-colors">
+                                                            <div className="flex items-center gap-4 justify-center">
+                                                                <div
+                                                                    className="flex items-center gap-1.5 cursor-pointer hover:opacity-70 transition-opacity"
+                                                                    onClick={() => router.push(`/clients/${client.slug}`)}
+                                                                    title="Requests"
                                                                 >
-                                                                    {copiedId === client.id ? <Check size={14} className="text-emerald-500" /> : <Copy size={14} />}
-                                                                </button>
-                                                            </div>
-                                                        </td>
-                                                        <td className="px-6 py-2.5 border-r border-shark/60 text-iron font-black tracking-tight uppercase">{client.name}</td>
-                                                        <td className="px-3 py-2.5 border-r border-shark/60">
-                                                            <div className="flex flex-col gap-0.5">
-                                                                <span className="text-iron font-bold truncate max-w-[180px]" title={client.email}>
-                                                                    {client.email}
-                                                                </span>
-                                                                {client.phone && (
-                                                                    <span className="text-[10px] text-storm-gray font-medium tracking-wider">
-                                                                        {client.country_code || '+91'} {client.phone}
-                                                                    </span>
-                                                                )}
-                                                            </div>
-                                                        </td>
-                                                        <td
-                                                            className="px-4 py-2.5 border-r border-shark/60 cursor-pointer hover:bg-white/5 transition-colors"
-                                                            onClick={() => router.push(`/clients/${client.slug}`)}
-                                                            title="View all requests"
-                                                        >
-                                                            <div className="flex items-center gap-2">
-                                                                <MessageSquare size={14} className="text-[#279da6]" />
-                                                                <span className="text-iron font-black">{client.request_count || 0}</span>
-                                                            </div>
-                                                        </td>
-                                                        <td
-                                                            className="px-4 py-2.5 border-r border-shark/60 cursor-pointer hover:bg-white/5 transition-colors"
-                                                            onClick={() => router.push(`/clients/${client.slug}?tab=Tasks`)}
-                                                            title="View all tasks"
-                                                        >
-                                                            <div className="flex items-center gap-2">
-                                                                <CheckSquare size={14} className="text-amber-400" />
-                                                                <span className="text-iron font-black">{client.task_count || 0}</span>
+                                                                    <MessageSquare size={13} className="text-[#279da6]" />
+                                                                    <span className="text-iron font-black text-xs">{client.request_count || 0}</span>
+                                                                </div>
+                                                                <div
+                                                                    className="flex items-center gap-1.5 cursor-pointer hover:opacity-70 transition-opacity"
+                                                                    onClick={() => router.push(`/clients/${client.slug}?tab=Tasks`)}
+                                                                    title="Tasks"
+                                                                >
+                                                                    <CheckSquare size={13} className="text-amber-400" />
+                                                                    <span className="text-iron font-black text-xs">{client.task_count || 0}</span>
+                                                                </div>
                                                             </div>
                                                         </td>
 
-                                                        <td
-                                                            className="px-4 py-2.5 text-iron border-r border-shark/60 font-medium cursor-pointer hover:bg-white/5 transition-colors"
-                                                            onClick={(e) => {
-                                                                const target = e.target as HTMLElement;
-                                                                if (!target.closest('button')) {
-                                                                    e.currentTarget.querySelector('button')?.click();
-                                                                }
-                                                            }}
-                                                        >
-                                                            <div className="flex items-center justify-center gap-2 pointer-events-auto w-full">
-                                                                <CustomDropdown
-                                                                    value={client.status || 'Ongoing'}
-                                                                    onChange={(val) => handleStatusUpdate(client.id, val)}
-                                                                    options={[
-                                                                        { label: 'ONGOING', value: 'Ongoing', icon: <CheckCircle2 size={12} className="text-emerald-400" />, color: 'text-emerald-400' },
-                                                                        { label: 'LEADS', value: 'Leads', icon: <UsersIcon size={12} className="text-[#279da6]" />, color: 'text-[#279da6]' },
-                                                                        { label: 'CLOSED', value: 'Closed', icon: <XCircle size={12} className="text-rose-400" />, color: 'text-rose-400' },
-                                                                        { label: 'ARCHIVE', value: 'Archive', icon: <Archive size={12} className="text-[#F28C28]" />, color: 'text-[#F28C28]' },
-                                                                    ]}
-                                                                    variant="minimal"
-                                                                    className="w-auto"
-                                                                />
-                                                            </div>
+                                                        <td className="px-4 py-3 text-iron border-r border-shark/60 font-medium">
+                                                            <CustomDropdown
+                                                                value={client.status || 'Ongoing'}
+                                                                onChange={(val) => handleStatusUpdate(client.id, val)}
+                                                                options={[
+                                                                    { label: 'ONGOING', value: 'Ongoing', icon: <CheckCircle2 size={11} className="text-emerald-400" />, color: 'text-emerald-400' },
+                                                                    { label: 'LEADS', value: 'Leads', icon: <UsersIcon size={11} className="text-[#279da6]" />, color: 'text-[#279da6]' },
+                                                                    { label: 'CLOSED', value: 'Closed', icon: <XCircle size={11} className="text-rose-400" />, color: 'text-rose-400' },
+                                                                    { label: 'ARCHIVE', value: 'Archive', icon: <Archive size={11} className="text-[#F28C28]" />, color: 'text-[#F28C28]' },
+                                                                ]}
+                                                                variant="minimal"
+                                                                className="w-full scale-90"
+                                                            />
                                                         </td>
-                                                        <td className="px-4 py-2.5 border-r border-shark/60 text-storm-gray font-black whitespace-nowrap text-[12px] uppercase text-center">
+                                                        <td className="px-4 py-3 border-r border-shark/60 text-storm-gray font-black whitespace-nowrap text-[10px] uppercase text-center">
                                                             {client.lastLoginRaw ? (
                                                                 <div className="flex flex-col">
                                                                     <span className="text-iron font-black">{formatDate(client.lastLoginRaw)}</span>
-                                                                    <span className="opacity-50 font-bold">{formatTime(client.lastLoginRaw)}</span>
+                                                                    <span className="opacity-40 font-bold scale-90">{formatTime(client.lastLoginRaw)}</span>
                                                                 </div>
                                                             ) : 'NEVER'}
                                                         </td>
-                                                        <td className="px-4 py-2.5 border-r border-shark/60 text-storm-gray font-black whitespace-nowrap text-[12px] uppercase text-center">
+                                                        <td className="px-4 py-3 border-r border-shark/60 text-storm-gray font-black whitespace-nowrap text-[10px] uppercase text-center">
                                                             {client.createdAtRaw ? (
                                                                 <div className="flex flex-col">
                                                                     <span className="text-iron font-black">{formatDate(client.createdAtRaw)}</span>
-                                                                    <span className="opacity-50 font-bold">{formatTime(client.createdAtRaw)}</span>
+                                                                    <span className="opacity-40 font-bold scale-90">{formatTime(client.createdAtRaw)}</span>
                                                                 </div>
                                                             ) : (
                                                                 <span className="uppercase">{client.createdAt}</span>
                                                             )}
                                                         </td>
-                                                        <td className="px-3 py-2.5 relative text-center">
+                                                        <td className="px-3 py-3 relative text-center">
                                                             <div className="flex items-center justify-center gap-1">
                                                                 <button
                                                                     onClick={() => impersonate({
                                                                         id: client.profile_id || client.id,
                                                                         email: client.email,
                                                                         full_name: client.name,
-                                                                        role: 'client'
-                                                                    }, '/clients')}
-                                                                    className="p-1.5 rounded-md text-storm-gray hover:bg-shark hover:text-white transition-all cursor-pointer"
+                                                                        role: 'client',
+                                                                        organization: client.organization,
+                                                                        avatar_url: client.avatar_url
+                                                                    } as any, '/clients')}
+                                                                    className="p-1.5 rounded-lg text-storm-gray hover:bg-shark hover:text-[#279da6] transition-all cursor-pointer"
                                                                     title="Impersonate"
                                                                 >
                                                                     <UserCog size={16} />
                                                                 </button>
                                                                 <button
                                                                     onClick={() => handleEditClick(client)}
-                                                                    className="p-1.5 rounded-md text-storm-gray hover:bg-shark hover:text-white transition-all cursor-pointer"
+                                                                    className="p-1.5 rounded-lg text-storm-gray hover:bg-shark hover:text-white transition-all cursor-pointer"
                                                                     title="Edit Account"
                                                                 >
                                                                     <Edit2 size={16} />
                                                                 </button>
                                                             </div>
-
-
                                                         </td>
                                                     </tr>
                                                 ))

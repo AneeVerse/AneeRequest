@@ -19,18 +19,20 @@ import { useAuth } from '@/context/AuthContext';
 export default function DashboardPage() {
   const { isImpersonating } = useAuth();
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+  const [isMobileOpen, setIsMobileOpen] = useState(false);
   const [activeTab, setActiveTab] = useState('Overview');
 
   const overviewTabs = ['Overview', 'Analytics', 'Performance', 'Usage'];
 
   return (
     <div className={`flex h-screen bg-[#09090B] text-iron font-sans overflow-hidden transition-[padding,background-color] duration-500 ${isImpersonating ? 'p-1.5' : ''}`} style={isImpersonating ? { backgroundColor: '#0f2b1a' } : undefined}>
-      <Sidebar isCollapsed={isSidebarCollapsed} />
+      <Sidebar isCollapsed={isSidebarCollapsed} isMobileOpen={isMobileOpen} onMobileClose={() => setIsMobileOpen(false)} />
 
       <div className="flex-1 flex flex-col min-w-0 bg-[#09090B] relative">
-        <div className={`flex-1 flex flex-col min-w-0 bg-[#121214] rounded-t-2xl overflow-hidden border-t border-l border-r mt-6 mr-6 transition-[border-color,box-shadow] duration-500 ${isImpersonating ? 'border-[#22c55e]/60 shadow-[0_0_15px_rgba(34,197,94,0.15),0_0_40px_rgba(34,197,94,0.08),inset_0_0_20px_rgba(34,197,94,0.03)]' : 'border-shark'}`}>
+        <div className={`flex-1 flex flex-col min-w-0 bg-[#121214] rounded-t-2xl overflow-hidden border-t border-l border-r mt-6 mr-6 responsive-content-wrapper transition-[border-color,box-shadow] duration-500 ${isImpersonating ? 'border-[#22c55e]/60 shadow-[0_0_15px_rgba(34,197,94,0.15),0_0_40px_rgba(34,197,94,0.08),inset_0_0_20px_rgba(34,197,94,0.03)]' : 'border-shark'}`}>
           <Header
-            onToggleSidebar={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
+
+            onMobileMenuToggle={() => setIsMobileOpen(true)}
             label="Overview"
             labelIcon={<LayoutDashboard size={16} className="text-santas-gray" />}
             tabs={overviewTabs}
@@ -39,12 +41,12 @@ export default function DashboardPage() {
           />
 
           <main className="flex-1 overflow-y-auto custom-scrollbar">
-            <div className="px-6 pb-6 pt-2">
+            <div className="px-3 sm:px-6 pb-6 pt-2">
               {/* High-Fidelity Content Container */}
               <div className="bg-[#18181B] border border-shark rounded-2xl p-6 shadow-2xl space-y-8">
 
                 {/* Stats Grid */}
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6">
                   {[
                     { label: 'Total Revenue', value: '$45,231.89', trend: '+20.1%', icon: <Zap className="text-malibu" size={18} />, up: true },
                     { label: 'Active Clients', value: '+2,350', trend: '+180.1%', icon: <Users className="text-emerald-400" size={18} />, up: true },

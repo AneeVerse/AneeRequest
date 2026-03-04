@@ -1,6 +1,8 @@
-'use client';
+﻿'use client';
 
 import React, { useState } from 'react';
+import { createPortal } from 'react-dom';
+
 import {
     ChevronDown,
     Calendar as CalendarIcon,
@@ -18,14 +20,13 @@ import {
     X,
     Download,
     LayoutList,
-    Copy,
-    Check as CheckIcon
+    UserPlus
 } from 'lucide-react';
 import { RequestItem, Profile, TeamMember } from '@/lib/data/requests';
 import { formatDate, formatTime } from '@/lib/dateUtils';
 import { useRouter } from 'next/navigation';
+import Image from 'next/image';
 import CustomDropdown from '@/components/CustomDropdown';
-import CustomDatePicker from '@/components/CustomDatePicker';
 
 interface RequestsTableProps {
     requests?: RequestItem[];
@@ -44,6 +45,35 @@ export default function RequestsTable({
 }: RequestsTableProps) {
     const router = useRouter();
     const [activeFilterHeader, setActiveFilterHeader] = useState<string | null>(null);
+    const [filterCoords, setFilterCoords] = useState({ top: 0, left: 0, width: 0 });
+    const [mounted, setMounted] = useState(false);
+    const headerRefs = React.useRef<{ [key: string]: HTMLTableCellElement | null }>({});
+
+    React.useEffect(() => {
+        setMounted(true);
+    }, []);
+
+    const updateFilterPosition = (filterKey: string) => {
+        const el = headerRefs.current[filterKey];
+        if (el) {
+            const rect = el.getBoundingClientRect();
+            setFilterCoords({
+                top: rect.bottom + window.scrollY,
+                left: rect.left + window.scrollX,
+                width: rect.width
+            });
+        }
+    };
+
+    const toggleFilter = (filterKey: string) => {
+        if (activeFilterHeader === filterKey) {
+            setActiveFilterHeader(null);
+        } else {
+            updateFilterPosition(filterKey);
+            setActiveFilterHeader(filterKey);
+        }
+    };
+
     const [sortConfig, setSortConfig] = useState<{ key: string; direction: 'asc' | 'desc' | null }>({
         key: 'created_at',
         direction: 'desc'
@@ -56,26 +86,17 @@ export default function RequestsTable({
         priority: '',
         due_date: ''
     });
-    const [copiedId, setCopiedId] = useState<string | null>(null);
     const dateInputRefs = React.useRef<{ [key: string]: HTMLInputElement | null }>({});
 
-    const handleCopy = (e: React.MouseEvent, text: string, id: string) => {
-        e.stopPropagation();
-        navigator.clipboard.writeText(text);
-        setCopiedId(id);
-        setTimeout(() => setCopiedId(null), 2000);
-    };
-
     const handleUpdate = async (requestId: string, field: string, value: any) => {
-        const finalValue = (field === 'assigned_to' && value === '') ? null : value;
         if (onUpdateField) {
-            await onUpdateField(requestId, field, finalValue);
+            await onUpdateField(requestId, field, value);
         } else {
             try {
                 const response = await fetch(`/api/requests?id=${requestId}`, {
                     method: 'PATCH',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ [field]: finalValue })
+                    body: JSON.stringify({ [field]: value })
                 });
 
                 if (!response.ok) {
@@ -143,36 +164,143 @@ export default function RequestsTable({
         <div className="space-y-6">
 
             <div className="border border-shark/60 rounded-xl overflow-hidden bg-black/20">
-                <div className="overflow-x-auto custom-scrollbar">
-                    <table className="w-full text-left border-collapse table-fixed min-w-[1200px]">
+                {/* Mobile View: Stacked Cards */}
+                <div className="sm:hidden flex flex-col divide-y divide-shark/60 max-h-[70vh] overflow-y-auto custom-scrollbar">
+                    {sortedRequests.length === 0 ? (
+                        <div className="px-6 py-20 text-center text-storm-gray uppercase text-[10px] font-black tracking-widest opacity-40">
+                            No requests found for your criteria.
+                        </div>
+                    ) : (
+                        sortedRequests.map((item: RequestItem, index: number) => (
+                            <div key={item.id} className="p-4 bg-shark/5 flex flex-col gap-4">
+                                {/* Card Header: Index & Title */}
+                                <div className="flex items-start gap-3">
+                                    <div className="shrink-0 flex items-center justify-center w-8 h-8 rounded-lg bg-shark/40 text-[10px] font-black text-storm-gray border border-shark/60">
+                                        {(index + 1).toString().padStart(2, '0')}
+                                    </div>
+                                    <div
+                                        className="flex-1 cursor-pointer group"
+                                        onClick={() => router.push(`/requests/${item.slug || item.id}`)}
+                                    >
+                                        <h3 className="text-xs font-black text-iron uppercase leading-tight group-hover:text-[#279da6] transition-colors line-clamp-2">
+                                            {item.title}
+                                        </h3>
+                                        {showClientColumn && (
+                                            <div className="mt-1 flex items-center gap-1.5 overflow-hidden">
+                                                <span className="text-[9px] font-black text-storm-gray/40 uppercase tracking-widest shrink-0">ORG:</span>
+                                                <span className="text-[10px] font-bold text-cyan-400/80 truncate uppercase tracking-tight">
+                                                    {(item.client as any)?.organization || 'Individual'}
+                                                </span>
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+
+                                {/* Card Body: Status, Priority, Assignee */}
+                                <div className="grid grid-cols-2 gap-3">
+                                    <div className="space-y-1">
+                                        <label className="text-[9px] font-black text-storm-gray uppercase tracking-widest block opacity-50">Status</label>
+                                        <CustomDropdown
+                                            value={item.status}
+                                            onChange={(val) => handleUpdate(item.id, 'status', val)}
+                                            options={[
+                                                { label: 'TODO', value: 'Todo', icon: <Circle size={10} className="text-[#279da6]" />, color: 'text-[#279da6]' },
+                                                { label: 'IN PROGRESS', value: 'In Progress', icon: <Loader2 size={10} className="text-amber-500 animate-spin" />, color: 'text-amber-500' },
+                                                { label: 'REVIEW', value: 'Review', icon: <Eye size={10} className="text-blue-400" />, color: 'text-blue-400' },
+                                                { label: 'DONE', value: 'Done', icon: <Check size={10} className="text-emerald-500" />, color: 'text-emerald-500' },
+                                            ]}
+                                            variant="minimal"
+                                            className="w-full"
+                                        />
+                                    </div>
+                                    <div className="space-y-1">
+                                        <label className="text-[9px] font-black text-storm-gray uppercase tracking-widest block opacity-50">Priority</label>
+                                        <CustomDropdown
+                                            value={item.priority}
+                                            onChange={(val) => handleUpdate(item.id, 'priority', val)}
+                                            options={[
+                                                { label: 'LOW', value: 'Low', icon: <Flag size={10} className="text-storm-gray" />, color: 'text-storm-gray' },
+                                                { label: 'MEDIUM', value: 'Medium', icon: <Flag size={10} className="text-blue-400" />, color: 'text-blue-400' },
+                                                { label: 'HIGH', value: 'High', icon: <Flag size={10} className="text-amber-500" />, color: 'text-amber-500' },
+                                                { label: 'CRITICAL', value: 'Critical', icon: <Flag size={10} className="text-rose-500" />, color: 'text-rose-500' },
+                                            ]}
+                                            variant="minimal"
+                                            className="w-full"
+                                        />
+                                    </div>
+                                    <div className="space-y-1">
+                                        <label className="text-[9px] font-black text-storm-gray uppercase tracking-widest block opacity-50">Assigned To</label>
+                                        <CustomDropdown
+                                            value={item.assigned_to || ''}
+                                            onChange={(val) => handleUpdate(item.id, 'assigned_to', val)}
+                                            options={[
+                                                { label: 'UNASSIGNED', value: '', icon: <UserPlus size={10} className="text-storm-gray" /> },
+                                                ...teamMembers.map((m: any) => ({
+                                                    label: (m.full_name || (m as any).name)?.toUpperCase(),
+                                                    value: m.profile_id || m.id,
+                                                    icon: m.avatar_url ? (
+                                                        <div className="w-3.5 h-3.5 rounded-full overflow-hidden shrink-0 border border-shark/60">
+                                                            <img src={m.avatar_url} alt={m.full_name} className="w-full h-full object-cover" />
+                                                        </div>
+                                                    ) : <User size={10} className="text-[#279da6]" />
+                                                }))
+                                            ]}
+                                            variant="minimal"
+                                            className="w-full"
+                                        />
+                                    </div>
+                                    <div className="space-y-1">
+                                        <label className="text-[9px] font-black text-storm-gray uppercase tracking-widest block opacity-50">Due Date</label>
+                                        <div className="relative group/date">
+                                            <input
+                                                type="date"
+                                                value={item.due_date ? new Date(item.due_date).toISOString().split('T')[0] : ''}
+                                                onChange={(e) => handleUpdate(item.id, 'due_date', e.target.value)}
+                                                className="bg-transparent text-iron border border-shark/30 hover:border-[#279da6]/40 rounded-lg px-2 py-1.5 focus:outline-none cursor-pointer hover:text-white transition-all text-[10px] font-black uppercase w-full [color-scheme:dark]"
+                                            />
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        ))
+                    )}
+                </div>
+
+                {/* Desktop View: Standard Table */}
+                <div className="hidden sm:block overflow-x-auto custom-scrollbar">
+                    <table className="w-full text-left border-collapse">
                         <thead>
-                            <tr className="border-b border-shark text-storm-gray text-sm uppercase font-black tracking-widest bg-[#17171a]">
-                                <th className="px-5 py-3 w-12 border-r border-shark/60 text-center">#</th>
+                            <tr className="border-b border-shark text-storm-gray text-xs uppercase font-black tracking-widest bg-[#17171a]">
+                                <th className="px-5 py-3 w-10 sm:w-16 border-r border-shark/60 text-center font-black text-storm-gray">#</th>
                                 {[
-                                    { label: 'REQUEST', key: 'title', filter: 'title', width: 'w-[24%]' },
-                                    ...(showClientColumn ? [{ label: 'ORGANIZATION', key: 'client', filter: 'client', width: 'w-[15%] min-w-[120px]' }] : []),
-                                    { label: 'Status', key: 'status', filter: 'status', width: 'w-[10%]' },
-                                    { label: 'Assignee', key: 'assignee', filter: 'assigned_to', width: 'w-[12%]' },
-                                    { label: 'Priority', key: 'priority', filter: 'priority', width: 'w-[10%]' },
-                                    { label: 'Due Date', key: 'due_date', filter: 'due_date', width: 'w-[10%]' },
-                                    { label: 'Last Updated', key: 'updated_at', filter: 'updated_at', width: 'w-[7%]' },
-                                    { label: 'Created', key: 'created_at', filter: 'created_at', width: 'w-[7%]' }
+                                    { label: 'Title', key: 'title', filter: 'title', width: 'min-w-[240px]' },
+                                    ...(showClientColumn ? [{ label: 'Organization', key: 'organization', filter: 'client', width: 'min-w-[200px]' }] : []),
+                                    { label: 'Status', key: 'status', filter: 'status', width: 'min-w-[140px]' },
+                                    { label: 'Assignee', key: 'assigned_to', filter: 'assigned_to', width: 'min-w-[160px]' },
+                                    { label: 'Priority', key: 'priority', filter: 'priority', width: 'min-w-[120px]' },
+                                    { label: 'Due Date', key: 'due_date', filter: 'due_date', width: 'min-w-[120px]' },
+                                    { label: 'Updated', key: 'updated_at', filter: 'updated_at', width: 'min-w-[140px]' },
+                                    { label: 'Created', key: 'created_at', filter: 'created_at', width: 'min-w-[140px]' }
                                 ].map((header, idx) => (
-                                    <th key={header.label} className={`px-3 py-3 border-r border-shark/60 group/header relative header-filter-container ${header.width || ''}`}>
+                                    <th
+                                        key={header.label}
+                                        ref={el => { headerRefs.current[header.filter] = el; }}
+                                        className={`px-3 py-3 border-r border-shark/60 group/header relative header-filter-container ${header.width || ''}`}
+                                    >
                                         <div className={`flex items-center gap-2 ${(header.key === 'updated_at' || header.key === 'created_at') ? 'justify-center' : 'justify-between'}`}>
-                                            {header.filter === 'title' || header.filter === 'client' ? (
+                                            {header.filter === 'title' ? (
                                                 <div className="relative flex-1 group -ml-1">
-                                                    <Search size={16} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-storm-gray group-focus-within:text-[#279da6] transition-colors" />
+                                                    <Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-storm-gray group-focus-within:text-[#279da6] transition-colors" />
                                                     <input
                                                         type="text"
-                                                        value={filters[header.filter as keyof typeof filters]}
-                                                        onChange={(e) => setFilters(f => ({ ...f, [header.filter]: e.target.value }))}
-                                                        placeholder={header.label}
-                                                        className="w-full bg-transparent border-none py-1.5 pl-8 pr-6 text-sm font-black uppercase tracking-widest text-iron placeholder:text-storm-gray focus:outline-none transition-all font-bold"
+                                                        value={filters.title}
+                                                        onChange={(e) => setFilters(f => ({ ...f, title: e.target.value }))}
+                                                        placeholder="TITLE"
+                                                        className="w-full bg-transparent border-none py-1.5 pl-8 pr-6 text-xs font-black uppercase tracking-widest text-iron placeholder:text-storm-gray focus:outline-none transition-all font-bold"
                                                     />
-                                                    {filters[header.filter as keyof typeof filters] && (
+                                                    {filters.title && (
                                                         <button
-                                                            onClick={() => setFilters(f => ({ ...f, [header.filter]: '' }))}
+                                                            onClick={() => setFilters(f => ({ ...f, title: '' }))}
                                                             className="absolute right-2 top-1/2 -translate-y-1/2 text-storm-gray hover:text-white"
                                                         >
                                                             <X size={10} />
@@ -181,9 +309,9 @@ export default function RequestsTable({
                                                 </div>
                                             ) : (
                                                 <>
-                                                    <span className="cursor-default text-sm">{header.label}</span>
+                                                    <span className="cursor-default text-[10px] font-black">{header.label}</span>
                                                     <button
-                                                        onClick={() => setActiveFilterHeader(activeFilterHeader === header.filter ? null : header.filter)}
+                                                        onClick={() => toggleFilter(header.filter)}
                                                         className={`p-1 rounded hover:bg-shark/40 transition-colors ${((filters as any)[header.filter] && !['updated_at', 'created_at'].includes(header.filter)) || sortConfig.key === header.key ? 'text-[#279da6]' : 'text-storm-gray'}`}
                                                     >
                                                         <Filter size={10} />
@@ -192,48 +320,48 @@ export default function RequestsTable({
                                             )}
                                         </div>
 
-                                        {activeFilterHeader === header.filter && header.filter !== 'title' && (
-                                            <div className={`absolute top-full ${idx > 4 ? 'right-0' : 'left-0'} mt-1 w-44 bg-[#121214] border border-shark rounded-lg shadow-2xl p-2 z-[60] normal-case tracking-normal`}>
+                                        {activeFilterHeader === header.filter && header.filter !== 'title' && mounted && typeof document !== 'undefined' && createPortal(
+                                            <div
+                                                style={{
+                                                    position: 'absolute',
+                                                    top: `${filterCoords.top + 4}px`,
+                                                    left: idx > 4 ? `${filterCoords.left + filterCoords.width - 192}px` : `${filterCoords.left}px`,
+                                                }}
+                                                className={`w-48 bg-[#121214] border border-shark rounded-xl shadow-2xl p-2 z-[9999] normal-case tracking-normal animate-zoom-in`}
+                                                onClick={(e) => e.stopPropagation()}
+                                            >
                                                 <div className="mb-2 border-b border-shark/40 pb-2">
-                                                    <div className="text-[10px] font-bold text-storm-gray uppercase mb-1 px-1">Sort</div>
+                                                    <div className="text-[9px] font-black text-storm-gray uppercase mb-1 px-1 tracking-widest">Sort</div>
                                                     <button
                                                         onClick={() => { setSortConfig({ key: header.key, direction: 'asc' }); setActiveFilterHeader(null); }}
-                                                        className={`flex items-center gap-2 w-full px-2 py-1.5 rounded-md text-[11px] hover:bg-shark/40 transition-colors ${sortConfig.key === header.key && sortConfig.direction === 'asc' ? 'text-[#279da6] bg-shark/20' : 'text-iron'}`}
+                                                        className={`flex items-center gap-2 w-full px-2 py-1.5 rounded-lg text-[10px] uppercase font-black tracking-wider hover:bg-[#279da6]/10 hover:text-white transition-all ${sortConfig.key === header.key && sortConfig.direction === 'asc' ? 'text-[#279da6] bg-[#279da6]/5' : 'text-storm-gray'}`}
                                                     >
                                                         <SortAsc size={12} />
-                                                        <span>Sort A-Z</span>
+                                                        <span>Ascending</span>
                                                     </button>
                                                     <button
                                                         onClick={() => { setSortConfig({ key: header.key, direction: 'desc' }); setActiveFilterHeader(null); }}
-                                                        className={`flex items-center gap-2 w-full px-2 py-1.5 rounded-md text-[11px] hover:bg-shark/40 transition-colors ${sortConfig.key === header.key && sortConfig.direction === 'desc' ? 'text-[#279da6] bg-shark/20' : 'text-iron'}`}
+                                                        className={`flex items-center gap-2 w-full px-2 py-1.5 rounded-lg text-[10px] uppercase font-black tracking-wider hover:bg-[#279da6]/10 hover:text-white transition-all ${sortConfig.key === header.key && sortConfig.direction === 'desc' ? 'text-[#279da6] bg-[#279da6]/5' : 'text-storm-gray'}`}
                                                     >
                                                         <SortDesc size={12} />
-                                                        <span>Sort Z-A</span>
+                                                        <span>Descending</span>
                                                     </button>
                                                 </div>
 
                                                 {['client', 'status', 'assigned_to', 'priority', 'due_date'].includes(header.filter) && (
                                                     <div>
-                                                        <div className="text-[10px] font-bold text-storm-gray uppercase mb-1 px-1">Filter</div>
+                                                        <div className="text-[9px] font-black text-storm-gray uppercase mb-1 px-1 tracking-widest">Filter</div>
                                                         {header.filter === 'client' && (
-                                                            <div className="relative">
-                                                                <Search size={10} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-storm-gray" />
+                                                            <div className="relative px-1 pt-1 pb-2">
+                                                                <Search size={10} className="absolute left-3 top-1/2 -translate-y-1/2 text-storm-gray" />
                                                                 <input
                                                                     type="text"
                                                                     value={(filters as any)[header.filter]}
                                                                     onChange={(e) => setFilters(f => ({ ...f, [header.filter]: e.target.value }))}
-                                                                    className="w-full bg-[#09090B] border border-shark/50 rounded-md py-1.5 px-8 text-[10px] text-iron focus:outline-none focus:border-[#279da6]/40 transition-all font-bold"
-                                                                    placeholder={`Search ${header.label.toLowerCase()}...`}
+                                                                    className="w-full bg-[#09090B] border border-shark/50 rounded-lg py-1.5 px-8 text-[10px] text-iron focus:outline-none focus:border-[#279da6]/40 transition-all font-bold"
+                                                                    placeholder={`Search...`}
                                                                     autoFocus
                                                                 />
-                                                                {(filters as any)[header.filter] && (
-                                                                    <button
-                                                                        onClick={() => setFilters(f => ({ ...f, [header.filter]: '' }))}
-                                                                        className="absolute right-2 top-1/2 -translate-y-1/2 text-storm-gray hover:text-white"
-                                                                    >
-                                                                        <X size={10} />
-                                                                    </button>
-                                                                )}
                                                             </div>
                                                         )}
                                                         {header.filter === 'status' && (
@@ -242,11 +370,13 @@ export default function RequestsTable({
                                                                 onChange={(val) => { setFilters(f => ({ ...f, status: val })); setActiveFilterHeader(null); }}
                                                                 options={[
                                                                     { label: 'ALL STATUS', value: '' },
-                                                                    { label: 'TODO', value: 'Todo', icon: <Circle size={12} className="text-[#279da6]" />, color: 'text-[#279da6]' },
-                                                                    { label: 'IN PROGRESS', value: 'In Progress', icon: <Loader2 size={12} className="text-amber-500 animate-spin" />, color: 'text-amber-500' },
-                                                                    { label: 'REVIEW', value: 'Review', icon: <Eye size={12} className="text-blue-400" />, color: 'text-blue-400' },
-                                                                    { label: 'DONE', value: 'Done', icon: <Check size={12} className="text-emerald-500" />, color: 'text-emerald-500' },
+                                                                    { label: 'TODO', value: 'Todo', icon: <Circle size={10} className="text-[#279da6]" />, color: 'text-[#279da6]' },
+                                                                    { label: 'IN PROGRESS', value: 'In Progress', icon: <Loader2 size={10} className="text-amber-500 animate-spin" />, color: 'text-amber-500' },
+                                                                    { label: 'REVIEW', value: 'Review', icon: <Eye size={10} className="text-blue-400" />, color: 'text-blue-400' },
+                                                                    { label: 'DONE', value: 'Done', icon: <Check size={10} className="text-emerald-500" />, color: 'text-emerald-500' },
                                                                 ]}
+                                                                variant="minimal"
+                                                                className="w-full"
                                                             />
                                                         )}
                                                         {header.filter === 'assigned_to' && (
@@ -261,6 +391,8 @@ export default function RequestsTable({
                                                                         icon: <User size={12} className="text-[#279da6]" />
                                                                     }))
                                                                 ]}
+                                                                variant="minimal"
+                                                                className="w-full"
                                                             />
                                                         )}
                                                         {header.filter === 'priority' && (
@@ -269,24 +401,29 @@ export default function RequestsTable({
                                                                 onChange={(val) => { setFilters(f => ({ ...f, priority: val })); setActiveFilterHeader(null); }}
                                                                 options={[
                                                                     { label: 'ALL PRIORITY', value: '' },
-                                                                    { label: 'LOW', value: 'Low', icon: <Flag size={12} className="text-storm-gray" />, color: 'text-storm-gray' },
-                                                                    { label: 'MEDIUM', value: 'Medium', icon: <Flag size={12} className="text-blue-400" />, color: 'text-blue-400' },
-                                                                    { label: 'HIGH', value: 'High', icon: <Flag size={12} className="text-amber-500" />, color: 'text-amber-500' },
-                                                                    { label: 'CRITICAL', value: 'Critical', icon: <Flag size={12} className="text-rose-500" />, color: 'text-rose-500' },
+                                                                    { label: 'LOW', value: 'Low', icon: <Flag size={10} className="text-storm-gray" />, color: 'text-storm-gray' },
+                                                                    { label: 'MEDIUM', value: 'Medium', icon: <Flag size={10} className="text-blue-400" />, color: 'text-blue-400' },
+                                                                    { label: 'HIGH', value: 'High', icon: <Flag size={10} className="text-amber-500" />, color: 'text-amber-500' },
+                                                                    { label: 'CRITICAL', value: 'Critical', icon: <Flag size={10} className="text-rose-500" />, color: 'text-rose-500' },
                                                                 ]}
+                                                                variant="minimal"
+                                                                className="w-full"
                                                             />
                                                         )}
                                                         {header.filter === 'due_date' && (
-                                                            <input
-                                                                type="date"
-                                                                value={filters.due_date}
-                                                                onChange={(e) => { setFilters(f => ({ ...f, due_date: e.target.value })); setActiveFilterHeader(null); }}
-                                                                className="w-full bg-[#09090B] border border-shark/50 rounded-md py-1 px-2 text-[10px] text-iron focus:outline-none [color-scheme:dark]"
-                                                            />
+                                                            <div className="px-1">
+                                                                <input
+                                                                    type="date"
+                                                                    value={filters.due_date}
+                                                                    onChange={(e) => { setFilters(f => ({ ...f, due_date: e.target.value })); setActiveFilterHeader(null); }}
+                                                                    className="w-full bg-[#09090B] border border-shark/50 rounded-lg py-1.5 px-2 text-[10px] font-black text-iron focus:outline-none focus:border-[#279da6]/40 [color-scheme:dark]"
+                                                                />
+                                                            </div>
                                                         )}
                                                     </div>
                                                 )}
-                                            </div>
+                                            </div>,
+                                            document.body
                                         )}
                                     </th>
                                 ))}
@@ -295,128 +432,125 @@ export default function RequestsTable({
                         <tbody className="divide-y divide-shark/60">
                             {sortedRequests.length === 0 ? (
                                 <tr>
-                                    <td colSpan={showClientColumn ? 9 : 8} className="px-6 py-20 text-center text-storm-gray uppercase text-[10px] font-black tracking-widest opacity-40">
+                                    <td colSpan={10} className="px-6 py-20 text-center text-storm-gray uppercase text-[10px] font-black tracking-widest opacity-40">
                                         No requests found for your criteria.
                                     </td>
                                 </tr>
                             ) : (
-                                sortedRequests.map((item: RequestItem, index: number) => (
+                                sortedRequests.map((item, index) => (
                                     <tr key={item.id} className="hover:bg-shark/10 transition-colors group text-sm">
-                                        <td className="px-5 py-2.5 border-r border-shark/60 text-center font-black text-storm-gray">
+                                        <td className="px-5 py-3 border-r border-shark/60 text-center font-black text-storm-gray">
                                             {(index + 1).toString().padStart(2, '0')}
                                         </td>
                                         <td
-                                            className="px-6 py-2.5 font-black text-iron border-r border-shark/60 hover:text-[#279da6] cursor-pointer transition-colors hover:bg-white/5"
+                                            className="px-6 py-3 font-black text-iron border-r border-shark/60 group-hover:text-[#279da6] transition-colors cursor-pointer hover:bg-white/5"
                                             onClick={() => router.push(`/requests/${item.slug || item.id}`)}
                                         >
-                                            <div className="flex flex-col uppercase tracking-tight font-black">
-                                                <span className="line-clamp-1">{item.title}</span>
+                                            <div className="line-clamp-2 leading-tight uppercase tracking-tight font-black text-xs">
+                                                {item.title}
                                             </div>
                                         </td>
                                         {showClientColumn && (
-                                            <td
-                                                className="pl-3 pr-4 py-2.5 border-r border-shark/60 hover:bg-white/5 transition-colors group/cell cursor-pointer"
-                                                onClick={() => {
-                                                    if (item.client?.slug) {
-                                                        router.push(`/clients/${item.client.slug}`);
-                                                    }
-                                                }}
-                                            >
+                                            <td className="px-6 py-3 border-r border-shark/60 hover:bg-white/5 transition-colors">
                                                 <div className="flex items-center gap-3">
-                                                    <div className="w-[46px] h-[46px] rounded-full bg-shark/80 border border-white/5 overflow-hidden flex items-center justify-center text-[11px] text-white font-black bg-gradient-to-br from-[#279da6]/20 to-transparent group-hover/cell:scale-110 transition-transform shrink-0">
-                                                        {item.client?.avatar_url ? (
-                                                            <img src={item.client.avatar_url} alt={item.client.organization || item.client.full_name} className="w-full h-full object-cover" />
+                                                    <div className="w-6 h-6 rounded flex items-center justify-center bg-shark/40 border border-shark/60 text-[10px] font-black text-[#279da6] shrink-0 overflow-hidden">
+                                                        {(item.client as any)?.avatar_url ? (
+                                                            <img
+                                                                src={(item.client as any).avatar_url}
+                                                                alt={(item.client as any).organization || item.client?.full_name || 'Client'}
+                                                                className="w-full h-full object-cover"
+                                                                onError={(e) => {
+                                                                    (e.target as any).style.display = 'none';
+                                                                    (e.target as any).parentElement.innerHTML = `<span>${(item.client as any)?.organization?.[0] || item.client?.full_name?.[0] || 'C'}</span>`;
+                                                                }}
+                                                            />
                                                         ) : (
-                                                            (item.client?.organization || item.client?.full_name || 'U').split(' ').map((n: string) => n[0]).join('').slice(0, 2)
+                                                            <span>{(item.client as any)?.organization?.[0] || item.client?.full_name?.[0] || 'C'}</span>
                                                         )}
                                                     </div>
                                                     <div className="flex flex-col min-w-0">
-                                                        <span className="text-sm text-iron font-black group-hover/cell:text-[#279da6] transition-colors uppercase tracking-tight truncate block">
-                                                            {item.client?.organization || item.client?.full_name || 'UNKNOWN'}
+                                                        <span className="font-black text-iron truncate max-w-[140px] uppercase tracking-tighter leading-tight text-[11px] group-hover:text-[#279da6] transition-colors">
+                                                            {(item.client?.organization && item.client.organization.toLowerCase() !== 'individual')
+                                                                ? item.client.organization
+                                                                : item.client?.full_name}
                                                         </span>
-                                                        {item.client?.organization && (
-                                                            <span className="text-sm text-storm-gray uppercase font-black tracking-tighter truncate block opacity-60">
-                                                                {item.client.full_name}
-                                                            </span>
-                                                        )}
+                                                        <span className="text-[9px] text-storm-gray font-bold truncate tracking-widest mt-0.5 opacity-40 uppercase">
+                                                            {(item.client?.organization && item.client.organization.toLowerCase() !== 'individual')
+                                                                ? item.client?.full_name
+                                                                : 'Individual Client'}
+                                                        </span>
                                                     </div>
-                                                    <button
-                                                        onClick={(e) => handleCopy(e, item.client?.organization || item.client?.full_name || '', item.id)}
-                                                        className="p-1 rounded-md text-storm-gray hover:text-[#279da6] hover:bg-[#279da6]/10 transition-all opacity-0 group-hover/cell:opacity-100 focus:opacity-100 ml-auto shrink-0"
-                                                        title="Copy organization name"
-                                                    >
-                                                        {copiedId === item.id ? <CheckIcon size={14} className="text-emerald-500" /> : <Copy size={14} />}
-                                                    </button>
                                                 </div>
                                             </td>
                                         )}
-                                        <td className="px-4 py-2.5 border-r border-shark/60 text-storm-gray font-black whitespace-nowrap text-[12px] uppercase text-center hover:bg-white/5 transition-colors leading-tight">
+                                        <td className="px-3 py-3 border-r border-shark/60 hover:bg-white/5 transition-colors">
                                             <CustomDropdown
                                                 value={item.status}
                                                 onChange={(val) => handleUpdate(item.id, 'status', val)}
-                                                variant="minimal"
-                                                className="w-full"
                                                 options={[
-                                                    { label: 'TODO', value: 'Todo', icon: <Circle size={12} className="text-[#279da6]" />, color: 'text-[#279da6]' },
-                                                    { label: 'IN PROGRESS', value: 'In Progress', icon: <Loader2 size={12} className="text-amber-500 animate-spin" />, color: 'text-amber-500' },
-                                                    { label: 'REVIEW', value: 'Review', icon: <Eye size={12} className="text-blue-400" />, color: 'text-blue-400' },
-                                                    { label: 'DONE', value: 'Done', icon: <Check size={12} className="text-emerald-500" />, color: 'text-emerald-500' },
+                                                    { label: 'TODO', value: 'Todo', icon: <Circle size={10} className="text-[#279da6]" />, color: 'text-[#279da6]' },
+                                                    { label: 'IN PROGRESS', value: 'In Progress', icon: <Loader2 size={10} className="text-amber-500 animate-spin" />, color: 'text-amber-500' },
+                                                    { label: 'REVIEW', value: 'Review', icon: <Eye size={10} className="text-blue-400" />, color: 'text-blue-400' },
+                                                    { label: 'DONE', value: 'Done', icon: <Check size={10} className="text-emerald-500" />, color: 'text-emerald-500' },
                                                 ]}
+                                                variant="minimal"
+                                                className="w-full scale-90"
                                             />
                                         </td>
-                                        <td className="px-3 py-2.5 relative text-center border-r border-shark/60 hover:bg-white/5 transition-colors">
-                                            <div className="flex items-center gap-2">
-                                                <CustomDropdown
-                                                    value={item.assigned_to || ''}
-                                                    onChange={(val) => handleUpdate(item.id, 'assigned_to', val)}
-                                                    variant="minimal"
-                                                    className="w-full"
-                                                    placeholder="UNASSIGNED"
-                                                    options={[
-                                                        { label: 'UNASSIGNED', value: '' },
-                                                        ...teamMembers.filter((tm: any) => tm.profile_id || tm.id).map((tm: any) => ({
-                                                            label: (tm.name || tm.full_name)?.toUpperCase(),
-                                                            value: tm.profile_id || tm.id,
-                                                            icon: <User size={12} className="text-[#279da6]" />
-                                                        }))
-                                                    ]}
-                                                />
-                                            </div>
+                                        <td className="px-3 py-3 text-santas-gray border-r border-shark/60 whitespace-nowrap hover:bg-white/5 transition-colors">
+                                            <CustomDropdown
+                                                value={item.assigned_to || ''}
+                                                onChange={(val) => handleUpdate(item.id, 'assigned_to', val)}
+                                                options={[
+                                                    { label: 'UNASSIGNED', value: '', icon: <UserPlus size={10} className="text-storm-gray" /> },
+                                                    ...teamMembers.map((m: any) => ({
+                                                        label: (m.full_name || (m as any).name)?.toUpperCase(),
+                                                        value: m.profile_id || m.id,
+                                                        icon: m.avatar_url ? (
+                                                            <div className="w-3.5 h-3.5 rounded-full overflow-hidden shrink-0 border border-shark/60">
+                                                                <img src={m.avatar_url} alt={m.full_name} className="w-full h-full object-cover" />
+                                                            </div>
+                                                        ) : <User size={10} className="text-[#279da6]" />
+                                                    }))
+                                                ]}
+                                                variant="minimal"
+                                                className="w-full scale-90"
+                                            />
                                         </td>
-                                        <td className="px-4 py-2.5 border-r border-shark/60 font-black hover:bg-white/5 transition-colors uppercase tracking-tight">
+                                        <td className="px-3 py-3 border-r border-shark/60 text-storm-gray font-black whitespace-nowrap text-[11px] uppercase text-center hover:bg-white/5 transition-colors leading-tight">
                                             <CustomDropdown
                                                 value={item.priority}
                                                 onChange={(val) => handleUpdate(item.id, 'priority', val)}
-                                                variant="minimal"
-                                                className="w-full"
                                                 options={[
-                                                    { label: 'LOW', value: 'Low', icon: <Flag size={12} className="text-storm-gray" />, color: 'text-storm-gray' },
-                                                    { label: 'MEDIUM', value: 'Medium', icon: <Flag size={12} className="text-blue-400" />, color: 'text-blue-400' },
-                                                    { label: 'HIGH', value: 'High', icon: <Flag size={12} className="text-amber-500" />, color: 'text-amber-500' },
-                                                    { label: 'CRITICAL', value: 'Critical', icon: <Flag size={12} className="text-rose-500" />, color: 'text-rose-500' },
+                                                    { label: 'LOW', value: 'Low', icon: <Flag size={10} className="text-storm-gray" />, color: 'text-storm-gray' },
+                                                    { label: 'MEDIUM', value: 'Medium', icon: <Flag size={10} className="text-blue-400" />, color: 'text-blue-400' },
+                                                    { label: 'HIGH', value: 'High', icon: <Flag size={10} className="text-amber-500" />, color: 'text-amber-500' },
+                                                    { label: 'CRITICAL', value: 'Critical', icon: <Flag size={10} className="text-rose-500" />, color: 'text-rose-500' },
                                                 ]}
-                                            />
-                                        </td>
-                                        <td className="px-6 py-2.5 text-santas-gray border-r border-shark/60 whitespace-nowrap hover:bg-white/5 transition-colors uppercase">
-                                            <CustomDatePicker
-                                                value={item.due_date || undefined}
-                                                onChange={(val) => handleUpdate(item.id, 'due_date', val)}
                                                 variant="minimal"
-                                                className="w-full text-center"
+                                                className="w-full scale-90"
                                             />
                                         </td>
-                                        <td className="px-6 py-2.5 text-storm-gray border-r border-shark/60 whitespace-nowrap text-xs text-center uppercase">
-                                            {item.updated_at ? (
-                                                <div className="flex flex-col">
-                                                    <span className="text-iron font-black">{formatDate(item.updated_at)}</span>
-                                                    <span className="opacity-50 font-bold">{formatTime(item.updated_at)}</span>
-                                                </div>
-                                            ) : '-'}
+                                        <td className="px-5 py-3 text-storm-gray border-r border-shark/60 whitespace-nowrap hover:bg-white/5 transition-colors">
+                                            <div className="relative group/date">
+                                                <input
+                                                    type="date"
+                                                    value={item.due_date ? new Date(item.due_date).toISOString().split('T')[0] : ''}
+                                                    onChange={(e) => handleUpdate(item.id, 'due_date', e.target.value)}
+                                                    className="bg-transparent text-iron border border-transparent hover:border-shark/40 rounded px-1.5 py-1 focus:outline-none cursor-pointer hover:text-white transition-all text-[11px] font-black uppercase w-full [color-scheme:dark]"
+                                                />
+                                            </div>
                                         </td>
-                                        <td className="px-6 py-2.5 text-storm-gray whitespace-nowrap text-xs text-center uppercase">
+                                        <td className="px-5 py-3 text-storm-gray border-r border-shark/60 whitespace-nowrap text-[10px] text-center uppercase border-shark/60">
+                                            <div className="flex flex-col">
+                                                <span className="text-iron font-black">{formatDate(item.updated_at)}</span>
+                                                <span className="opacity-40 font-bold tracking-tighter scale-90">{formatTime(item.updated_at)}</span>
+                                            </div>
+                                        </td>
+                                        <td className="px-5 py-3 text-storm-gray whitespace-nowrap text-[10px] text-center uppercase">
                                             <div className="flex flex-col">
                                                 <span className="text-iron font-black">{formatDate(item.created_at)}</span>
-                                                <span className="opacity-50 font-bold">{formatTime(item.created_at)}</span>
+                                                <span className="opacity-40 font-bold tracking-tighter scale-90">{formatTime(item.created_at)}</span>
                                             </div>
                                         </td>
                                     </tr>

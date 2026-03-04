@@ -151,6 +151,8 @@ export default function RequestDetailsPage() {
     const { profile, viewAsProfile, isImpersonating } = useAuth();
     const displayProfile = viewAsProfile || profile;
     const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+    const [isMobileOpen, setIsMobileOpen] = useState(false);
+    const [isMobileSummaryOpen, setIsMobileSummaryOpen] = useState(false);
     const [request, setRequest] = useState<RequestDetails | null>(null);
     const initialTab = (searchParams.get('tab') as 'chat' | 'tasks' | 'files') || 'chat';
     const [activeTab, setActiveTabInternal] = useState<'chat' | 'tasks' | 'files'>(initialTab);
@@ -794,15 +796,16 @@ export default function RequestDetailsPage() {
     return (
         <>
             <div className={`flex h-screen bg-[#09090B] text-iron font-sans overflow-hidden transition-all duration-500 ${isImpersonating ? 'p-1.5' : ''}`} style={isImpersonating ? { backgroundColor: '#0f2b1a' } : undefined}>
-                <Sidebar isCollapsed={isSidebarCollapsed} />
+                <Sidebar isCollapsed={isSidebarCollapsed} isMobileOpen={isMobileOpen} onMobileClose={() => setIsMobileOpen(false)} />
 
                 <div className="flex-1 flex flex-col min-w-0 bg-[#09090B] relative">
-                    <div className={`flex-1 flex flex-col min-w-0 bg-[#121214] rounded-t-2xl overflow-hidden border-t border-l border-r mt-6 mr-6 transition-all duration-500 ${isImpersonating ? 'border-[#22c55e]/60 shadow-[0_0_15px_rgba(34,197,94,0.15),0_0_40px_rgba(34,197,94,0.08),inset_0_0_20px_rgba(34,197,94,0.03)]' : 'border-shark'}`}>
+                    <div className={`flex-1 flex flex-col min-w-0 bg-[#121214] rounded-t-2xl overflow-hidden border-t border-l border-r mt-6 mr-6 responsive-content-wrapper transition-all duration-500 ${isImpersonating ? 'border-[#22c55e]/60 shadow-[0_0_15px_rgba(34,197,94,0.15),0_0_40px_rgba(34,197,94,0.08),inset_0_0_20px_rgba(34,197,94,0.03)]' : 'border-shark'}`}>
 
                         {/* Header */}
                         <div className="border-b border-shark">
                             <Header
-                                onToggleSidebar={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
+
+                                onMobileMenuToggle={() => setIsMobileOpen(true)}
                                 label={request.title || 'Request Details'}
                                 labelIcon={
                                     <div className="flex items-center gap-2">
@@ -1383,7 +1386,7 @@ export default function RequestDetailsPage() {
 
                             {/* Right Sidebar - Summary */}
                             {activeTab !== 'tasks' && (
-                                <div className="w-[340px] border-l border-shark bg-[#121214] flex flex-col p-6 overflow-y-auto custom-scrollbar">
+                                <div className="hidden lg:flex w-[340px] border-l border-shark bg-[#121214] flex-col p-6 overflow-y-auto custom-scrollbar">
                                     <h3 className="text-lg font-bold text-white mb-8">Summary</h3>
 
                                     <div className="space-y-8">

@@ -93,6 +93,8 @@ export default function TaskDetailsPage() {
     const { profile, viewAsProfile, isImpersonating } = useAuth();
     const displayProfile = viewAsProfile || profile;
     const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+    const [isMobileOpen, setIsMobileOpen] = useState(false);
+    const [isMobileSummaryOpen, setIsMobileSummaryOpen] = useState(false);
     const [task, setTask] = useState<TaskDetails | null>(null);
     const [messages, setMessages] = useState<Message[]>([]);
     const [newMessage, setNewMessage] = useState('');
@@ -399,17 +401,24 @@ export default function TaskDetailsPage() {
     return (
         <>
             <div className={`flex h-screen bg-[#09090B] text-iron font-sans overflow-hidden transition-all duration-500 ${isImpersonating ? 'p-1.5' : ''}`} style={isImpersonating ? { backgroundColor: '#0f2b1a' } : undefined}>
-                <Sidebar isCollapsed={isSidebarCollapsed} />
+                <Sidebar isCollapsed={isSidebarCollapsed} isMobileOpen={isMobileOpen} onMobileClose={() => setIsMobileOpen(false)} />
 
                 <div className="flex-1 flex flex-col min-w-0 bg-[#09090B] relative">
-                    <div className={`flex-1 flex flex-col min-w-0 bg-[#121214] rounded-t-2xl overflow-hidden border-t border-l border-r mt-6 mr-6 transition-all duration-500 ${isImpersonating ? 'border-[#22c55e]/60 shadow-[0_0_15px_rgba(34,197,94,0.15),0_0_40px_rgba(34,197,94,0.08),inset_0_0_20px_rgba(34,197,94,0.03)]' : 'border-shark'}`}>
+                    <div className={`flex-1 flex flex-col min-w-0 bg-[#121214] rounded-t-2xl overflow-hidden border-t border-l border-r mt-6 mr-6 responsive-content-wrapper transition-all duration-500 ${isImpersonating ? 'border-[#22c55e]/60 shadow-[0_0_15px_rgba(34,197,94,0.15),0_0_40px_rgba(34,197,94,0.08),inset_0_0_20px_rgba(34,197,94,0.03)]' : 'border-shark'}`}>
 
                         {/* Header */}
-                        <div className="h-16 border-b border-shark flex items-center justify-between px-6 bg-shark/5">
-                            <div className="flex items-center gap-4">
+                        <div className="h-14 lg:h-16 border-b border-shark flex items-center justify-between px-3 sm:px-6 bg-shark/5">
+                            <div className="flex items-center gap-2 lg:gap-4">
+                                {/* Mobile hamburger */}
+                                <button
+                                    onClick={() => setIsMobileOpen(true)}
+                                    className="p-2 hover:bg-shark rounded-lg text-santas-gray hover:text-white transition-all lg:hidden"
+                                >
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="4" x2="20" y1="12" y2="12" /><line x1="4" x2="20" y1="6" y2="6" /><line x1="4" x2="20" y1="18" y2="18" /></svg>
+                                </button>
                                 <button
                                     onClick={() => router.back()}
-                                    className="p-2 hover:bg-shark rounded-lg text-santas-gray hover:text-white transition-all"
+                                    className="p-2 hover:bg-shark rounded-lg text-santas-gray hover:text-white transition-all hidden lg:block"
                                 >
                                     <ChevronLeft size={20} />
                                 </button>
@@ -653,7 +662,7 @@ export default function TaskDetailsPage() {
                             </div>
 
                             {/* Right Sidebar - Summary */}
-                            <div className="w-[340px] border-l border-shark bg-[#121214] flex flex-col p-6 overflow-y-auto custom-scrollbar">
+                            <div className="hidden lg:flex w-[340px] border-l border-shark bg-[#121214] flex-col p-6 overflow-y-auto custom-scrollbar">
                                 <h3 className="text-lg font-bold text-white mb-8">Summary</h3>
 
                                 <div className="space-y-8">

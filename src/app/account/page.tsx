@@ -32,6 +32,7 @@ export default function AccountPage() {
     const displayProfile = viewAsProfile || profile;
     const router = useRouter();
     const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+    const [isMobileOpen, setIsMobileOpen] = useState(false);
     const [isUpdating, setIsUpdating] = useState(false);
     const [isUploading, setIsUploading] = useState(false);
     const [status, setStatus] = useState<{ type: 'success' | 'error', message: string } | null>(null);
@@ -252,31 +253,41 @@ export default function AccountPage() {
 
     return (
         <div className={`flex h-screen bg-[#09090B] text-iron font-sans overflow-hidden transition-all duration-500 ${isImpersonating ? 'p-1.5' : ''}`} style={isImpersonating ? { backgroundColor: '#0f2b1a' } : undefined}>
-            <Sidebar isCollapsed={isSidebarCollapsed} />
+            <Sidebar isCollapsed={isSidebarCollapsed} isMobileOpen={isMobileOpen} onMobileClose={() => setIsMobileOpen(false)} />
 
             <div className="flex-1 flex flex-col min-w-0 bg-[#09090B] relative">
-                <div className={`flex-1 flex flex-col min-w-0 bg-[#121214] rounded-t-2xl overflow-hidden border-t border-l border-r mt-6 mr-6 relative transition-all duration-500 ${isImpersonating ? 'border-[#22c55e]/60 shadow-[0_0_15px_rgba(34,197,94,0.15),0_0_40px_rgba(34,197,94,0.08),inset_0_0_20px_rgba(34,197,94,0.03)]' : 'border-shark'}`}>
+                <div className={`flex-1 flex flex-col min-w-0 bg-[#121214] rounded-t-2xl overflow-hidden border-t border-l border-r mt-6 mr-6 relative responsive-content-wrapper transition-all duration-500 ${isImpersonating ? 'border-[#22c55e]/60 shadow-[0_0_15px_rgba(34,197,94,0.15),0_0_40px_rgba(34,197,94,0.08),inset_0_0_20px_rgba(34,197,94,0.03)]' : 'border-shark'}`}>
 
                     {/* Header */}
-                    <div className="h-16 flex items-center justify-between px-8 bg-black/20 shrink-0 border-b border-shark/40">
-                        <div className="flex items-center gap-4">
+                    <div className="h-14 lg:h-16 flex items-center justify-between px-3 sm:px-6 lg:px-8 bg-black/20 shrink-0 border-b border-shark/40">
+                        <div className="flex items-center gap-2 lg:gap-4">
+                            {/* Mobile hamburger */}
+                            <button
+                                onClick={() => setIsMobileOpen(true)}
+                                className="p-2 hover:bg-white/5 rounded-xl text-storm-gray hover:text-white transition-all lg:hidden"
+                            >
+                                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="4" x2="20" y1="12" y2="12" /><line x1="4" x2="20" y1="6" y2="6" /><line x1="4" x2="20" y1="18" y2="18" /></svg>
+                            </button>
                             <button
                                 onClick={() => router.back()}
-                                className="p-2 hover:bg-white/5 rounded-xl text-storm-gray hover:text-white transition-all flex items-center gap-2 font-bold text-xs"
+                                className="p-2 hover:bg-white/5 rounded-xl text-storm-gray hover:text-white transition-all flex items-center gap-2 font-bold text-xs hidden lg:flex"
                             >
                                 <ArrowLeft size={16} />
                                 <span>Back</span>
                             </button>
-                            <div className="h-4 w-px bg-shark" />
-                            <h1 className="text-sm font-black text-white uppercase tracking-wider flex items-center gap-3">
-                                <Shield size={18} className="text-[#279da6]" />
-                                Account Settings
+                            <div className="h-4 w-px bg-shark hidden lg:block" />
+                            <h1 className="text-xs sm:text-sm font-black text-white uppercase tracking-wider flex items-center gap-2 sm:gap-3">
+                                <Shield size={16} className="text-[#279da6]" />
+                                <span className="hidden sm:inline">Account Settings</span>
+                                <span className="sm:hidden">Account</span>
                             </h1>
                         </div>
-                        <ImpersonationWarning />
+                        <div className="hidden sm:block">
+                            <ImpersonationWarning />
+                        </div>
                     </div>
 
-                    <main className="flex-1 overflow-y-auto custom-scrollbar p-12">
+                    <main className="flex-1 overflow-y-auto custom-scrollbar p-4 sm:p-8 lg:p-12">
                         {/* Status Notification */}
                         {status && (
                             <div className="fixed top-24 left-1/2 -translate-x-1/2 z-50 animate-slide-up">

@@ -197,3 +197,52 @@ select option {
   background-color: #18181B !important;
   color: white !important;
 }
+
+/* ===== Responsive Utilities ===== */
+
+/* Mobile sidebar overlay backdrop */
+.sidebar-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(4px);
+  z-index: 40;
+  animation: fade-in 0.2s ease-out forwards;
+}
+
+/* Slide-in from left animation for mobile sidebar */
+@keyframes slide-in-left {
+  from {
+    transform: translateX(-100%);
+  }
+
+  to {
+    transform: translateX(0);
+  }
+}
+
+.animate-slide-in-left {
+  animation: slide-in-left 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* Horizontal scrollable tab bar (hide scrollbar) */
+.tabs-scroll-container {
+  overflow-x: auto;
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.tabs-scroll-container::-webkit-scrollbar {
+  display: none;
+}
+
+/* Responsive content wrapper — removes margin/rounding on mobile */
+@media (max-width: 1023px) {
+  .responsive-content-wrapper {
+    margin-right: 0 !important;
+    margin-top: 0 !important;
+    border-radius: 0 !important;
+    border-left: none !important;
+    border-right: none !important;
+  }
+}
