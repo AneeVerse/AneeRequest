@@ -2,7 +2,7 @@ import { google, drive_v3 } from 'googleapis';
 import { Readable } from 'stream';
 import { createServiceClient } from '@/lib/supabase';
 
-// ─── Auth (Prefers Service Account, falls back to OAuth2) ───
+// ─── Auth (Prefers OAuth2 for storage quota, falls back to Service Account) ───
 const serviceAccountKey = process.env.GOOGLE_SERVICE_ACCOUNT_KEY;
 const clientId = process.env.GOOGLE_OAUTH_CLIENT_ID;
 const clientSecret = process.env.GOOGLE_OAUTH_CLIENT_SECRET;
@@ -10,7 +10,15 @@ const refreshToken = process.env.GOOGLE_OAUTH_REFRESH_TOKEN;
 
 let googleAuth: any;
 
-if (serviceAccountKey) {
+// Prefer OAuth2 — service accounts have NO storage quota and cannot upload files
+if (clientId && clientSecret && refreshToken) {
+    const oauth2Client = new google.auth.OAuth2(clientId, clientSecret);
+    oauth2Client.setCredentials({ refresh_token: refreshToken });
+    googleAuth = oauth2Client;
+    console.log('Google Drive: Initialized with OAuth2 (Refresh Token)');
+}
+
+if (!googleAuth && serviceAccountKey) {
     try {
         const credentials = typeof serviceAccountKey === 'string' ? JSON.parse(serviceAccountKey) : serviceAccountKey;
         googleAuth = new google.auth.GoogleAuth({
@@ -24,13 +32,7 @@ if (serviceAccountKey) {
 }
 
 if (!googleAuth) {
-    if (!clientId || !clientSecret || !refreshToken) {
-        throw new Error('No Google credentials found. Set GOOGLE_SERVICE_ACCOUNT_KEY or GOOGLE_OAUTH_* env vars.');
-    }
-    const oauth2Client = new google.auth.OAuth2(clientId, clientSecret);
-    oauth2Client.setCredentials({ refresh_token: refreshToken });
-    googleAuth = oauth2Client;
-    console.log('Google Drive: Initialized with OAuth2 (Refresh Token)');
+    throw new Error('No Google credentials found. Set GOOGLE_OAUTH_* or GOOGLE_SERVICE_ACCOUNT_KEY env vars.');
 }
 
 // --- Server-Side TTL Cache ---
