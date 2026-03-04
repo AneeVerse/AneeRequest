@@ -4,10 +4,6 @@ import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import {
-    Bell,
-    PanelLeft,
-    Moon,
-    Sun,
     Plus,
     ListFilter,
     Shield,
@@ -15,7 +11,8 @@ import {
     Check,
     X,
     Loader2,
-    ChevronLeft
+    ChevronLeft,
+    PanelLeft
 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import ImpersonationWarning from '@/components/ImpersonationWarning';
@@ -38,6 +35,7 @@ interface HeaderProps {
     pageSwitcher?: { name: string; path: string }[];
     activePath?: string;
     children?: React.ReactNode;
+    rightToolbar?: React.ReactNode;
 }
 
 const Header: React.FC<HeaderProps> = ({
@@ -57,21 +55,11 @@ const Header: React.FC<HeaderProps> = ({
     tabCounts,
     pageSwitcher,
     activePath,
-    children
+    children,
+    rightToolbar
 }) => {
     const { isImpersonating, viewAsProfile, stopImpersonating } = useAuth();
     const router = useRouter();
-    const [theme, setTheme] = useState<'dark' | 'light'>('dark');
-
-    // Theme toggle effect
-    useEffect(() => {
-        const root = window.document.documentElement;
-        if (theme === 'light') {
-            root.classList.add('light');
-        } else {
-            root.classList.remove('light');
-        }
-    }, [theme]);
 
     return (
         <header className="h-16 flex items-center justify-between px-6 z-30 shrink-0">
@@ -89,13 +77,13 @@ const Header: React.FC<HeaderProps> = ({
                     onClick={onToggleSidebar}
                     className="p-1 text-santas-gray hover:text-white transition-colors cursor-pointer"
                 >
-                    <PanelLeft size={18} />
+                    <PanelLeft size={18} className="opacity-40 shrink-0" />
                 </button>
 
                 {/* Section Label / User Card */}
-                <div className="flex items-center gap-2 px-3 py-1.5 bg-shark/40 border border-shark rounded-lg shrink-0 overflow-hidden">
+                <div className="flex items-center gap-2 shrink-0 overflow-hidden">
                     {labelIcon || <ListFilter size={16} className="text-[#279da6]" />}
-                    <span className="text-xs font-bold text-iron truncate max-w-[200px]">{label}</span>
+                    <span className="text-xs font-black text-iron truncate max-w-[200px] uppercase tracking-tight">{label}</span>
                 </div>
 
                 {children}
@@ -139,7 +127,7 @@ const Header: React.FC<HeaderProps> = ({
                                 <button
                                     key={label}
                                     onClick={() => setActiveTab?.(label)}
-                                    className={`relative px-4 py-1.5 rounded-lg text-[11px] font-bold transition-all whitespace-nowrap cursor-pointer tracking-tight flex items-center gap-1.5 ${activeTab === label
+                                    className={`relative px-4 py-1.5 rounded-lg text-[12px] font-bold transition-all whitespace-nowrap cursor-pointer tracking-tight flex items-center gap-1.5 ${activeTab === label
                                         ? 'bg-shark/80 text-[#279da6] shadow-lg'
                                         : 'text-storm-gray hover:text-iron hover:bg-white/5'
                                         }`}
@@ -147,7 +135,7 @@ const Header: React.FC<HeaderProps> = ({
                                     {icon}
                                     {label}
                                     {count !== undefined && count > 0 && (
-                                        <span className="absolute -top-3 -right-0.5 min-w-[17px] h-[17px] flex items-center justify-center rounded-full text-[9px] font-black px-1 border border-[#09090B] shadow-md bg-[#279da6] text-white z-[20]">
+                                        <span className="absolute -top-3 -right-0.5 min-w-[17px] h-[17px] flex items-center justify-center rounded-full text-[12px] font-black px-1 border border-[#09090B] shadow-md bg-[#279da6] text-black z-[20]">
                                             {count > 99 ? '99+' : count}
                                         </span>
                                     )}
@@ -194,17 +182,7 @@ const Header: React.FC<HeaderProps> = ({
 
                 <div className="h-4 w-[1px] bg-shark" />
 
-                <button
-                    onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
-                    className="p-2 text-santas-gray hover:text-white rounded-lg hover:bg-shark/40 transition-all cursor-pointer"
-                >
-                    {theme === 'dark' ? <Moon size={18} /> : <Sun size={18} />}
-                </button>
-
-                <button className="p-2 text-santas-gray hover:text-white rounded-lg hover:bg-shark/40 transition-all relative cursor-pointer">
-                    <Bell size={18} />
-                    <div className="absolute top-2 right-2.5 w-1.5 h-1.5 bg-red-500 rounded-full border border-black" />
-                </button>
+                {rightToolbar}
 
                 {onEdit && (
                     <>

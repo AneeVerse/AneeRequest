@@ -19,12 +19,15 @@ export default async function ClientsPage() {
             email: c.email,
             organization: c.organization,
             createdAt: formatDate(c.created_at),
+            createdAtRaw: c.created_at,
             lastLoginDate: lastLoginInfo.date,
             lastLoginTime: lastLoginInfo.time,
             lastLoginRaw: c.last_login,
             status: c.status || 'Ongoing',
+            avatar_url: c.avatar_url,
             request_count: c.request_count || 0,
-            task_count: c.task_count || 0
+            task_count: c.task_count || 0,
+            slug: c.slug
         };
     });
 

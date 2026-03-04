@@ -8,10 +8,11 @@ export const formatDate = (date: string | Date | null | undefined): string => {
     if (isNaN(d.getTime())) return '-';
 
     const day = String(d.getDate()).padStart(2, '0');
-    const month = String(d.getMonth() + 1).padStart(2, '0');
-    const year = d.getFullYear();
+    const months = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'];
+    const month = months[d.getMonth()];
+    const year = String(d.getFullYear()).slice(-2);
 
-    return `${day}-${month}-${year}`;
+    return `${day} ${month} ${year}`;
 };
 
 export const formatTime = (date: string | Date | null | undefined): string => {

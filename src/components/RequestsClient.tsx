@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import Sidebar from '@/components/Sidebar';
 import Header from '@/components/Header';
 import {
-    LayoutList,
+    MessageSquare,
     Plus,
     Pencil,
     Check,
@@ -16,17 +16,20 @@ import {
     Search,
     Filter,
     ChevronDown,
-    User as UserIcon,
+    SlidersHorizontal,
+    LayoutList,
     Circle,
     Eye,
     Flag,
-    LayoutGrid
+    User as UserIcon
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import ChatDrawer from '@/components/ChatDrawer';
 import RequestsTable from '@/components/RequestsTable';
 import CustomDropdown from '@/components/CustomDropdown';
+import CustomDateRangePicker from '@/components/CustomDateRangePicker';
+import CustomDatePicker from '@/components/CustomDatePicker';
 import type { RequestItem, Profile, TeamMember } from '@/lib/data/requests';
 
 interface RequestsClientProps {
@@ -45,12 +48,23 @@ export default function RequestsClient({
     const displayProfile = viewAsProfile || profile;
 
     const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
-    const [activeTab, setActiveTab] = useState('All');
+    const [activeTab, setActiveTab] = useState('UNASSIGNED');
     const [selectedRequest, setSelectedRequest] = useState<RequestItem | null>(null);
     const [isChatOpen, setIsChatOpen] = useState(false);
     const [isCreating, setIsCreating] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
+
+    const [isFilterOpen, setIsFilterOpen] = useState(false);
+    const [filters, setFilters] = useState({
+        title: '',
+        client: '',
+        assigned_to: '',
+        status: '',
+        priority: '',
+        due_date_from: '',
+        due_date_to: ''
+    });
 
     const [requestFormData, setRequestFormData] = useState({
         title: '',
@@ -61,18 +75,9 @@ export default function RequestsClient({
         create_folder: false
     });
 
-    const [viewMode, setViewMode] = useState<'grid' | 'list'>('list');
-    const [isFilterOpen, setIsFilterOpen] = useState(false);
-    const [filters, setFilters] = useState({
-        assigned_to: '',
-        status: '',
-        priority: '',
-        due_date: ''
-    });
-
     const inlineRequestInputRef = React.useRef<HTMLInputElement>(null);
 
-    const subTabs = ['All', 'Assigned', 'Open', 'Unassigned', 'Completed'];
+    const subTabs = ['UNASSIGNED', 'TODO', 'IN PROGRESS', 'REVIEW', 'LOW', 'MEDIUM', 'HIGH', 'CRITICAL', 'DONE', 'All'];
 
     const [requests, setRequests] = useState<RequestItem[]>(initialRequests);
     const [profiles, setProfiles] = useState<Profile[]>(initialProfiles);
@@ -176,47 +181,228 @@ export default function RequestsClient({
         return requests;
     })();
 
-    // Compute counts per tab for notification badges
-    const tabCounts = React.useMemo(() => {
-        const counts: Record<string, number> = {};
-        subTabs.forEach(tab => {
-            counts[tab] = visibleRequests.filter(req => {
-                if (tab === 'All') return true;
-                if (tab === 'Assigned') return !!req.assigned_to;
-                if (tab === 'Unassigned') return !req.assigned_to;
-                if (tab === 'Open') return req.status !== 'Done';
-                if (tab === 'Completed') return req.status === 'Done';
-                return true;
-            }).length;
-        });
-        return counts;
-    }, [visibleRequests, subTabs]);
+    const tabFilteredRequests = visibleRequests.filter((req: RequestItem) => {
+        // Tab filters
+        let matchesTab = true;
+        if (activeTab === 'UNASSIGNED') matchesTab = !req.assigned_to;
+        else if (activeTab === 'TODO') matchesTab = req.status === 'Todo';
+        else if (activeTab === 'IN PROGRESS') matchesTab = req.status === 'In Progress';
+        else if (activeTab === 'REVIEW') matchesTab = req.status === 'Review';
+        else if (activeTab === 'LOW') matchesTab = req.priority === 'Low';
+        else if (activeTab === 'MEDIUM') matchesTab = req.priority === 'Medium';
+        else if (activeTab === 'HIGH') matchesTab = req.priority === 'High';
+        else if (activeTab === 'CRITICAL') matchesTab = req.priority === 'Critical';
+        else if (activeTab === 'DONE') matchesTab = req.status === 'Done';
 
-    const filteredRequestsBySearchAndFilter = visibleRequests.filter(req => {
+        if (!matchesTab) return false;
+
+        // Search query
         const searchLower = searchQuery.toLowerCase();
         const matchesSearch = !searchQuery ||
             req.title?.toLowerCase().includes(searchLower) ||
             req.client?.full_name?.toLowerCase().includes(searchLower) ||
             (req.client as any)?.organization?.toLowerCase().includes(searchLower);
 
+        if (!matchesSearch) return false;
+
+        // Advanced filters
+        const matchesTitle = !filters.title || req.title?.toLowerCase().includes(filters.title.toLowerCase());
+        const matchesClient = !filters.client || req.client?.full_name?.toLowerCase().includes(filters.client.toLowerCase()) || (req.client as any)?.organization?.toLowerCase().includes(filters.client.toLowerCase());
         const matchesAssignee = !filters.assigned_to || req.assigned_to === filters.assigned_to;
         const matchesStatus = !filters.status || req.status === filters.status;
         const matchesPriority = !filters.priority || req.priority === filters.priority;
-        const matchesDate = !filters.due_date || (req.due_date && req.due_date.startsWith(filters.due_date));
 
-        return matchesSearch && matchesAssignee && matchesStatus && matchesPriority && matchesDate;
+        // Date range filter
+        let matchesDate = true;
+        if (filters.due_date_from || filters.due_date_to) {
+            if (!req.due_date) {
+                matchesDate = false;
+            } else {
+                const reqDate = new Date(req.due_date);
+                reqDate.setHours(0, 0, 0, 0);
+
+                if (filters.due_date_from) {
+                    const fromDate = new Date(filters.due_date_from);
+                    fromDate.setHours(0, 0, 0, 0);
+                    if (reqDate < fromDate) matchesDate = false;
+                }
+                if (filters.due_date_to) {
+                    const toDate = new Date(filters.due_date_to);
+                    toDate.setHours(0, 0, 0, 0);
+                    if (reqDate > toDate) matchesDate = false;
+                }
+            }
+        }
+
+        return matchesTitle && matchesClient && matchesAssignee && matchesStatus && matchesPriority && matchesDate;
     });
 
-    const finalRequests = filteredRequestsBySearchAndFilter.filter((req: RequestItem) => {
-        // Tab filters
-        let matchesTab = true;
-        if (activeTab === 'Assigned') matchesTab = !!req.assigned_to;
-        else if (activeTab === 'Unassigned') matchesTab = !req.assigned_to;
-        else if (activeTab === 'Open') matchesTab = req.status !== 'Done';
-        else if (activeTab === 'Completed') matchesTab = req.status === 'Done';
+    // Compute counts per tab for notification badges
+    const tabCounts = React.useMemo(() => {
+        const counts: Record<string, number> = {};
+        subTabs.forEach(tab => {
+            counts[tab] = visibleRequests.filter(req => {
+                if (tab === 'All') return true;
+                if (tab === 'UNASSIGNED') return !req.assigned_to;
+                if (tab === 'TODO') return req.status === 'Todo';
+                if (tab === 'IN PROGRESS') return req.status === 'In Progress';
+                if (tab === 'REVIEW') return req.status === 'Review';
+                if (tab === 'LOW') return req.priority === 'Low';
+                if (tab === 'MEDIUM') return req.priority === 'Medium';
+                if (tab === 'HIGH') return req.priority === 'High';
+                if (tab === 'CRITICAL') return req.priority === 'Critical';
+                if (tab === 'DONE') return req.status === 'Done';
+                return true;
+            }).length;
+        });
+        return counts;
+    }, [visibleRequests, subTabs]);
 
-        return matchesTab;
-    });
+    const filtersElement = (
+        <div className="relative">
+            <button
+                onClick={() => setIsFilterOpen(!isFilterOpen)}
+                className={`relative flex items-center gap-2 px-3 py-1.5 rounded-lg border transition-all text-xs font-bold z-10 ${Object.values(filters).some(v => v !== '') || searchQuery !== '' ? 'bg-[#279da6]/20 border-[#279da6]/60 text-[#279da6] active:scale-95' : 'border-shark bg-[#121214] text-santas-gray hover:text-white hover:bg-shark/40'}`}
+            >
+                <Filter size={14} className={Object.values(filters).some(v => v !== '') || searchQuery !== '' ? 'fill-[#279da6]/20' : ''} />
+                <span>Filters</span>
+                <ChevronDown size={14} className={isFilterOpen ? 'rotate-180 transition-transform' : 'transition-transform'} />
+            </button>
+
+            {isFilterOpen && (
+                <div className="absolute right-0 mt-2 w-[500px] bg-[#121214] border border-shark rounded-xl shadow-2xl p-5 z-50 space-y-4 animate-in fade-in slide-in-from-top-2 duration-200">
+                    <div className="flex items-center justify-between mb-1">
+                        <h4 className="text-[12px] font-black uppercase tracking-widest text-[#279da6]">Advanced Filters</h4>
+                        <button
+                            onClick={() => {
+                                setFilters({
+                                    title: '',
+                                    client: '',
+                                    assigned_to: '',
+                                    status: '',
+                                    priority: '',
+                                    due_date_from: '',
+                                    due_date_to: ''
+                                });
+                                setSearchQuery('');
+                                setIsFilterOpen(false);
+                            }}
+                            className="text-[10px] font-bold text-storm-gray hover:text-white underline underline-offset-4"
+                        >
+                            Reset all
+                        </button>
+                    </div>
+
+                    <div className="space-y-4">
+                        <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-1.5">
+                                <label className="text-[10px] font-black text-storm-gray uppercase tracking-widest ml-1">Title</label>
+                                <div className="relative group">
+                                    <Search size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-storm-gray group-focus-within:text-[#279da6] transition-colors" />
+                                    <input
+                                        type="text"
+                                        value={filters.title}
+                                        onChange={(e) => setFilters(f => ({ ...f, title: e.target.value }))}
+                                        placeholder="Search tit..."
+                                        className="w-full bg-black/40 border border-shark/50 rounded-xl py-2.5 pl-10 pr-10 text-[12px] font-black uppercase tracking-widest text-iron placeholder:text-storm-gray focus:outline-none focus:border-[#279da6]/40 transition-all font-bold"
+                                    />
+                                    {filters.title && (
+                                        <button
+                                            onClick={() => setFilters(f => ({ ...f, title: '' }))}
+                                            className="absolute right-3.5 top-1/2 -translate-y-1/2 p-1 hover:bg-shark rounded-md text-storm-gray hover:text-white transition-colors"
+                                        >
+                                            <X size={12} />
+                                        </button>
+                                    )}
+                                </div>
+                            </div>
+                            <div className="space-y-1.5">
+                                <label className="text-[10px] font-black text-storm-gray uppercase tracking-widest ml-1">Client</label>
+                                <div className="relative group">
+                                    <Building size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-storm-gray group-focus-within:text-[#279da6] transition-colors" />
+                                    <input
+                                        type="text"
+                                        value={filters.client}
+                                        onChange={(e) => setFilters(f => ({ ...f, client: e.target.value }))}
+                                        placeholder="Search client..."
+                                        className="w-full bg-black/40 border border-shark/50 rounded-xl py-2.5 pl-10 pr-10 text-[12px] font-black uppercase tracking-widest text-iron placeholder:text-storm-gray focus:outline-none focus:border-[#279da6]/40 transition-all font-bold"
+                                    />
+                                    {filters.client && (
+                                        <button
+                                            onClick={() => setFilters(f => ({ ...f, client: '' }))}
+                                            className="absolute right-3.5 top-1/2 -translate-y-1/2 p-1 hover:bg-shark rounded-md text-storm-gray hover:text-white transition-colors"
+                                        >
+                                            <X size={12} />
+                                        </button>
+                                    )}
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-1.5">
+                                <label className="text-[10px] font-black text-storm-gray uppercase tracking-widest ml-1">Status</label>
+                                <CustomDropdown
+                                    value={filters.status}
+                                    onChange={(val) => setFilters(f => ({ ...f, status: val }))}
+                                    options={[
+                                        { label: 'All Statuses', value: '' },
+                                        { label: 'Todo', value: 'Todo', icon: <Circle size={12} className="text-[#279da6]" />, color: 'text-[#279da6]' },
+                                        { label: 'In Progress', value: 'In Progress', icon: <Loader2 size={12} className="text-amber-500 animate-spin" />, color: 'text-amber-500' },
+                                        { label: 'Review', value: 'Review', icon: <Eye size={12} className="text-blue-400" />, color: 'text-blue-400' },
+                                        { label: 'Done', value: 'Done', icon: <Check size={12} className="text-emerald-500" />, color: 'text-emerald-500' },
+                                    ]}
+                                    showClear={true}
+                                />
+                            </div>
+                            <div className="space-y-1.5">
+                                <label className="text-[10px] font-black text-storm-gray uppercase tracking-widest ml-1">Assigned</label>
+                                <CustomDropdown
+                                    value={filters.assigned_to}
+                                    onChange={(val) => setFilters(f => ({ ...f, assigned_to: val }))}
+                                    options={[
+                                        { label: 'All Members', value: '' },
+                                        ...teamMembers.map((m: any) => ({
+                                            label: m.full_name || (m as any).name,
+                                            value: m.profile_id || m.id,
+                                            icon: <UserIcon size={12} className="text-storm-gray" />
+                                        }))
+                                    ]}
+                                    showClear={true}
+                                />
+                            </div>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-1.5">
+                                <label className="text-[10px] font-black text-storm-gray uppercase tracking-widest ml-1">Priority</label>
+                                <CustomDropdown
+                                    value={filters.priority}
+                                    onChange={(val) => setFilters(f => ({ ...f, priority: val }))}
+                                    options={[
+                                        { label: 'All Priorities', value: '' },
+                                        { label: 'Low', value: 'Low', icon: <Flag size={12} className="text-storm-gray" />, color: 'text-storm-gray' },
+                                        { label: 'Medium', value: 'Medium', icon: <Flag size={12} className="text-blue-400" />, color: 'text-blue-400' },
+                                        { label: 'High', value: 'High', icon: <Flag size={12} className="text-amber-500" />, color: 'text-amber-500' },
+                                        { label: 'Critical', value: 'Critical', icon: <Flag size={12} className="text-rose-500" />, color: 'text-rose-500' },
+                                    ]}
+                                    showClear={true}
+                                />
+                            </div>
+                            <div className="space-y-1.5">
+                                <label className="text-[10px] font-black text-storm-gray uppercase tracking-widest ml-1">Time Period</label>
+                                <CustomDateRangePicker
+                                    from={filters.due_date_from}
+                                    to={filters.due_date_to}
+                                    onChange={(from, to) => setFilters(f => ({ ...f, due_date_from: from, due_date_to: to }))}
+                                />
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+        </div>
+    );
 
     return (
         <div className={`flex h-screen bg-[#09090B] text-iron font-sans overflow-hidden transition-all duration-500 ${isImpersonating ? 'p-1.5' : ''}`} style={isImpersonating ? { backgroundColor: '#0f2b1a' } : undefined}>
@@ -228,7 +414,7 @@ export default function RequestsClient({
                         <Header
                             onToggleSidebar={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
                             label="Requests"
-                            labelIcon={<LayoutList size={16} className="text-[#279da6]" />}
+                            labelIcon={<MessageSquare size={16} className="text-[#279da6]" />}
                             tabs={subTabs}
                             activeTab={activeTab}
                             setActiveTab={setActiveTab}
@@ -241,6 +427,7 @@ export default function RequestsClient({
                                 setRequestFormData({ title: '', priority: 'Medium', description: '', due_date: '', client_id: '', create_folder: false });
                             }}
                             isSubmitting={isSubmitting}
+                            rightToolbar={filtersElement}
                         />
                     </div>
 
@@ -307,7 +494,6 @@ export default function RequestsClient({
                                                                     icon: <Building size={14} className="text-[#279da6]" />
                                                                 }))
                                                             ]}
-                                                            showSearch={true}
                                                         />
                                                     </div>
                                                 </div>
@@ -329,12 +515,9 @@ export default function RequestsClient({
                                                     <div className="space-y-1.5">
                                                         <label className="text-[10px] font-black text-storm-gray uppercase tracking-widest ml-1">Due Date</label>
                                                         <div className="relative group/input">
-                                                            <Calendar size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-storm-gray group-focus-within/input:text-[#279da6] transition-colors z-10" />
-                                                            <input
-                                                                type="date"
+                                                            <CustomDatePicker
                                                                 value={requestFormData.due_date}
-                                                                onChange={(e) => setRequestFormData({ ...requestFormData, due_date: e.target.value })}
-                                                                className="w-full bg-black/40 border border-shark/50 rounded-xl py-2.5 pl-10 pr-4 text-xs text-iron focus:outline-none focus:border-[#279da6]/40 transition-all font-bold [color-scheme:dark]"
+                                                                onChange={(val) => setRequestFormData({ ...requestFormData, due_date: val })}
                                                             />
                                                         </div>
                                                     </div>
@@ -363,149 +546,13 @@ export default function RequestsClient({
                                 </div>
                             </div>
 
-                            {/* Toolbar */}
-                            <div className="flex items-center justify-between mb-8">
-                                <div className="flex items-center gap-4">
-                                    <div className="relative w-80">
-                                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-santas-gray" size={16} />
-                                        <input
-                                            type="text"
-                                            value={searchQuery}
-                                            onChange={(e) => setSearchQuery(e.target.value)}
-                                            placeholder="Search requests..."
-                                            className="w-full bg-[#09090B] border border-shark/50 rounded-lg py-2.5 pl-10 pr-4 text-xs text-iron placeholder:text-storm-gray focus:outline-none focus:border-[#279da6]/40 transition-all font-bold"
-                                        />
-                                    </div>
-                                </div>
-
-                                <div className="flex items-center gap-2">
-                                    {/* Filters Dropdown */}
-                                    <div className="relative">
-                                        <button
-                                            onClick={() => setIsFilterOpen(!isFilterOpen)}
-                                            className={`flex items-center gap-2 px-3 py-1.5 rounded-lg border transition-all text-[11px] font-bold uppercase tracking-tight z-10 ${Object.values(filters).some(v => v !== '') || searchQuery !== '' ? 'bg-[#279da6]/10 border-[#279da6]/40 text-[#279da6]' : 'border-shark/60 bg-[#121214] text-santas-gray hover:text-white hover:bg-white/5'}`}
-                                        >
-                                            <Filter size={14} className={Object.values(filters).some(v => v !== '') || searchQuery !== '' ? 'text-[#279da6]' : ''} />
-                                            <span>Filters</span>
-                                            <ChevronDown size={14} className={isFilterOpen ? 'rotate-180 transition-transform' : 'transition-transform'} />
-                                        </button>
-
-                                        {isFilterOpen && (
-                                            <div className="absolute right-0 mt-2 w-72 bg-[#121214] border border-shark rounded-xl shadow-2xl p-5 z-50 space-y-4 animate-in fade-in slide-in-from-top-2 duration-200">
-                                                <div className="flex items-center justify-between mb-1">
-                                                    <h4 className="text-[12px] font-black uppercase tracking-widest text-[#279da6]">Advanced Filters</h4>
-                                                    <button
-                                                        onClick={() => {
-                                                            setFilters({
-                                                                assigned_to: '',
-                                                                status: '',
-                                                                priority: '',
-                                                                due_date: ''
-                                                            });
-                                                            setSearchQuery('');
-                                                            setIsFilterOpen(false);
-                                                        }}
-                                                        className="text-[10px] font-bold text-storm-gray hover:text-white underline underline-offset-4"
-                                                    >
-                                                        Reset all
-                                                    </button>
-                                                </div>
-
-                                                <div className="space-y-3">
-                                                    <div className="grid grid-cols-2 gap-3">
-                                                        <div className="space-y-1.5">
-                                                            <label className="text-[10px] font-bold text-storm-gray uppercase">Assigned To</label>
-                                                            <CustomDropdown
-                                                                value={filters.assigned_to}
-                                                                onChange={(val) => setFilters(f => ({ ...f, assigned_to: val }))}
-                                                                options={[
-                                                                    { label: 'All Members', value: '' },
-                                                                    ...teamMembers.map((m: any) => ({
-                                                                        label: m.full_name || (m as any).name,
-                                                                        value: m.profile_id || m.id,
-                                                                        icon: <UserIcon size={12} className="text-storm-gray" />
-                                                                    }))
-                                                                ]}
-                                                            />
-                                                        </div>
-                                                        <div className="space-y-1.5">
-                                                            <label className="text-[10px] font-bold text-storm-gray uppercase">Status</label>
-                                                            <CustomDropdown
-                                                                value={filters.status}
-                                                                onChange={(val) => setFilters(f => ({ ...f, status: val }))}
-                                                                options={[
-                                                                    { label: 'All Statuses', value: '' },
-                                                                    { label: 'Todo', value: 'Todo', icon: <Circle size={12} className="text-[#279da6]" />, color: 'text-[#279da6]' },
-                                                                    { label: 'In Progress', value: 'In Progress', icon: <Loader2 size={12} className="text-amber-500 animate-spin" />, color: 'text-amber-500' },
-                                                                    { label: 'Review', value: 'Review', icon: <Eye size={12} className="text-blue-400" />, color: 'text-blue-400' },
-                                                                    { label: 'Done', value: 'Done', icon: <Check size={12} className="text-emerald-500" />, color: 'text-emerald-500' },
-                                                                ]}
-                                                            />
-                                                        </div>
-                                                    </div>
-
-                                                    <div className="grid grid-cols-2 gap-3">
-                                                        <div className="space-y-1.5">
-                                                            <label className="text-[10px] font-bold text-storm-gray uppercase">Priority</label>
-                                                            <CustomDropdown
-                                                                value={filters.priority}
-                                                                onChange={(val) => setFilters(f => ({ ...f, priority: val }))}
-                                                                options={[
-                                                                    { label: 'All Priorities', value: '' },
-                                                                    { label: 'Low', value: 'Low', icon: <Flag size={12} className="text-storm-gray" />, color: 'text-storm-gray' },
-                                                                    { label: 'Medium', value: 'Medium', icon: <Flag size={12} className="text-blue-400" />, color: 'text-blue-400' },
-                                                                    { label: 'High', value: 'High', icon: <Flag size={12} className="text-amber-500" />, color: 'text-amber-500' },
-                                                                    { label: 'Critical', value: 'Critical', icon: <Flag size={12} className="text-rose-500" />, color: 'text-rose-500' },
-                                                                ]}
-                                                            />
-                                                        </div>
-                                                        <div className="space-y-1.5">
-                                                            <label className="text-[10px] font-bold text-storm-gray uppercase">Due Date</label>
-                                                            <input
-                                                                type="date"
-                                                                value={filters.due_date}
-                                                                onChange={(e) => setFilters(f => ({ ...f, due_date: e.target.value }))}
-                                                                className="w-full bg-[#09090B] border border-shark rounded-lg px-2 py-1.5 text-[11px] font-bold focus:outline-none focus:border-[#279da6]/40 text-iron [color-scheme:dark]"
-                                                            />
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        )}
-                                    </div>
-
-                                    <div className="h-4 w-[1px] bg-shark/60 mx-1" />
-
-                                    {/* View Mode Switcher */}
-                                    <div className="flex items-center bg-[#09090B] border border-shark/60 rounded-xl p-0.5 overflow-hidden">
-                                        <button
-                                            onClick={() => setViewMode('list')}
-                                            className={`p-1.5 rounded-lg transition-all flex items-center gap-2 ${viewMode === 'list' ? 'bg-[#279da6] text-white shadow-lg shadow-[#279da6]/20' : 'text-santas-gray hover:text-white hover:bg-white/5'}`}
-                                            title="List view"
-                                        >
-                                            <LayoutList size={14} />
-                                            {viewMode === 'list' && <span className="text-[10px] font-black uppercase pr-1">List</span>}
-                                        </button>
-                                        <button
-                                            onClick={() => setViewMode('grid')}
-                                            className={`p-1.5 rounded-lg transition-all flex items-center gap-2 ${viewMode === 'grid' ? 'bg-[#279da6] text-white shadow-lg shadow-[#279da6]/20' : 'text-santas-gray hover:text-white hover:bg-white/5'}`}
-                                            title="Grid view"
-                                        >
-                                            <LayoutGrid size={14} />
-                                            {viewMode === 'grid' && <span className="text-[10px] font-black uppercase pr-1">Grid</span>}
-                                        </button>
-                                    </div>
-                                </div>
-                            </div>
 
                             <RequestsTable
-                                requests={finalRequests}
+                                requests={tabFilteredRequests}
                                 profiles={profiles}
                                 teamMembers={teamMembers}
                                 showClientColumn={true}
                                 onUpdateField={handleUpdateField}
-                                searchQuery={searchQuery}
-                                onSearchChange={setSearchQuery}
                             />
                         </div>
                     </main>

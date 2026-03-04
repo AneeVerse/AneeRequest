@@ -1,14 +1,20 @@
 import { createServiceClient } from '@/lib/supabase';
+import { slugify } from '@/lib/utils';
 
 export interface ClientItem {
     id: string;
     profile_id?: string | null;
     name: string;
     email: string;
+    phone?: string | null;
+    country_code?: string | null;
     organization: string;
     created_at: string;
     last_login: string | null;
     status: string;
+    website?: string | null;
+    slug: string;
+    avatar_url?: string | null;
 }
 
 /**
@@ -17,11 +23,23 @@ export interface ClientItem {
 export async function getClients(): Promise<ClientItem[]> {
     const supabase = createServiceClient();
 
-    const [clientsRes, authRes, profilesRes] = await Promise.all([
-        supabase.from('clients').select('*').order('created_at', { ascending: false }),
-        supabase.auth.admin.listUsers(),
-        supabase.from('profiles').select('id, email, full_name, role, avatar_url').eq('role', 'client')
-    ]);
+    let clientsRes, authRes, profilesRes;
+    try {
+        [clientsRes, authRes, profilesRes] = await Promise.all([
+            supabase.from('clients').select('*').order('created_at', { ascending: false }),
+            supabase.auth.admin.listUsers(),
+            supabase.from('profiles').select('id, email, full_name, role, avatar_url, phone, country_code')
+        ]);
+
+        // If the profiles fetch failed because of missing columns, try a fallback
+        if (profilesRes.error && (profilesRes.error.message.includes('column') || profilesRes.error.code === '42703')) {
+            console.warn('Profiles fetch failed, trying fallback without phone columns:', profilesRes.error.message);
+            profilesRes = await supabase.from('profiles').select('id, email, full_name, role, avatar_url');
+        }
+    } catch (err) {
+        console.error('Promise.all failed in getClients:', err);
+        return [];
+    }
 
     if (clientsRes.error) {
         console.error('Error fetching clients:', clientsRes.error);
@@ -37,8 +55,11 @@ export async function getClients(): Promise<ClientItem[]> {
         return {
             ...client,
             profile_id: profile?.id || null,
-            avatar_url: profile?.avatar_url || null,
-            last_login: authUser?.last_sign_in_at || client.last_login || null
+            avatar_url: profile?.avatar_url || client.avatar_url || null,
+            phone: (profile as any)?.phone || null,
+            country_code: (profile as any)?.country_code || null,
+            last_login: authUser?.last_sign_in_at || client.last_login || null,
+            slug: slugify(client.organization || client.name)
         };
     });
 }

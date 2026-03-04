@@ -17,6 +17,7 @@ import {
     Image as ImageIcon,
     Film,
     Pencil,
+    Trash2,
     Download,
     X,
     ArrowLeft,
@@ -101,7 +102,6 @@ export default function FilesClient({ initialRootId, initialDriveItems, initialD
 
     const [driveItems, setDriveItems] = useState<DriveItem[]>(initialDriveItems);
     const [isDriveLoading, setIsDriveLoading] = useState(false);
-    const [driveError, setDriveError] = useState<string | null>(null);
 
     // Update state when initialDriveItems changes (from SSR refresh)
     useEffect(() => {
@@ -110,19 +110,14 @@ export default function FilesClient({ initialRootId, initialDriveItems, initialD
 
     const [dbEnrichment, setDbEnrichment] = useState<DBEnrichment>(initialDbEnrichment);
 
-    // Initial load error check
-    useEffect(() => {
-        if (!initialRootId && !isDriveLoading) {
-            setDriveError('System Error: Could not resolve root folder. Please verify GOOGLE_DRIVE_ROOT_FOLDER_ID in your configuration.');
-        }
-    }, [initialRootId, isDriveLoading]);
-
     // Preview
     const [previewFile, setPreviewFile] = useState<any | null>(null);
     const [isPreviewOpen, setIsPreviewOpen] = useState(false);
 
     // CRUD state
     const [contextMenuFile, setContextMenuFile] = useState<DriveItem | null>(null);
+    const [isDeleting, setIsDeleting] = useState(false);
+    const [deleteTarget, setDeleteTarget] = useState<DriveItem | null>(null);
     const [isCreatingFolder, setIsCreatingFolder] = useState(false);
     const [newFolderName, setNewFolderName] = useState('');
     const [isNewMenuOpen, setIsNewMenuOpen] = useState(false);
@@ -185,19 +180,14 @@ export default function FilesClient({ initialRootId, initialDriveItems, initialD
     const browseDriveFolder = async (folderId: string) => {
         setCurrentDriveFolderId(folderId);
         setIsDriveLoading(true);
-        setDriveError(null);
         try {
             const res = await fetch(`/api/drive/browse?folderId=${folderId}`);
             if (res.ok) {
                 const data = await res.json();
                 setDriveItems(data);
-            } else {
-                const data = await res.json();
-                setDriveError(data.error || 'File Loading error');
             }
-        } catch (e: any) {
+        } catch (e) {
             console.error('Browse error:', e);
-            setDriveError('File Loading error');
         } finally {
             setIsDriveLoading(false);
         }
@@ -374,7 +364,23 @@ export default function FilesClient({ initialRootId, initialDriveItems, initialD
     };
 
 
-
+    const handleDelete = async () => {
+        if (!deleteTarget) return;
+        try {
+            const res = await fetch(
+                `/api/drive/browse?id=${deleteTarget.id}&isFolder=${deleteTarget.isFolder}`,
+                { method: 'DELETE' }
+            );
+            if (res.ok) {
+                setDeleteTarget(null);
+                setIsDeleting(false);
+                refreshFolder();
+                router.refresh();
+            }
+        } catch (e) {
+            console.error('Delete error:', e);
+        }
+    };
 
     // ─── Visual Helpers ───
     const getFileIcon = (mimeType: string, itemName?: string, iconSize: number = 24) => {
@@ -438,6 +444,83 @@ export default function FilesClient({ initialRootId, initialDriveItems, initialD
         return matchesSearch && matchesType;
     });
 
+    const filtersElement = (
+        <div className="flex items-center gap-3">
+            <div className="relative w-64">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-santas-gray" size={14} />
+                <input
+                    type="text"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    placeholder="Search files..."
+                    className="w-full bg-black/40 border border-shark/50 rounded-xl py-2 pl-9 pr-4 text-[11px] text-iron placeholder:text-storm-gray focus:outline-none focus:border-[#279da6]/40 transition-all font-bold"
+                />
+            </div>
+
+            <div className="w-[1px] h-4 bg-shark/60 mx-1" />
+
+            {/* Filters Dropdown */}
+            <div className="relative" ref={filterMenuRef}>
+                <button
+                    onClick={() => setIsFilterMenuOpen(!isFilterMenuOpen)}
+                    className={`flex items-center gap-2 px-3 py-1.5 rounded-xl border border-shark/60 hover:border-[#279da6]/40 hover:bg-white/5 transition-all group ${filterType !== 'all' ? 'bg-[#279da6]/10 border-[#279da6]/40 text-[#279da6]' : 'text-santas-gray'}`}
+                >
+                    <Filter size={14} className={filterType !== 'all' ? 'text-[#279da6]' : 'group-hover:text-white'} />
+                    <span className="text-[11px] font-bold uppercase tracking-tight">
+                        {filterType === 'all' ? 'Filters' : filterType}
+                    </span>
+                    <ChevronDown size={12} className={`transition-transform duration-300 ${isFilterMenuOpen ? 'rotate-180' : ''}`} />
+                </button>
+
+                {isFilterMenuOpen && (
+                    <div className="absolute top-full right-0 mt-2 w-48 bg-[#121214] border border-shark/60 rounded-xl shadow-2xl py-2 z-[60] animate-zoom-in backdrop-blur-xl bg-opacity-95">
+                        {[
+                            { id: 'all', label: 'All Files', icon: <FileIcon size={14} /> },
+                            { id: 'folder', label: 'Folders', icon: <FolderOpen size={14} /> },
+                            { id: 'doc', label: 'Google Docs', icon: <FileText size={14} className="text-blue-500" /> },
+                            { id: 'sheet', label: 'Google Sheets', icon: <Table size={14} className="text-green-500" /> },
+                            { id: 'slide', label: 'Google Slides', icon: <Presentation size={14} className="text-yellow-500" /> },
+                            { id: 'image', label: 'Images', icon: <ImageIcon size={14} className="text-emerald-500" /> },
+                            { id: 'pdf', label: 'PDFs', icon: <FileText size={14} className="text-rose-500" /> },
+                        ].map((opt) => (
+                            <button
+                                key={opt.id}
+                                onClick={() => { setFilterType(opt.id); setIsFilterMenuOpen(false); }}
+                                className={`w-full flex items-center gap-3 px-4 py-2 hover:bg-white/5 text-xs transition-colors ${filterType === opt.id ? 'text-[#279da6] bg-[#279da6]/5 font-bold' : 'text-iron'}`}
+                            >
+                                <span className="opacity-80 group-hover:opacity-100">{opt.icon}</span>
+                                <span className="uppercase tracking-widest text-[10px]">{opt.label}</span>
+                                {filterType === opt.id && <Check size={12} className="ml-auto" />}
+                            </button>
+                        ))}
+                    </div>
+                )}
+            </div>
+
+            <div className="h-4 w-[1px] bg-shark mx-1" />
+
+            {/* View Mode Switcher */}
+            <div className="flex items-center bg-black/40 border border-shark/60 rounded-xl p-0.5 overflow-hidden">
+                <button
+                    onClick={() => setViewMode('list')}
+                    className={`p-1.5 rounded-lg transition-all flex items-center gap-2 ${viewMode === 'list' ? 'bg-[#279da6] text-white shadow-lg shadow-[#279da6]/20' : 'text-santas-gray hover:text-white hover:bg-white/5'}`}
+                    title="List view"
+                >
+                    <List size={14} />
+                    {viewMode === 'list' && <span className="text-[10px] font-black uppercase pr-1">List</span>}
+                </button>
+                <button
+                    onClick={() => setViewMode('grid')}
+                    className={`p-1.5 rounded-lg transition-all flex items-center gap-2 ${viewMode === 'grid' ? 'bg-[#279da6] text-white shadow-lg shadow-[#279da6]/20' : 'text-santas-gray hover:text-white hover:bg-white/5'}`}
+                    title="Grid view"
+                >
+                    <LayoutGrid size={14} />
+                    {viewMode === 'grid' && <span className="text-[10px] font-black uppercase pr-1">Grid</span>}
+                </button>
+            </div>
+        </div>
+    );
+
     return (
         <div className={`flex h-screen bg-[#09090B] text-iron font-sans overflow-hidden transition-all duration-500 ${isImpersonating ? 'p-1.5' : ''}`} style={isImpersonating ? { backgroundColor: '#0f2b1a' } : undefined}>
             <Sidebar isCollapsed={isSidebarCollapsed} />
@@ -457,6 +540,7 @@ export default function FilesClient({ initialRootId, initialDriveItems, initialD
                                 setNewFolderName('');
                             }}
                             isSubmitting={isDriveLoading}
+                            rightToolbar={filtersElement}
                         >
                             {/* Breadcrumbs */}
                             <div className="flex items-center gap-2 text-sm ml-2 overflow-hidden">
@@ -474,7 +558,7 @@ export default function FilesClient({ initialRootId, initialDriveItems, initialD
                                         {i > 0 && <ChevronRight size={14} className="text-storm-gray shrink-0" />}
                                         <button
                                             onClick={() => navigateToBreadcrumb(i)}
-                                            className={`font-black uppercase tracking-widest text-[14px] transition-all truncate max-w-[120px] ${i === driveBreadcrumbs.length - 1 ? 'text-[#279da6]' : 'text-storm-gray hover:text-iron'}`}
+                                            className={`font-black uppercase tracking-widest text-[10px] transition-all truncate max-w-[120px] ${i === driveBreadcrumbs.length - 1 ? 'text-[#279da6]' : 'text-storm-gray hover:text-iron'}`}
                                         >
                                             {crumb.name}
                                         </button>
@@ -520,7 +604,7 @@ export default function FilesClient({ initialRootId, initialDriveItems, initialD
                                         <FolderPlus size={16} className="text-storm-gray group-hover:text-[#279da6] transition-colors" />
                                         <span className="text-xs font-medium">New folder</span>
                                     </div>
-                                    <span className="text-[14px] text-storm-gray opacity-40 group-hover:opacity-100 transition-opacity uppercase tracking-widest px-1.5 border border-shark/40 rounded bg-shark/20">⌘F</span>
+                                    <span className="text-[10px] text-storm-gray opacity-40 group-hover:opacity-100 transition-opacity uppercase tracking-widest px-1.5 border border-shark/40 rounded bg-shark/20">⌘F</span>
                                 </button>
                                 <div className="h-[1px] bg-shark/40 my-1" />
                                 <button
@@ -541,7 +625,7 @@ export default function FilesClient({ initialRootId, initialDriveItems, initialD
                                         <FolderUp size={16} className="text-storm-gray group-hover:text-[#279da6] transition-colors" />
                                         <span className="text-xs font-medium">Folder upload</span>
                                     </div>
-                                    <span className="text-[14px] text-storm-gray opacity-40 group-hover:opacity-100 transition-opacity uppercase tracking-widest px-1.5 border border-shark/40 rounded bg-shark/20">⌘I</span>
+                                    <span className="text-[10px] text-storm-gray opacity-40 group-hover:opacity-100 transition-opacity uppercase tracking-widest px-1.5 border border-shark/40 rounded bg-shark/20">⌘I</span>
                                 </button>
                                 <div className="h-[1px] bg-shark/40 my-1" />
                                 <button
@@ -571,83 +655,6 @@ export default function FilesClient({ initialRootId, initialDriveItems, initialD
                             </div>
                         )}
                         <div className="p-6">
-                            {/* Toolbar */}
-                            <div className="flex items-center justify-between mb-6">
-                                <div className="flex items-center gap-4">
-                                    <div className="relative w-80">
-                                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-santas-gray" size={16} />
-                                        <input
-                                            type="text"
-                                            placeholder="Search files and folders"
-                                            value={searchQuery}
-                                            onChange={(e) => setSearchQuery(e.target.value)}
-                                            className="w-full bg-[#09090B] border border-shark/50 rounded-lg py-2 pl-10 pr-4 text-[14px] text-iron placeholder:text-storm-gray focus:outline-none focus:border-[#279da6]/40 transition-all"
-                                        />
-                                    </div>
-                                </div>
-
-                                <div className="flex items-center gap-2">
-                                    {/* Filters Dropdown */}
-                                    <div className="relative" ref={filterMenuRef}>
-                                        <button
-                                            onClick={() => setIsFilterMenuOpen(!isFilterMenuOpen)}
-                                            className={`flex items-center gap-2 px-3 py-1.5 rounded-lg border border-shark/60 hover:border-[#279da6]/40 hover:bg-white/5 transition-all group ${filterType !== 'all' ? 'bg-[#279da6]/10 border-[#279da6]/40 text-[#279da6]' : 'text-santas-gray'}`}
-                                        >
-                                            <Filter size={14} className={filterType !== 'all' ? 'text-[#279da6]' : 'group-hover:text-white'} />
-                                            <span className="text-[14px] font-bold uppercase tracking-tight">
-                                                {filterType === 'all' ? 'Filters' : filterType}
-                                            </span>
-                                            <ChevronDown size={12} className={`transition-transform duration-300 ${isFilterMenuOpen ? 'rotate-180' : ''}`} />
-                                        </button>
-
-                                        {isFilterMenuOpen && (
-                                            <div className="absolute top-full right-0 mt-2 w-48 bg-[#18181B] border border-shark/60 rounded-xl shadow-2xl py-2 z-[60] animate-zoom-in backdrop-blur-xl bg-opacity-95">
-                                                {[
-                                                    { id: 'all', label: 'All Files', icon: <FileIcon size={14} /> },
-                                                    { id: 'folder', label: 'Folders', icon: <FolderOpen size={14} /> },
-                                                    { id: 'doc', label: 'Google Docs', icon: <FileText size={14} className="text-blue-500" /> },
-                                                    { id: 'sheet', label: 'Google Sheets', icon: <Table size={14} className="text-green-500" /> },
-                                                    { id: 'slide', label: 'Google Slides', icon: <Presentation size={14} className="text-yellow-500" /> },
-                                                    { id: 'image', label: 'Images', icon: <ImageIcon size={14} className="text-emerald-500" /> },
-                                                    { id: 'pdf', label: 'PDFs', icon: <FileText size={14} className="text-rose-500" /> },
-                                                ].map((opt) => (
-                                                    <button
-                                                        key={opt.id}
-                                                        onClick={() => { setFilterType(opt.id); setIsFilterMenuOpen(false); }}
-                                                        className={`w-full flex items-center gap-3 px-4 py-2 hover:bg-white/5 text-[14px] transition-colors ${filterType === opt.id ? 'text-[#279da6] bg-[#279da6]/5 font-bold' : 'text-iron'}`}
-                                                    >
-                                                        <span className="opacity-80 group-hover:opacity-100">{opt.icon}</span>
-                                                        <span>{opt.label}</span>
-                                                        {filterType === opt.id && <Check size={12} className="ml-auto" />}
-                                                    </button>
-                                                ))}
-                                            </div>
-                                        )}
-                                    </div>
-
-                                    <div className="h-4 w-[1px] bg-shark mx-1" />
-
-                                    {/* View Mode Switcher */}
-                                    <div className="flex items-center bg-[#09090B] border border-shark/60 rounded-xl p-0.5 overflow-hidden">
-                                        <button
-                                            onClick={() => setViewMode('list')}
-                                            className={`p-1.5 rounded-lg transition-all flex items-center gap-2 ${viewMode === 'list' ? 'bg-[#279da6] text-white shadow-lg shadow-[#279da6]/20' : 'text-santas-gray hover:text-white hover:bg-white/5'}`}
-                                            title="List view"
-                                        >
-                                            <List size={14} />
-                                            {viewMode === 'list' && <span className="text-[14px] font-black uppercase pr-1">List</span>}
-                                        </button>
-                                        <button
-                                            onClick={() => setViewMode('grid')}
-                                            className={`p-1.5 rounded-lg transition-all flex items-center gap-2 ${viewMode === 'grid' ? 'bg-[#279da6] text-white shadow-lg shadow-[#279da6]/20' : 'text-santas-gray hover:text-white hover:bg-white/5'}`}
-                                            title="Grid view"
-                                        >
-                                            <LayoutGrid size={14} />
-                                            {viewMode === 'grid' && <span className="text-[14px] font-black uppercase pr-1">Grid</span>}
-                                        </button>
-                                    </div>
-                                </div>
-                            </div>
 
                             {/* New Folder Creation Input */}
                             <div
@@ -679,24 +686,7 @@ export default function FilesClient({ initialRootId, initialDriveItems, initialD
                                 </div>
                             </div>
 
-                            {driveError ? (
-                                <div className="flex flex-col items-center justify-center py-32 text-center opacity-70">
-                                    <AlertCircle size={48} className="text-rose-500 mb-4" />
-                                    <p className="text-xs font-black text-iron uppercase mb-1 tracking-widest">FILE LOADING ERROR</p>
-                                    <p className="text-[10px] text-storm-gray uppercase tracking-widest max-w-md mx-auto leading-relaxed">
-                                        {driveError === 'invalid_grant'
-                                            ? 'The Google Drive access token has expired or been revoked. Please verify your credentials.'
-                                            : driveError || 'An unexpected error occurred while syncing with Google Drive.'}
-                                    </p>
-                                    <button
-                                        onClick={refreshFolder}
-                                        className="mt-6 flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[#279da6]/10 hover:bg-[#279da6]/20 text-[#279da6] text-[10px] font-black uppercase tracking-widest transition-all border border-[#279da6]/30"
-                                    >
-                                        <RefreshCw size={14} className={isDriveLoading ? 'animate-spin' : ''} />
-                                        Try Reconneting
-                                    </button>
-                                </div>
-                            ) : isDriveLoading && driveItems.length === 0 ? (
+                            {isDriveLoading && driveItems.length === 0 ? (
                                 <div className="flex flex-col items-center justify-center py-32 gap-4">
                                     <Loader2 size={32} className="animate-spin text-[#279da6]" />
                                     <p className="text-[10px] font-black text-storm-gray uppercase tracking-[0.3em]">Synching with Drive...</p>
@@ -704,8 +694,8 @@ export default function FilesClient({ initialRootId, initialDriveItems, initialD
                             ) : filteredItems.length === 0 ? (
                                 <div className="flex flex-col items-center justify-center py-32 text-center opacity-40">
                                     <FolderOpen size={48} className="text-storm-gray mb-4" />
-                                    <p className="text-[14px] font-black text-iron uppercase mb-1 tracking-widest">THIS FOLDER IS EMPTY</p>
-                                    <p className="text-[14px] text-storm-gray uppercase tracking-widest">Upload your first file or create a subfolder.</p>
+                                    <p className="text-xs font-black text-iron uppercase mb-1 tracking-widest">THIS FOLDER IS EMPTY</p>
+                                    <p className="text-[10px] text-storm-gray uppercase tracking-widest">Upload your first file or create a subfolder.</p>
                                 </div>
                             ) : (
                                 <div className="animate-fade-in">
@@ -714,7 +704,7 @@ export default function FilesClient({ initialRootId, initialDriveItems, initialD
                                             {/* Folders Section */}
                                             {filteredItems.some(item => item.isFolder) && (
                                                 <div className="space-y-4">
-                                                    <h3 className="text-[14px] font-black text-storm-gray uppercase tracking-[0.2em] ml-1 opacity-60">Folders</h3>
+                                                    <h3 className="text-[10px] font-black text-storm-gray uppercase tracking-[0.2em] ml-1 opacity-60">Folders</h3>
                                                     <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-4">
                                                         {filteredItems.filter(item => item.isFolder).map((item) => (
                                                             <div
@@ -726,7 +716,7 @@ export default function FilesClient({ initialRootId, initialDriveItems, initialD
                                                                     {getFileIcon(item.mimeType, item.name, 20)}
                                                                 </div>
                                                                 <div className="flex-1 min-w-0">
-                                                                    <p className="text-[14px] font-bold text-iron truncate uppercase tracking-tight group-hover:text-[#279da6] transition-colors">{item.name}</p>
+                                                                    <p className="text-[11px] font-bold text-iron truncate uppercase tracking-tight group-hover:text-[#279da6] transition-colors">{item.name}</p>
                                                                 </div>
 
                                                                 {/* Mini Actions */}
@@ -756,6 +746,12 @@ export default function FilesClient({ initialRootId, initialDriveItems, initialD
                                                                     >
                                                                         <Pencil size={12} />
                                                                     </button>
+                                                                    <button
+                                                                        onClick={(e) => { e.stopPropagation(); setDeleteTarget(item); setIsDeleting(true); }}
+                                                                        className="p-1.5 hover:text-rose-400 transition-colors"
+                                                                    >
+                                                                        <Trash2 size={12} />
+                                                                    </button>
                                                                 </div>
                                                             </div>
                                                         ))}
@@ -766,7 +762,7 @@ export default function FilesClient({ initialRootId, initialDriveItems, initialD
                                             {/* Files Section */}
                                             {filteredItems.some(item => !item.isFolder) && (
                                                 <div className="space-y-4">
-                                                    <h3 className="text-[14px] font-black text-storm-gray uppercase tracking-[0.2em] ml-1 opacity-60">Files</h3>
+                                                    <h3 className="text-[10px] font-black text-storm-gray uppercase tracking-[0.2em] ml-1 opacity-60">Files</h3>
                                                     <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-8 gap-6">
                                                         {filteredItems.filter(item => !item.isFolder).map((item) => (
                                                             <div
@@ -784,23 +780,29 @@ export default function FilesClient({ initialRootId, initialDriveItems, initialD
                                                                         <div className="scale-75 origin-left">
                                                                             {getFileIcon(item.mimeType, item.name, 12)}
                                                                         </div>
-                                                                        <span className="text-[14px] font-black text-storm-gray uppercase tracking-[0.1em]">{getFileTypeLabel(item.mimeType)}</span>
+                                                                        <span className="text-[8px] font-black text-storm-gray uppercase tracking-[0.1em]">{getFileTypeLabel(item.mimeType)}</span>
                                                                     </div>
                                                                 </div>
 
                                                                 {/* Footer Info */}
                                                                 <div className="p-4 bg-[#111114]/80 backdrop-blur-sm border-t border-shark/40">
-                                                                    <p className="text-[14px] font-bold text-iron truncate uppercase tracking-tight group-hover:text-[#279da6] transition-colors mb-1">{item.name}</p>
+                                                                    <p className="text-[10px] font-bold text-iron truncate uppercase tracking-tight group-hover:text-[#279da6] transition-colors mb-1">{item.name}</p>
                                                                     <div className="flex items-center justify-between">
-                                                                        <span className="text-[14px] font-black text-storm-gray uppercase tracking-widest">{item.size ? formatFileSize(item.size) : '--'}</span>
+                                                                        <span className="text-[8px] font-black text-storm-gray uppercase tracking-widest">{item.size ? formatFileSize(item.size) : '--'}</span>
                                                                         {dbEnrichment.clients.some(c => (c.org || c.name) === item.name) && (
-                                                                            <span className="text-[14px] font-black text-cyan-400 uppercase tracking-widest">CLIENT</span>
+                                                                            <span className="text-[8px] font-black text-cyan-400 uppercase tracking-widest">CLIENT</span>
                                                                         )}
                                                                     </div>
                                                                 </div>
 
                                                                 {/* Hover Actions */}
                                                                 <div className="absolute top-2 right-2 flex flex-col gap-1.5 opacity-0 group-hover:opacity-100 transition-all translate-x-2 group-hover:translate-x-0">
+                                                                    <button
+                                                                        onClick={(e) => { e.stopPropagation(); setDeleteTarget(item); setIsDeleting(true); }}
+                                                                        className="p-2 rounded-xl bg-[#09090B]/80 backdrop-blur-md border border-shark hover:bg-rose-500/20 text-storm-gray hover:text-rose-400 transition-all"
+                                                                    >
+                                                                        <Trash2 size={12} />
+                                                                    </button>
                                                                     <a
                                                                         href={item.webContentLink || item.webViewLink}
                                                                         target="_blank"
@@ -821,33 +823,33 @@ export default function FilesClient({ initialRootId, initialDriveItems, initialD
                                         /* List View */
                                         <div className="flex flex-col gap-1 border border-shark/40 rounded-2xl overflow-hidden bg-[#09090B]/20">
                                             {/* Header */}
-                                            <div className="flex items-center px-4 py-3 bg-white/5 border-b border-shark/60 text-[14px] font-black text-storm-gray uppercase tracking-widest">
-                                                <div className="flex-1">Name</div>
-                                                <div className="w-32 hidden md:block">Type</div>
-                                                <div className="w-24 hidden sm:block">Size</div>
-                                                <div className="w-32 text-right">Actions</div>
+                                            <div className="flex items-center px-4 py-2.5 bg-white/5 border-b border-shark/60 text-[10px] font-black text-storm-gray uppercase tracking-widest">
+                                                <div className="flex-1">NAME</div>
+                                                <div className="w-32 hidden md:block">TYPE</div>
+                                                <div className="w-24 hidden sm:block">SIZE</div>
+                                                <div className="w-32 text-right">ACTIONS</div>
                                             </div>
                                             {/* Items */}
                                             {filteredItems.map((item) => (
                                                 <div
                                                     key={item.id}
                                                     onClick={() => item.isFolder ? navigateToSubfolder(item) : (setPreviewFile({ ...item, url: item.webViewLink, previewUrl: item.previewUrl, type: item.mimeType }), setIsPreviewOpen(true))}
-                                                    className="flex items-center px-4 py-3 hover:bg-white/5 transition-all cursor-pointer group border-b border-shark/20 last:border-none"
+                                                    className="flex items-center px-4 py-2.5 hover:bg-white/5 transition-all cursor-pointer group border-b border-shark/20 last:border-none"
                                                 >
                                                     <div className="flex-1 flex items-center gap-3 min-w-0">
                                                         <div className="shrink-0 scale-75 origin-left">
                                                             {getFileIcon(item.mimeType, item.name)}
                                                         </div>
-                                                        <p className="text-[14px] font-bold text-iron truncate uppercase tracking-tight group-hover:text-[#279da6] transition-colors">{item.name}</p>
+                                                        <p className="text-xs font-black text-iron truncate uppercase tracking-tight group-hover:text-[#279da6] transition-colors">{item.name}</p>
                                                         {dbEnrichment.clients.some(c => (c.org || c.name) === item.name) && (
-                                                            <span className="text-[14px] font-black bg-cyan-500/10 text-cyan-400 px-1.5 py-0.5 rounded border border-cyan-500/20 uppercase">CLIENT</span>
+                                                            <span className="text-[8px] font-black bg-cyan-500/10 text-cyan-400 px-1.5 py-0.5 rounded border border-cyan-500/20 uppercase">CLIENT</span>
                                                         )}
                                                     </div>
                                                     <div className="w-32 hidden md:block">
-                                                        <span className="text-[14px] font-black text-storm-gray uppercase tracking-widest">{getFileTypeLabel(item.mimeType)}</span>
+                                                        <span className="text-[9px] font-black text-storm-gray uppercase tracking-widest">{getFileTypeLabel(item.mimeType)}</span>
                                                     </div>
                                                     <div className="w-24 hidden sm:block">
-                                                        <span className="text-[14px] font-black text-storm-gray uppercase tracking-widest">{!item.isFolder && item.size ? formatFileSize(item.size) : '--'}</span>
+                                                        <span className="text-[9px] font-black text-storm-gray uppercase tracking-widest">{!item.isFolder && item.size ? formatFileSize(item.size) : '--'}</span>
                                                     </div>
                                                     <div className="w-32 flex items-center justify-end gap-1 opacity-100 transition-opacity">
                                                         <button
@@ -886,6 +888,12 @@ export default function FilesClient({ initialRootId, initialDriveItems, initialD
                                                         >
                                                             <Pencil size={12} />
                                                         </button>
+                                                        <button
+                                                            onClick={(e) => { e.stopPropagation(); setDeleteTarget(item); setIsDeleting(true); }}
+                                                            className="p-1.5 rounded-lg hover:bg-rose-500/20 text-storm-gray hover:text-rose-400 transition-all"
+                                                        >
+                                                            <Trash2 size={12} />
+                                                        </button>
                                                         {!item.isFolder && (
                                                             <a
                                                                 href={item.webContentLink || item.webViewLink}
@@ -909,7 +917,36 @@ export default function FilesClient({ initialRootId, initialDriveItems, initialD
                 </div >
             </div >
 
-
+            {/* Delete Confirmation */}
+            {
+                isDeleting && deleteTarget && (
+                    <div className="fixed inset-0 z-50 flex items-center justify-center px-4 bg-black/80 backdrop-blur-sm animate-fade-in">
+                        <div className="bg-[#18181B] border border-shark rounded-3xl p-8 max-w-md w-full shadow-2xl animate-scale-in">
+                            <div className="w-16 h-16 rounded-2xl bg-rose-500/10 flex items-center justify-center text-rose-500 mb-6 mx-auto">
+                                <Trash2 size={32} />
+                            </div>
+                            <h3 className="text-xl font-black text-white text-center mb-2 uppercase tracking-tight">Confirm Deletion</h3>
+                            <p className="text-sm font-bold text-storm-gray text-center mb-8 uppercase tracking-widest text-[10px]">
+                                Are you sure you want to delete <span className="text-iron">"{deleteTarget?.name}"</span>? This action cannot be undone.
+                            </p>
+                            <div className="flex gap-3">
+                                <button
+                                    onClick={() => { setIsDeleting(false); setDeleteTarget(null); }}
+                                    className="flex-1 px-6 py-3 rounded-2xl bg-shark/40 hover:bg-shark border border-shark text-iron text-xs font-black uppercase tracking-widest transition-all"
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    onClick={handleDelete}
+                                    className="flex-1 px-6 py-3 rounded-2xl bg-rose-500 hover:bg-rose-600 text-white text-xs font-black uppercase tracking-widest transition-all shadow-lg shadow-rose-500/20"
+                                >
+                                    Delete Now
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                )
+            }
 
             {/* File Preview Modal */}
             <FilePreviewModal
@@ -928,7 +965,7 @@ export default function FilesClient({ initialRootId, initialDriveItems, initialD
                         />
                         <div className="bg-[#18181B] border border-shark/60 w-full max-w-md rounded-2xl shadow-2xl relative z-10 overflow-hidden animate-zoom-in">
                             <div className="px-6 py-5 border-b border-shark">
-                                <h3 className="text-[14px] font-black text-iron tracking-tight uppercase">
+                                <h3 className="text-lg font-black text-iron tracking-tight uppercase">
                                     {namingModal.title}
                                 </h3>
                                 <button
@@ -940,7 +977,7 @@ export default function FilesClient({ initialRootId, initialDriveItems, initialD
                             </div>
 
                             <div className="p-6">
-                                <label className="block text-[14px] font-black text-storm-gray uppercase tracking-widest mb-2 ml-1">
+                                <label className="block text-[10px] font-black text-storm-gray uppercase tracking-widest mb-2 ml-1">
                                     Enter Name
                                 </label>
                                 <input
@@ -954,7 +991,7 @@ export default function FilesClient({ initialRootId, initialDriveItems, initialD
                                             setNamingModal(prev => ({ ...prev, isOpen: false }));
                                         }
                                     }}
-                                    className="w-full bg-shark/40 border border-shark rounded-xl px-4 py-3 text-iron focus:outline-none focus:border-[#279da6] transition-all placeholder:text-storm-gray/40 font-medium text-[14px]"
+                                    className="w-full bg-shark/40 border border-shark rounded-xl px-4 py-3 text-iron focus:outline-none focus:border-[#279da6] transition-all placeholder:text-storm-gray/40 font-medium"
                                     placeholder="e.g. Project Proposal"
                                 />
                             </div>
@@ -962,7 +999,7 @@ export default function FilesClient({ initialRootId, initialDriveItems, initialD
                             <div className="px-6 py-4 bg-shark/20 flex items-center justify-end gap-3">
                                 <button
                                     onClick={() => setNamingModal(prev => ({ ...prev, isOpen: false }))}
-                                    className="px-5 py-2 text-[14px] font-black text-storm-gray hover:text-white transition-colors uppercase tracking-widest"
+                                    className="px-5 py-2 text-xs font-black text-storm-gray hover:text-white transition-colors uppercase tracking-widest"
                                 >
                                     Cancel
                                 </button>
@@ -971,7 +1008,7 @@ export default function FilesClient({ initialRootId, initialDriveItems, initialD
                                         const input = (e.currentTarget.parentElement?.previousElementSibling?.querySelector('input') as HTMLInputElement);
                                         if (input) namingModal.onConfirm(input.value);
                                     }}
-                                    className="px-6 py-2 bg-[#279da6] text-white rounded-xl text-[14px] font-black hover:bg-[#279da6]/90 transition-all shadow-lg shadow-[#279da6]/20 uppercase tracking-widest active:scale-95"
+                                    className="px-6 py-2 bg-[#279da6] text-white rounded-xl text-xs font-black hover:bg-[#279da6]/90 transition-all shadow-lg shadow-[#279da6]/20 uppercase tracking-widest active:scale-95"
                                 >
                                     Create
                                 </button>

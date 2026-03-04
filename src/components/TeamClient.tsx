@@ -1,7 +1,6 @@
 'use client';
 
 import React, { useState, useRef, useEffect } from 'react';
-import { createPortal } from 'react-dom';
 import Sidebar from '@/components/Sidebar';
 import Header from '@/components/Header';
 import {
@@ -21,25 +20,36 @@ import {
     Check,
     SortAsc,
     SortDesc,
-    Settings,
-    Box,
     FileText,
     UserCog,
-    Camera,
     Shield,
-    Mail
+    Mail,
+    Building,
+    Home,
+    FolderOpen,
+    MessageSquare,
+    CheckSquare,
+    SlidersHorizontal,
+    LayoutList,
+    ShieldAlert,
+    UserIcon,
+    ChevronDown,
+    Phone
 } from 'lucide-react';
 import AvatarUpload from '@/components/AvatarUpload';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import { formatDate, formatTime } from '@/lib/dateUtils';
 import CustomDropdown from '@/components/CustomDropdown';
+import CustomDateRangePicker from '@/components/CustomDateRangePicker';
 
 interface TeamMember {
     id: string;
     profile_id?: string | null;
     name: string;
     email: string;
+    phone?: string | null;
+    country_code?: string | null;
     role: 'admin' | 'editor' | 'viewer';
     status: string;
     created_at: string;
@@ -49,6 +59,7 @@ interface TeamMember {
     task_count?: number;
     tasks?: string[];
     accessible_sections?: string[];
+    position?: string | null;
 }
 
 interface TeamClientProps {
@@ -57,28 +68,37 @@ interface TeamClientProps {
 }
 
 
+const COUNTRY_CODES = [
+    { code: '+91', country: 'India' },
+    { code: '+1', country: 'USA' },
+    { code: '+44', country: 'UK' },
+    { code: '+971', country: 'UAE' },
+    { code: '+61', country: 'Australia' },
+    { code: '+65', country: 'Singapore' },
+    { code: '+49', country: 'Germany' },
+    { code: '+33', country: 'France' },
+    { code: '+81', country: 'Japan' },
+    { code: '+86', country: 'China' },
+];
 
 export default function TeamClient({ initialMembers, initialCounts }: TeamClientProps) {
     const router = useRouter();
     const { impersonate, isImpersonating } = useAuth();
     const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
     const [activeTab, setActiveTab] = useState('All Members');
-    const [isModalOpen, setIsModalOpen] = useState(false);
-    const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+    const [panelMode, setPanelMode] = useState<'create' | 'edit'>('create');
     const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
     const [selectedMember, setSelectedMember] = useState<TeamMember | null>(null);
     const [showPassword, setShowPassword] = useState(false);
-    const [activeDropdown, setActiveDropdown] = useState<string | null>(null);
     const [searchQuery, setSearchQuery] = useState('');
     const [filters, setFilters] = useState({
         name: '',
         email: '',
         role: '',
-        request_count: '',
-        task_count: '',
-        last_login: '',
-        created_at: ''
+        date_from: '',
+        date_to: ''
     });
+    const [isFilterOpen, setIsFilterOpen] = useState(false);
     const [sortConfig, setSortConfig] = useState<{ key: string; direction: 'asc' | 'desc' | null }>({
         key: 'created_at',
         direction: 'desc'
@@ -86,29 +106,7 @@ export default function TeamClient({ initialMembers, initialCounts }: TeamClient
     const [activeFilterHeader, setActiveFilterHeader] = useState<string | null>(null);
 
     const [members, setMembers] = useState<TeamMember[]>(initialMembers);
-    const [dropdownCoords, setDropdownCoords] = useState({ top: 0, left: 0, origin: 'top right' });
-    const dropdownRef = useRef<HTMLDivElement>(null);
 
-    // Close dropdown on scroll or click outside
-    useEffect(() => {
-        const handleScroll = () => setActiveDropdown(null);
-        const handleClickOutside = (event: MouseEvent) => {
-            if (activeDropdown && dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
-                setActiveDropdown(null);
-            }
-        };
-        window.addEventListener('scroll', handleScroll, true);
-        document.addEventListener('mousedown', handleClickOutside);
-        return () => {
-            window.removeEventListener('scroll', handleScroll, true);
-            document.removeEventListener('mousedown', handleClickOutside);
-        };
-    }, [activeDropdown]);
-
-    // Update state when initialMembers changes (from SSR refresh)
-    React.useEffect(() => {
-        setMembers(initialMembers);
-    }, [initialMembers]);
 
     const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -116,12 +114,14 @@ export default function TeamClient({ initialMembers, initialCounts }: TeamClient
     const [formData, setFormData] = useState({
         name: '',
         email: '',
+        phone: '',
+        country_code: '+91',
         password: '',
         confirmPassword: '',
         role: 'viewer' as 'admin' | 'editor' | 'viewer',
-        department: '',
         position: '',
-        accessible_sections: [] as string[],
+        accessible_sections: ['dashboard', 'requests', 'tasks'] as string[],
+        status: 'Active',
         avatarUrl: ''
     });
 
@@ -138,85 +138,73 @@ export default function TeamClient({ initialMembers, initialCounts }: TeamClient
 
 
     const resetForm = () => {
-        setFormData({ name: '', email: '', password: '', confirmPassword: '', role: 'viewer', department: '', position: '', accessible_sections: [], avatarUrl: '' });
+        setFormData({ name: '', email: '', phone: '', country_code: '+91', password: '', confirmPassword: '', role: 'viewer', position: '', accessible_sections: ['dashboard', 'requests', 'tasks'], status: 'Active', avatarUrl: '' });
         setSelectedMember(null);
     };
 
     // Handle Create Form Submit
-    const handleSubmit = async (e: React.FormEvent) => {
-        e.preventDefault();
-        if (formData.password !== formData.confirmPassword) {
-            alert("Passwords don't match!");
-            return;
-        }
 
-        setIsSubmitting(true);
-        try {
-            const response = await fetch('/api/team', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    name: formData.name,
-                    email: formData.email,
-                    password: formData.password,
-                    position: formData.role,
-                    role: formData.role,
-                    accessible_sections: formData.accessible_sections,
-                    avatarUrl: formData.avatarUrl
-                })
-            });
-
-            if (response.ok) {
-                const newMember = await response.json();
-                setIsModalOpen(false);
-                resetForm();
-                // Optimistically update the list
-                const enrichedNewMember = {
-                    ...newMember.member,
-                    role: formData.role,
-                    accessible_sections: formData.accessible_sections,
-                    avatar_url: formData.avatarUrl,
-                    request_count: 0,
-                    created_at: new Date().toISOString()
-                };
-                setMembers([...members, enrichedNewMember as any]);
-                router.refresh(); // Revalidate via server refresh
-            } else {
-                const err = await response.json();
-                alert(`Error: ${err.error}`);
-            }
-        } catch (error) {
-            console.error('Submit failed:', error);
-        } finally {
-            setIsSubmitting(false);
-        }
-    };
-
-    // Handle Inline Create Submit
-    const handleInlineCreate = async () => {
-        if (!formData.name || !formData.email || !formData.password) {
+    // Handle Panel Submit (Unified for Create & Edit)
+    const handlePanelSubmit = async () => {
+        if (!formData.name || !formData.email || (panelMode === 'create' && !formData.password)) {
             alert("Please fill in Name, Email, and Password.");
             return;
         }
 
-        if (formData.password !== formData.confirmPassword) {
+        if (formData.password && formData.password !== formData.confirmPassword) {
             alert("Passwords don't match!");
             return;
         }
 
         setIsSubmitting(true);
+
+        // Optimistic update for Edit Mode
+        if (panelMode === 'edit' && selectedMember) {
+            const updatedMembers = members.map(m =>
+                m.id === selectedMember.id
+                    ? {
+                        ...m,
+                        name: formData.name,
+                        email: formData.email,
+                        phone: formData.phone,
+                        country_code: formData.country_code,
+                        role: formData.role,
+                        position: formData.position,
+                        avatar_url: formData.avatarUrl
+                    }
+                    : m
+            );
+            setMembers(updatedMembers);
+        }
+
         try {
+            const method = panelMode === 'edit' ? 'PATCH' : 'POST';
+            const body = panelMode === 'edit'
+                ? {
+                    id: selectedMember?.id,
+                    name: formData.name,
+                    email: formData.email,
+                    phone: formData.phone,
+                    country_code: formData.country_code,
+                    role: formData.role,
+                    position: formData.position,
+                    avatarUrl: formData.avatarUrl,
+                    password: formData.password || undefined,
+                    accessible_sections: formData.accessible_sections,
+                    oldEmail: selectedMember?.email
+                }
+                : formData;
+
             const response = await fetch('/api/team', {
-                method: 'POST',
+                method,
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(formData)
+                body: JSON.stringify(body)
             });
 
             if (response.ok) {
-                const newMember = await response.json();
                 setIsCreating(false);
                 resetForm();
-                // Optimistically update the list if possible, or just refresh
+                setPanelMode('create');
                 router.refresh();
             } else {
                 const err = await response.json();
@@ -229,109 +217,32 @@ export default function TeamClient({ initialMembers, initialCounts }: TeamClient
         }
     };
 
-    // Handle Edit Click
     const handleEditClick = (member: TeamMember) => {
         setSelectedMember(member);
         setFormData({
             name: member.name,
             email: member.email,
+            phone: member.phone || '',
+            country_code: member.country_code || '+91',
             password: '',
             confirmPassword: '',
             role: member.role || 'viewer',
-            department: (member as any).department || '',
-            position: (member as any).position || '',
-            accessible_sections: member.accessible_sections || [],
+            position: member.position || '',
+            accessible_sections: member.accessible_sections || ['dashboard', 'requests', 'tasks'],
+            status: member.status || 'Active',
             avatarUrl: member.avatar_url || ''
         });
-        setIsEditModalOpen(true);
-        setActiveDropdown(null);
+        setPanelMode('edit');
+        setIsCreating(true);
     };
 
-    // Handle Edit Submit
-    const handleEditSubmit = async (e: React.FormEvent) => {
-        e.preventDefault();
-        if (!selectedMember) return;
-        if (formData.password && formData.password !== formData.confirmPassword) {
-            alert("Passwords don't match!");
-            return;
-        }
-
-        setIsSubmitting(true);
-
-        // Optimistic update
-        const updatedMembers = members.map(m =>
-            m.id === selectedMember.id
-                ? { ...m, name: formData.name, email: formData.email, role: formData.role as any, accessible_sections: formData.accessible_sections, avatar_url: formData.avatarUrl }
-                : m
-        );
-        setMembers(updatedMembers);
-
-        try {
-            const response = await fetch('/api/team', {
-                method: 'PATCH',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    id: selectedMember.id,
-                    name: formData.name,
-                    email: formData.email,
-                    password: formData.password,
-                    position: formData.role,
-                    oldEmail: selectedMember.email,
-                    accessible_sections: formData.accessible_sections,
-                    avatarUrl: formData.avatarUrl
-                })
-            });
-
-            if (response.ok) {
-                setIsEditModalOpen(false);
-                resetForm();
-                router.refresh(); // Revalidate to ensure consistency
-            } else {
-                const err = await response.json();
-                alert(`Error: ${err.error}`);
-                setMembers(initialMembers); // Rollback on error
-            }
-        } catch (error) {
-            console.error('Update failed:', error);
-        } finally {
-            setIsSubmitting(false);
-        }
-    };
 
     // Handle Delete Click
     const handleDeleteClick = (member: TeamMember) => {
         setSelectedMember(member);
         setIsDeleteModalOpen(true);
-        setActiveDropdown(null);
     };
 
-    const handleDropdownTrigger = (e: React.MouseEvent, member: TeamMember) => {
-        e.stopPropagation();
-        if (activeDropdown === member.id) {
-            setActiveDropdown(null);
-            return;
-        }
-
-        const rect = e.currentTarget.getBoundingClientRect();
-        const spaceBelow = window.innerHeight - rect.bottom;
-        const dropdownHeight = 150; // Adjusted for 3 items + divider
-
-        let top = rect.bottom + window.scrollY + 8;
-        let origin = 'top right';
-
-        if (spaceBelow < dropdownHeight) {
-            top = rect.top + window.scrollY - 150; // Open upwards
-            origin = 'bottom right';
-        }
-
-        setDropdownCoords({
-            top,
-            left: rect.right + window.scrollX,
-            origin
-        });
-        setSelectedMember(member);
-        setActiveDropdown(member.id);
-    };
 
     // Handle Delete Confirm
     const handleDeleteConfirm = async () => {
@@ -365,29 +276,6 @@ export default function TeamClient({ initialMembers, initialCounts }: TeamClient
         }
     };
 
-    // Handle Role Update directly from table
-    const handleRoleUpdate = async (member: TeamMember, newRole: string) => {
-        const originalMembers = [...members];
-        // Optimistic update
-        setMembers(members.map(m => m.id === member.id ? { ...m, role: newRole as any } : m));
-        try {
-            const response = await fetch('/api/team', {
-                method: 'PATCH',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ id: member.id, position: newRole })
-            });
-            if (!response.ok) {
-                setMembers(originalMembers);
-                const err = await response.json();
-                alert(`Error: ${err.error}`);
-            } else {
-                router.refresh();
-            }
-        } catch (error) {
-            setMembers(originalMembers);
-            console.error('Role update failed:', error);
-        }
-    };
 
     const handleSort = (key: string) => {
         setSortConfig(prev => ({
@@ -398,23 +286,30 @@ export default function TeamClient({ initialMembers, initialCounts }: TeamClient
 
     const filteredMembers = members.filter((member: TeamMember) => {
 
-        // Search Filter
-        const searchLower = searchQuery.toLowerCase();
-        const matchesSearch = !searchQuery ||
-            member.name.toLowerCase().includes(searchLower) ||
-            member.email.toLowerCase().includes(searchLower);
-
         // Header Filters
         const matchesName = !filters.name || member.name.toLowerCase().includes(filters.name.toLowerCase());
         const matchesEmail = !filters.email || member.email.toLowerCase().includes(filters.email.toLowerCase());
         const matchesRole = !filters.role || member.role.toLowerCase() === filters.role.toLowerCase();
-        const matchesRequests = !filters.request_count || (member.request_count || 0) >= parseInt(filters.request_count);
-        const matchesTasks = !filters.task_count || (member.task_count || 0) >= parseInt(filters.task_count);
 
-        const matchesLastLogin = !filters.last_login || (member.last_login && formatDate(member.last_login).includes(filters.last_login));
-        const matchesCreatedAt = !filters.created_at || formatDate(member.created_at).includes(filters.created_at);
+        // Date Range Filter
+        let matchesDate = true;
+        if (filters.date_from || filters.date_to) {
+            const memberDate = new Date(member.created_at);
+            memberDate.setHours(0, 0, 0, 0);
 
-        return matchesSearch && matchesName && matchesEmail && matchesRole && matchesRequests && matchesTasks && matchesLastLogin && matchesCreatedAt;
+            if (filters.date_from) {
+                const fromDate = new Date(filters.date_from);
+                fromDate.setHours(0, 0, 0, 0);
+                if (memberDate < fromDate) matchesDate = false;
+            }
+            if (filters.date_to) {
+                const toDate = new Date(filters.date_to);
+                toDate.setHours(0, 0, 0, 0);
+                if (memberDate > toDate) matchesDate = false;
+            }
+        }
+
+        return matchesName && matchesEmail && matchesRole && matchesDate;
     });
 
     const sortedMembers = [...filteredMembers].sort((a, b) => {
@@ -442,6 +337,94 @@ export default function TeamClient({ initialMembers, initialCounts }: TeamClient
         return () => document.removeEventListener('mousedown', handleClickOutside);
     }, [activeFilterHeader]);
 
+    const filtersElement = (
+        <div className="flex items-center gap-3">
+            <div className="relative">
+                <button
+                    onClick={() => setIsFilterOpen(!isFilterOpen)}
+                    className={`relative flex items-center gap-2 px-3 py-1.5 rounded-xl border transition-all text-[11px] font-bold z-10 ${Object.values(filters).some(v => v !== '') || searchQuery !== '' || (sortConfig.key !== '' && !(sortConfig.key === 'created_at' && sortConfig.direction === 'desc')) ? 'bg-[#279da6]/20 border-[#279da6]/60 text-[#279da6]' : 'border-shark bg-black/40 text-santas-gray hover:text-white hover:bg-shark/40'}`}
+                >
+                    <Filter size={14} className={Object.values(filters).some(v => v !== '') || searchQuery !== '' || (sortConfig.key !== '' && !(sortConfig.key === 'created_at' && sortConfig.direction === 'desc')) ? 'fill-[#279da6]/20' : ''} />
+                    <span>Filters</span>
+                    <ChevronDown size={14} className={isFilterOpen ? 'rotate-180 transition-transform' : 'transition-transform'} />
+                </button>
+
+                {isFilterOpen && (
+                    <div className="absolute right-0 mt-2 w-80 bg-[#121214] border border-shark rounded-2xl shadow-2xl p-4 z-50 space-y-4 animate-in fade-in slide-in-from-top-2 duration-200">
+                        <div className="flex items-center justify-between mb-1">
+                            <h4 className="text-[10px] font-black uppercase tracking-widest text-[#279da6]">Advanced Filters</h4>
+                            <button
+                                onClick={() => {
+                                    setFilters({
+                                        name: '',
+                                        email: '',
+                                        role: '',
+                                        date_from: '',
+                                        date_to: ''
+                                    });
+                                    setSearchQuery('');
+                                    setSortConfig({ key: 'created_at', direction: 'desc' });
+                                    setIsFilterOpen(false);
+                                }}
+                                className="text-[10px] font-bold text-storm-gray hover:text-white underline underline-offset-4"
+                            >
+                                Reset all
+                            </button>
+                        </div>
+
+                        <div className="space-y-3">
+                            <div className="space-y-1.5">
+                                <label className="text-[10px] font-black text-storm-gray uppercase tracking-widest ml-1">Name</label>
+                                <div className="relative group">
+                                    <UsersIcon size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-storm-gray group-focus-within:text-[#279da6] transition-colors" />
+                                    <input
+                                        type="text"
+                                        value={filters.name}
+                                        onChange={(e) => setFilters(f => ({ ...f, name: e.target.value }))}
+                                        placeholder="Search name..."
+                                        className="w-full bg-black/40 border border-shark/50 rounded-xl py-2.5 pl-10 pr-10 text-[11px] text-iron placeholder:text-storm-gray focus:outline-none focus:border-[#279da6]/40 transition-all font-bold"
+                                    />
+                                    {filters.name && (
+                                        <button
+                                            onClick={() => setFilters(f => ({ ...f, name: '' }))}
+                                            className="absolute right-3.5 top-1/2 -translate-y-1/2 p-1 hover:bg-shark rounded-md text-storm-gray hover:text-white transition-colors"
+                                        >
+                                            <X size={12} />
+                                        </button>
+                                    )}
+                                </div>
+                            </div>
+
+                            <div className="space-y-1.5">
+                                <label className="text-[10px] font-black text-storm-gray uppercase tracking-widest ml-1">Role</label>
+                                <CustomDropdown
+                                    value={filters.role}
+                                    onChange={(val) => setFilters(f => ({ ...f, role: val }))}
+                                    options={[
+                                        { label: 'All Roles', value: '' },
+                                        { label: 'Admin', value: 'admin', icon: <Shield size={12} className="text-rose-500" /> },
+                                        { label: 'Editor', value: 'editor', icon: <Edit2 size={12} className="text-[#279da6]" /> },
+                                        { label: 'Viewer', value: 'viewer', icon: <Eye size={12} className="text-storm-gray" /> }
+                                    ]}
+                                    showClear={true}
+                                />
+                            </div>
+
+                            <div className="space-y-1.5">
+                                <label className="text-[10px] font-black text-storm-gray uppercase tracking-widest ml-1">Created At</label>
+                                <CustomDateRangePicker
+                                    from={filters.date_from}
+                                    to={filters.date_to}
+                                    onChange={(from, to) => setFilters(f => ({ ...f, date_from: from, date_to: to }))}
+                                />
+                            </div>
+                        </div>
+                    </div>
+                )}
+            </div>
+        </div>
+    );
+
     return (
         <div className={`flex h-screen bg-[#09090B] text-iron font-sans overflow-hidden transition-all duration-500 ${isImpersonating ? 'p-1.5' : ''}`} style={isImpersonating ? { backgroundColor: '#0f2b1a' } : undefined}>
             <Sidebar isCollapsed={isSidebarCollapsed} />
@@ -451,14 +434,19 @@ export default function TeamClient({ initialMembers, initialCounts }: TeamClient
                     <div className="border-b border-shark">
                         <Header
                             onToggleSidebar={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
-                            label="Users"
+                            label={panelMode === 'edit' ? 'Edit Team Member' : 'Users'}
                             labelIcon={<Users size={16} className="text-[#279da6]" />}
-                            onCreate={() => setIsCreating(true)}
+                            onCreate={() => {
+                                setPanelMode('create');
+                                setIsCreating(true);
+                            }}
                             isCreating={isCreating}
-                            onConfirm={handleInlineCreate}
+                            onConfirm={handlePanelSubmit}
+                            confirmLabel={panelMode === 'edit' ? 'Update Member' : 'Create Member'}
                             onCancel={() => {
                                 setIsCreating(false);
                                 resetForm();
+                                setPanelMode('create');
                             }}
                             isSubmitting={isSubmitting}
                             pageSwitcher={[
@@ -466,6 +454,7 @@ export default function TeamClient({ initialMembers, initialCounts }: TeamClient
                                 { name: 'Team', path: '/team' }
                             ]}
                             activePath="/team"
+                            rightToolbar={filtersElement}
                         />
                     </div>
 
@@ -480,7 +469,23 @@ export default function TeamClient({ initialMembers, initialCounts }: TeamClient
                                     }`}
                             >
                                 <div className="p-1 bg-[#121214]/90 backdrop-blur-2xl border border-[#279da6]/30 rounded-[2rem] shadow-[0_25px_60px_rgba(0,0,0,0.4),0_0_40px_rgba(39,157,166,0.08)] ring-1 ring-white/5 relative overflow-hidden">
-                                    <div className="p-6 space-y-6">
+                                    <div className="absolute top-4 left-1/2 -translate-x-1/2 px-4 py-1 bg-[#279da6]/20 border border-[#279da6]/30 rounded-full">
+                                        <span className="text-[10px] font-black text-[#279da6] uppercase tracking-[0.2em]">
+                                            {panelMode === 'edit' ? 'Edit Team Member' : 'Add Team Member'}
+                                        </span>
+                                    </div>
+                                    {panelMode === 'edit' && (
+                                        <div className="absolute top-4 right-8">
+                                            <button
+                                                onClick={() => handleDeleteClick(selectedMember!)}
+                                                className="flex items-center gap-2 px-3 py-1 bg-rose-500/10 border border-rose-500/30 rounded-full text-rose-500 hover:bg-rose-500/20 transition-all cursor-pointer group"
+                                            >
+                                                <Trash2 size={12} className="group-hover:scale-110 transition-transform" />
+                                                <span className="text-[9px] font-black uppercase tracking-widest">Delete Member</span>
+                                            </button>
+                                        </div>
+                                    )}
+                                    <div className="p-6 pt-10 space-y-6">
                                         <div className="flex items-start gap-6">
                                             <div className="flex flex-col items-center gap-3 shrink-0">
                                                 <AvatarUpload
@@ -493,13 +498,13 @@ export default function TeamClient({ initialMembers, initialCounts }: TeamClient
                                                 <p className="text-[10px] font-black text-storm-gray uppercase tracking-widest">Photo</p>
                                             </div>
 
-                                            <div className="flex-1 space-y-6">
-                                                {/* Top Row: Basic Info */}
-                                                <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                                            <div className="flex-1 space-y-8">
+                                                {/* Header Grid: 4-column layout */}
+                                                <div className="grid grid-cols-1 md:grid-cols-4 gap-x-5 gap-y-8">
                                                     <div className="space-y-1.5 flex-1">
                                                         <label className="text-[10px] font-black text-storm-gray uppercase tracking-widest ml-1">Full Name</label>
                                                         <div className="relative group">
-                                                            <Users size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-storm-gray group-focus-within:text-[#279da6] transition-colors" />
+                                                            <UsersIcon size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-storm-gray group-focus-within:text-[#279da6] transition-colors" />
                                                             <input
                                                                 ref={inlineInputRef}
                                                                 type="text"
@@ -510,7 +515,7 @@ export default function TeamClient({ initialMembers, initialCounts }: TeamClient
                                                             />
                                                         </div>
                                                     </div>
-                                                    <div className="space-y-1.5 flex-1">
+                                                    <div className="space-y-1.5 flex-1 col-span-2">
                                                         <label className="text-[10px] font-black text-storm-gray uppercase tracking-widest ml-1">Email Address</label>
                                                         <div className="relative group">
                                                             <Mail size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-storm-gray group-focus-within:text-[#279da6] transition-colors" />
@@ -523,11 +528,35 @@ export default function TeamClient({ initialMembers, initialCounts }: TeamClient
                                                             />
                                                         </div>
                                                     </div>
-                                                </div>
-
-                                                {/* Middle Row: Security & Role */}
-                                                <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-                                                    <div className="space-y-1.5 flex-1">
+                                                    <div className="space-y-1.5 flex-1 col-span-2">
+                                                        <label className="text-[10px] font-black text-storm-gray uppercase tracking-widest ml-1">Phone Number</label>
+                                                        <div className="flex gap-2">
+                                                            <div className="w-[100px] shrink-0">
+                                                                <select
+                                                                    value={formData.country_code}
+                                                                    onChange={(e) => setFormData({ ...formData, country_code: e.target.value })}
+                                                                    className="w-full bg-black/40 border border-shark/50 rounded-xl py-2.5 px-3 text-xs text-iron focus:outline-none focus:border-[#279da6]/40 transition-all font-bold appearance-none cursor-pointer"
+                                                                >
+                                                                    {COUNTRY_CODES.map(c => (
+                                                                        <option key={c.code} value={c.code} className="bg-[#121214]">
+                                                                            {c.code} ({c.country})
+                                                                        </option>
+                                                                    ))}
+                                                                </select>
+                                                            </div>
+                                                            <div className="relative flex-1 group">
+                                                                <Phone size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-storm-gray group-focus-within:text-[#279da6] transition-colors" />
+                                                                <input
+                                                                    type="text"
+                                                                    value={formData.phone}
+                                                                    onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                                                                    placeholder="Phone Number"
+                                                                    className="w-full bg-black/40 border border-shark/50 rounded-xl py-2.5 pl-10 pr-4 text-xs text-iron placeholder:text-storm-gray focus:outline-none focus:border-[#279da6]/40 transition-all font-bold"
+                                                                />
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                    <div className="space-y-1.5 flex-1 col-span-2">
                                                         <label className="text-[10px] font-black text-storm-gray uppercase tracking-widest ml-1">Password</label>
                                                         <div className="relative group">
                                                             <Eye size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-storm-gray group-focus-within:text-[#279da6] transition-colors" />
@@ -540,7 +569,7 @@ export default function TeamClient({ initialMembers, initialCounts }: TeamClient
                                                             />
                                                         </div>
                                                     </div>
-                                                    <div className="space-y-1.5 flex-1">
+                                                    <div className="space-y-1.5 flex-1 col-span-2">
                                                         <label className="text-[10px] font-black text-storm-gray uppercase tracking-widest ml-1">Confirm Password</label>
                                                         <div className="relative group">
                                                             <EyeOff size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-storm-gray group-focus-within:text-[#279da6] transition-colors" />
@@ -553,65 +582,37 @@ export default function TeamClient({ initialMembers, initialCounts }: TeamClient
                                                             />
                                                         </div>
                                                     </div>
-                                                    <div className="space-y-1.5 flex-1">
-                                                        <label className="text-[10px] font-black text-storm-gray uppercase tracking-widest ml-1">Access Role</label>
-                                                        <CustomDropdown
-                                                            value={formData.role}
-                                                            onChange={(val) => setFormData({ ...formData, role: val as any })}
-                                                            options={[
-                                                                { label: 'Viewer', value: 'viewer', icon: <Eye size={14} className="text-storm-gray" /> },
-                                                                { label: 'Editor', value: 'editor', icon: <Edit2 size={14} className="text-malibu" /> },
-                                                                { label: 'Admin', value: 'admin', icon: <Shield size={14} className="text-[#279da6]" /> }
-                                                            ]}
-                                                        />
-                                                    </div>
-                                                </div>
-
-                                                {/* Bottom Row: Dept & Position */}
-                                                <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                                                    <div className="space-y-1.5 flex-1">
-                                                        <label className="text-[10px] font-black text-storm-gray uppercase tracking-widest ml-1">Department</label>
-                                                        <input
-                                                            type="text"
-                                                            value={formData.department}
-                                                            onChange={(e) => setFormData({ ...formData, department: e.target.value })}
-                                                            placeholder="e.g. Design"
-                                                            className="w-full bg-black/40 border border-shark/50 rounded-xl py-2.5 px-4 text-xs text-iron placeholder:text-storm-gray focus:outline-none focus:border-[#279da6]/40 transition-all font-bold"
-                                                        />
-                                                    </div>
-                                                    <div className="space-y-1.5 flex-1">
-                                                        <label className="text-[10px] font-black text-storm-gray uppercase tracking-widest ml-1">Position</label>
-                                                        <input
-                                                            type="text"
-                                                            value={formData.position}
-                                                            onChange={(e) => setFormData({ ...formData, position: e.target.value })}
-                                                            placeholder="e.g. Senior Editor"
-                                                            className="w-full bg-black/40 border border-shark/50 rounded-xl py-2.5 px-4 text-xs text-iron placeholder:text-storm-gray focus:outline-none focus:border-[#279da6]/40 transition-all font-bold"
-                                                        />
-                                                    </div>
                                                 </div>
 
                                                 {/* Section Access */}
                                                 <div className="space-y-3">
                                                     <label className="text-[10px] font-black text-storm-gray uppercase tracking-widest ml-1">Section Access</label>
                                                     <div className="flex flex-wrap gap-2">
-                                                        {['Dashboard', 'Files', 'Clients', 'Team', 'Requests', 'Tasks', 'Storage'].map((section) => (
+                                                        {[
+                                                            { id: 'dashboard', label: 'Dashboard', icon: Home },
+                                                            { id: 'requests', label: 'Requests', icon: MessageSquare },
+                                                            { id: 'tasks', label: 'Tasks', icon: CheckSquare },
+                                                            { id: 'files', label: 'Files', icon: FolderOpen },
+                                                            { id: 'clients', label: 'Clients', icon: Users },
+                                                            { id: 'team', label: 'Team', icon: UserCog },
+                                                        ].map((section) => (
                                                             <button
-                                                                key={section}
+                                                                key={section.id}
                                                                 type="button"
                                                                 onClick={() => {
                                                                     const current = formData.accessible_sections;
-                                                                    const updated = current.includes(section)
-                                                                        ? current.filter(s => s !== section)
-                                                                        : [...current, section];
+                                                                    const updated = current.includes(section.id)
+                                                                        ? current.filter(s => s !== section.id)
+                                                                        : [...current, section.id];
                                                                     setFormData({ ...formData, accessible_sections: updated });
                                                                 }}
-                                                                className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all border ${formData.accessible_sections.includes(section)
+                                                                className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all border flex items-center gap-2 ${formData.accessible_sections.includes(section.id)
                                                                     ? 'bg-[#279da6]/10 border-[#279da6]/40 text-[#279da6]'
                                                                     : 'bg-black/40 border-shark/50 text-storm-gray hover:border-shark/80'
                                                                     }`}
                                                             >
-                                                                {section}
+                                                                <section.icon size={12} className={formData.accessible_sections.includes(section.id) ? 'text-[#279da6]' : 'text-storm-gray'} />
+                                                                {section.label}
                                                             </button>
                                                         ))}
                                                     </div>
@@ -624,71 +625,57 @@ export default function TeamClient({ initialMembers, initialCounts }: TeamClient
                             </div>
 
 
-                            {/* Toolbar */}
-                            <div className="flex items-center justify-between mb-6">
-                                <div className="relative w-80">
-                                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-santas-gray" size={16} />
-                                    <input
-                                        type="text"
-                                        placeholder="Search for Team Members"
-                                        value={searchQuery}
-                                        onChange={(e) => setSearchQuery(e.target.value)}
-                                        className="w-full bg-[#09090B] border border-shark/50 rounded-lg py-2 pl-10 pr-4 text-xs text-iron placeholder:text-storm-gray focus:outline-none focus:border-[#279da6]/40 transition-all font-bold"
-                                    />
-                                </div>
-                                <div className="flex items-center gap-2">
-                                    <div className="relative">
-                                        <button
-                                            onClick={() => {
-                                                setFilters({
-                                                    name: '',
-                                                    email: '',
-                                                    role: '',
-                                                    request_count: '',
-                                                    task_count: '',
-                                                    last_login: '',
-                                                    created_at: ''
-                                                });
-                                                setSearchQuery('');
-                                                setSortConfig({ key: '', direction: null });
-                                            }}
-                                            className={`relative flex items-center gap-2 px-3 py-1.5 rounded-lg border transition-all text-[11px] font-bold z-10 cursor-pointer ${Object.values(filters).some(v => v !== '') || searchQuery !== '' || (sortConfig.key !== '' && !(sortConfig.key === 'created_at' && sortConfig.direction === 'desc')) ? 'bg-[#279da6]/20 border-[#279da6]/60 text-[#279da6] active:scale-95' : 'border-shark bg-shark/20 text-santas-gray hover:text-white hover:bg-shark/40'}`}
-                                        >
-                                            <Filter size={14} className={Object.values(filters).some(v => v !== '') || searchQuery !== '' || (sortConfig.key !== '' && !(sortConfig.key === 'created_at' && sortConfig.direction === 'desc')) ? 'fill-[#279da6]/20' : ''} />
-                                            <span>{Object.values(filters).some(v => v !== '') || searchQuery !== '' || (sortConfig.key !== '' && !(sortConfig.key === 'created_at' && sortConfig.direction === 'desc')) ? 'Reset Filters' : 'Filters'}</span>
-                                        </button>
-                                    </div>
-                                </div>
-                            </div>
 
                             {/* Team Members Table */}
-                            <div className="border border-shark/60 rounded-xl bg-black/20">
+                            <div className="border border-shark/60 rounded-xl bg-black/20 overflow-hidden">
                                 <div className="overflow-x-auto custom-scrollbar">
-                                    <table className="w-full text-left border-collapse table-auto text-xs">
+                                    <table className="w-full text-left border-collapse table-fixed min-w-[1200px]">
                                         <thead>
-                                            <tr className="border-b border-shark text-storm-gray text-xs uppercase font-black tracking-widest bg-shark/20">
-                                                <th className="px-5 py-5 w-12 border-r border-shark/60 text-center">#</th>
+                                            <tr className="border-b border-shark text-storm-gray text-sm uppercase font-black tracking-widest bg-[#17171a]">
+                                                <th className="px-5 py-3 w-12 border-r border-shark/60 text-center">#</th>
                                                 {[
-                                                    { label: 'Name', key: 'name', width: 'min-w-[200px]' },
-                                                    { label: 'Email', key: 'email', width: 'min-w-[200px]' },
-                                                    { label: 'Role', key: 'role', width: 'w-24 min-w-[100px]' },
-                                                    { label: 'Requests', key: 'request_count', width: 'w-32 min-w-[120px]' },
-                                                    { label: 'Task', key: 'task_count', width: 'w-24 min-w-[100px]' },
-                                                    { label: 'Last Login', key: 'last_login', width: 'w-32 min-w-[150px]' },
-                                                    { label: 'Created At', key: 'created_at', width: 'w-32 min-w-[150px]' }
+                                                    { label: 'NAME', key: 'name', width: 'w-[24%]' },
+                                                    { label: 'CONTACT', key: 'email', width: 'w-[16%]' },
+                                                    { label: 'REQUESTS', key: 'request_count', width: 'w-[10%]' },
+                                                    { label: 'TASKS', key: 'task_count', width: 'w-[10%]' },
+                                                    { label: 'LAST LOGIN', key: 'last_login', width: 'w-[15%]' },
+                                                    { label: 'CREATED AT', key: 'created_at', width: 'w-[15%]' }
                                                 ].map((header, idx) => (
-                                                    <th key={header.label} className={`px-4 py-5 border-r border-shark/60 group/header relative header-filter-container ${header.width || ''}`}>
+                                                    <th key={header.label} className={`px-4 py-3 border-r border-shark/60 group/header relative header-filter-container ${header.width || ''}`}>
                                                         <div className="flex items-center justify-between gap-2">
-                                                            <span className="cursor-default">{header.label}</span>
-                                                            <button
-                                                                onClick={() => setActiveFilterHeader(activeFilterHeader === header.key ? null : header.key)}
-                                                                className={`p-1 rounded hover:bg-shark/40 transition-colors ${filters[header.key as keyof typeof filters] || sortConfig.key === header.key ? 'text-[#279da6]' : 'text-storm-gray'}`}
-                                                            >
-                                                                <Filter size={10} />
-                                                            </button>
+                                                            {header.key === 'name' ? (
+                                                                <div className="relative flex-1 group -ml-1">
+                                                                    <Search size={16} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-storm-gray group-focus-within:text-[#279da6] transition-colors" />
+                                                                    <input
+                                                                        type="text"
+                                                                        value={(filters as any).name || ''}
+                                                                        onChange={(e) => setFilters({ ...filters, name: e.target.value })}
+                                                                        placeholder="NAME"
+                                                                        className="w-full bg-transparent border-none py-1.5 pl-8 pr-6 text-sm font-black uppercase tracking-widest text-iron placeholder:text-storm-gray focus:outline-none transition-all font-bold"
+                                                                    />
+                                                                    {(filters as any).name && (
+                                                                        <button
+                                                                            onClick={() => setFilters({ ...filters, name: '' })}
+                                                                            className="absolute right-2 top-1/2 -translate-y-1/2 text-storm-gray hover:text-white"
+                                                                        >
+                                                                            <X size={10} />
+                                                                        </button>
+                                                                    )}
+                                                                </div>
+                                                            ) : (
+                                                                <>
+                                                                    <span className="cursor-default text-sm">{header.label}</span>
+                                                                    <button
+                                                                        onClick={() => setActiveFilterHeader(activeFilterHeader === header.key ? null : header.key)}
+                                                                        className={`p-1 rounded hover:bg-shark/40 transition-colors ${filters[header.key as keyof typeof filters] || sortConfig.key === header.key ? 'text-[#279da6]' : 'text-storm-gray'}`}
+                                                                    >
+                                                                        <Filter size={10} />
+                                                                    </button>
+                                                                </>
+                                                            )}
                                                         </div>
 
-                                                        {activeFilterHeader === header.key && (
+                                                        {activeFilterHeader === header.key && header.key !== 'name' && (
                                                             <div className={`absolute top-full ${idx > 3 ? 'right-0' : 'left-0'} mt-1 w-48 bg-[#121214] border border-shark rounded-lg shadow-2xl p-2 z-[60] normal-case tracking-normal`}>
                                                                 <div className="mb-2 border-b border-shark/40 pb-2">
                                                                     <div className="text-[10px] font-bold text-storm-gray uppercase mb-1 px-1">Sort</div>
@@ -716,49 +703,50 @@ export default function TeamClient({ initialMembers, initialCounts }: TeamClient
                                                                     </div>
                                                                 </div>
 
-                                                                <div className="text-[10px] font-bold text-storm-gray uppercase mb-1 px-1">Filter</div>
-                                                                <div className="relative">
-                                                                    <Search size={10} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-storm-gray" />
-                                                                    <input
-                                                                        type="text"
-                                                                        value={(filters as any)[header.key] || ''}
-                                                                        onChange={(e) => setFilters({ ...filters, [header.key]: e.target.value })}
-                                                                        className="w-full bg-shark/30 border border-shark/50 rounded px-8 py-1.5 text-[11px] text-iron focus:outline-none focus:border-[#279da6]/40 transition-all font-bold"
-                                                                        placeholder={`Filter ${header.label}...`}
-                                                                        autoFocus
-                                                                    />
-                                                                    {(filters as any)[header.key] && (
-                                                                        <button
-                                                                            onClick={() => setFilters({ ...filters, [header.key]: '' })}
-                                                                            className="absolute right-2 top-1/2 -translate-y-1/2 text-storm-gray hover:text-white"
-                                                                        >
-                                                                            <X size={10} />
-                                                                        </button>
-                                                                    )}
-                                                                </div>
+                                                                {header.key !== 'name' && (
+                                                                    <div className="relative">
+                                                                        <Search size={10} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-storm-gray" />
+                                                                        <input
+                                                                            type="text"
+                                                                            value={(filters as any)[header.key] || ''}
+                                                                            onChange={(e) => setFilters({ ...filters, [header.key]: e.target.value })}
+                                                                            className="w-full bg-shark/30 border border-shark/50 rounded px-8 py-1.5 text-[11px] text-iron focus:outline-none focus:border-[#279da6]/40 transition-all font-bold"
+                                                                            placeholder={`Filter ${header.label}...`}
+                                                                            autoFocus
+                                                                        />
+                                                                        {(filters as any)[header.key] && (
+                                                                            <button
+                                                                                onClick={() => setFilters({ ...filters, [header.key]: '' })}
+                                                                                className="absolute right-2 top-1/2 -translate-y-1/2 text-storm-gray hover:text-white"
+                                                                            >
+                                                                                <X size={10} />
+                                                                            </button>
+                                                                        )}
+                                                                    </div>
+                                                                )}
                                                             </div>
                                                         )}
                                                     </th>
                                                 ))}
-                                                <th className="px-6 py-5 w-20 text-center"></th>
+                                                <th className="px-3 py-5 w-10 text-center"></th>
                                             </tr>
                                         </thead>
                                         <tbody className="divide-y divide-shark/60">
                                             {sortedMembers.length === 0 ? (
                                                 <tr>
-                                                    <td colSpan={9} className="px-6 py-12 text-center text-storm-gray font-medium uppercase tracking-widest opacity-40">
+                                                    <td colSpan={8} className="px-6 py-12 text-center text-storm-gray font-medium uppercase tracking-widest opacity-40">
                                                         No team members found matching your criteria.
                                                     </td>
                                                 </tr>
                                             ) : (
                                                 sortedMembers.map((member: TeamMember, index: number) => (
                                                     <tr key={member.id} className="hover:bg-shark/10 transition-colors group text-sm">
-                                                        <td className="px-5 py-4.5 border-r border-shark/60 text-center font-black text-storm-gray">
+                                                        <td className="px-5 py-2.5 border-r border-shark/60 text-center font-black text-storm-gray">
                                                             {(index + 1).toString().padStart(2, '0')}
                                                         </td>
-                                                        <td className="px-6 py-4.5 border-r border-shark/60">
+                                                        <td className="px-6 py-2.5 border-r border-shark/60 hover:bg-white/5 transition-colors">
                                                             <div
-                                                                className="flex items-center gap-3 cursor-pointer group/name"
+                                                                className="flex items-center gap-3 cursor-pointer group/name uppercase tracking-tight"
                                                                 onClick={() => {
                                                                     if (member.profile_id) {
                                                                         impersonate({
@@ -766,12 +754,13 @@ export default function TeamClient({ initialMembers, initialCounts }: TeamClient
                                                                             email: member.email,
                                                                             full_name: member.name,
                                                                             role: 'team_member',
-                                                                            team_role: member.role
+                                                                            team_role: member.role,
+                                                                            accessible_sections: member.accessible_sections
                                                                         }, '/team');
                                                                     }
                                                                 }}
                                                             >
-                                                                <div className="w-9 h-9 rounded-full bg-shark flex items-center justify-center text-[11px] font-black text-white overflow-hidden border border-white/5 group-hover/name:ring-2 ring-[#279da6]/50 transition-all shrink-0">
+                                                                <div className="w-12 h-12 rounded-full bg-shark flex items-center justify-center text-[12px] font-black text-white overflow-hidden border border-white/5 group-hover/name:ring-2 ring-[#279da6]/50 transition-all shrink-0">
                                                                     {member.avatar_url ? (
                                                                         <img src={member.avatar_url} alt={member.name} className="w-full h-full object-cover" />
                                                                     ) : (
@@ -780,24 +769,12 @@ export default function TeamClient({ initialMembers, initialCounts }: TeamClient
                                                                 </div>
                                                                 <div className="flex flex-col">
                                                                     <span className="font-black text-iron group-hover/name:text-[#279da6] transition-colors">{member.name}</span>
-                                                                    <span className="text-[10px] text-[#279da6] font-bold opacity-0 group-hover/name:opacity-100 transition-opacity">Click to impersonate</span>
+                                                                    <span className="text-[10px] text-[#279da6] font-bold opacity-0 group-hover/name:opacity-100 transition-opacity leading-none">Click to impersonate</span>
                                                                 </div>
                                                             </div>
                                                         </td>
-                                                        <td className="px-6 py-4.5 border-r border-shark/60 text-storm-gray font-black">{member.email}</td>
-                                                        <td className="px-4 py-4.5 border-r border-shark/60">
-                                                            <CustomDropdown
-                                                                value={member.role}
-                                                                onChange={(val) => handleRoleUpdate(member, val)}
-                                                                options={[
-                                                                    { label: 'Viewer', value: 'viewer', icon: <Eye size={12} className="text-amber-400" />, color: 'text-amber-400' },
-                                                                    { label: 'Editor', value: 'editor', icon: <Edit2 size={12} className="text-blue-400" />, color: 'text-blue-400' },
-                                                                    { label: 'Admin', value: 'admin', icon: <Shield size={12} className="text-purple-400" />, color: 'text-purple-400' },
-                                                                ]}
-                                                                className="w-28"
-                                                            />
-                                                        </td>
-                                                        <td className="px-4 py-4.5 border-r border-shark/60">
+                                                        <td className="px-6 py-2.5 border-r border-shark/60 text-storm-gray font-black uppercase tracking-tight hover:bg-white/5 transition-colors">{member.email}</td>
+                                                        <td className="px-4 py-2.5 border-r border-shark/60 hover:bg-white/5 transition-colors text-center">
                                                             <div
                                                                 className="flex items-center gap-2 cursor-pointer hover:opacity-80 transition-opacity"
                                                                 onClick={() => {
@@ -807,18 +784,19 @@ export default function TeamClient({ initialMembers, initialCounts }: TeamClient
                                                                             email: member.email,
                                                                             full_name: member.name,
                                                                             role: 'team_member',
-                                                                            team_role: member.role
+                                                                            team_role: member.role,
+                                                                            accessible_sections: member.accessible_sections
                                                                         }, '/team');
                                                                         router.push('/requests');
                                                                     }
                                                                 }}
                                                                 title="View requests as this member"
                                                             >
-                                                                <FileText size={14} className="text-[#279da6]" />
+                                                                <MessageSquare size={14} className="text-[#279da6]" />
                                                                 <span className="text-iron font-black">{member.request_count || 0}</span>
                                                             </div>
                                                         </td>
-                                                        <td className="px-4 py-4.5 border-r border-shark/60">
+                                                        <td className="px-4 py-2.5 border-r border-shark/60 hover:bg-white/5 transition-colors text-center">
                                                             <div
                                                                 className="flex items-center gap-2 cursor-pointer hover:opacity-80 transition-opacity"
                                                                 onClick={() => {
@@ -828,18 +806,19 @@ export default function TeamClient({ initialMembers, initialCounts }: TeamClient
                                                                             email: member.email,
                                                                             full_name: member.name,
                                                                             role: 'team_member',
-                                                                            team_role: member.role
+                                                                            team_role: member.role,
+                                                                            accessible_sections: member.accessible_sections
                                                                         }, '/team');
                                                                         router.push('/tasks');
                                                                     }
                                                                 }}
                                                                 title="View tasks as this member"
                                                             >
-                                                                <Box size={14} className="text-amber-400" />
+                                                                <CheckSquare size={14} className="text-amber-400" />
                                                                 <span className="text-iron font-black">{member.task_count || 0}</span>
                                                             </div>
                                                         </td>
-                                                        <td className="px-6 py-4.5 border-r border-shark/60 text-storm-gray font-black whitespace-nowrap text-xs">
+                                                        <td className="px-6 py-4.5 border-r border-shark/60 text-storm-gray font-black whitespace-nowrap text-xs hover:bg-white/5 transition-colors uppercase text-center">
                                                             {member.last_login ? (
                                                                 <div className="flex flex-col">
                                                                     <span className="text-iron font-black">{formatDate(member.last_login)}</span>
@@ -847,19 +826,42 @@ export default function TeamClient({ initialMembers, initialCounts }: TeamClient
                                                                 </div>
                                                             ) : 'Never'}
                                                         </td>
-                                                        <td className="px-6 py-4.5 border-r border-shark/60 text-storm-gray font-black whitespace-nowrap text-xs">
+                                                        <td className="px-6 py-4.5 border-r border-shark/60 text-storm-gray font-black whitespace-nowrap text-xs hover:bg-white/5 transition-colors uppercase text-center">
                                                             <div className="flex flex-col">
                                                                 <span className="text-iron font-black">{formatDate(member.created_at)}</span>
                                                                 <span className="opacity-50 font-bold">{formatTime(member.created_at)}</span>
                                                             </div>
                                                         </td>
-                                                        <td className="px-6 py-4.5 text-center relative">
-                                                            <button
-                                                                onClick={(e) => handleDropdownTrigger(e, member)}
-                                                                className={`p-1.5 rounded-md transition-all cursor-pointer ${activeDropdown === member.id ? 'bg-[#279da6] text-white' : 'text-storm-gray hover:bg-shark hover:text-white'}`}
-                                                            >
-                                                                <Settings size={16} />
-                                                            </button>
+                                                        <td className="px-3 py-2.5 text-center relative hover:bg-white/5 transition-colors">
+                                                            <div className="flex items-center justify-center gap-1">
+                                                                <button
+                                                                    onClick={() => {
+                                                                        if (member.profile_id) {
+                                                                            impersonate({
+                                                                                id: member.profile_id,
+                                                                                email: member.email,
+                                                                                full_name: member.name,
+                                                                                role: 'team_member',
+                                                                                team_role: member.role,
+                                                                                accessible_sections: member.accessible_sections
+                                                                            }, '/team');
+                                                                        } else {
+                                                                            alert('This team member does not have an account yet.');
+                                                                        }
+                                                                    }}
+                                                                    className="p-1.5 rounded-md text-storm-gray hover:bg-shark hover:text-white transition-all cursor-pointer"
+                                                                    title="Impersonate"
+                                                                >
+                                                                    <UserCog size={16} />
+                                                                </button>
+                                                                <button
+                                                                    onClick={() => handleEditClick(member)}
+                                                                    className="p-1.5 rounded-md text-storm-gray hover:bg-shark hover:text-white transition-all cursor-pointer"
+                                                                    title="Edit Member"
+                                                                >
+                                                                    <Edit2 size={16} />
+                                                                </button>
+                                                            </div>
 
 
                                                         </td>
@@ -873,374 +875,7 @@ export default function TeamClient({ initialMembers, initialCounts }: TeamClient
                         </div>
                     </main>
 
-                    {/* --- Portal for Settings Dropdown --- */}
-                    {activeDropdown && selectedMember && createPortal(
-                        <div
-                            ref={dropdownRef}
-                            style={{
-                                position: 'absolute',
-                                top: `${dropdownCoords.top}px`,
-                                left: `${dropdownCoords.left - 192}px`, // 192px is w-48
-                                width: '192px',
-                                transformOrigin: dropdownCoords.origin
-                            }}
-                            className="z-[9999] bg-[#18181B] border border-shark rounded-lg shadow-2xl overflow-hidden py-1.5 animate-in fade-in zoom-in-95 duration-200"
-                        >
-                            <button
-                                onClick={() => {
-                                    if (selectedMember.profile_id) {
-                                        impersonate({
-                                            id: selectedMember.profile_id,
-                                            email: selectedMember.email,
-                                            full_name: selectedMember.name,
-                                            role: 'team_member',
-                                            team_role: selectedMember.role
-                                        }, '/team');
-                                        setActiveDropdown(null);
-                                    } else {
-                                        alert('This team member does not have an account yet.');
-                                    }
-                                }}
-                                className="w-full flex items-center gap-3 px-4 py-2 text-[11px] font-bold text-santas-gray hover:text-white hover:bg-[#279da6]/10 transition-all text-left"
-                            >
-                                <UserCog size={14} className="text-[#279da6]" />
-                                <span>Impersonate</span>
-                            </button>
-                            <button
-                                onClick={() => handleEditClick(selectedMember)}
-                                className="w-full flex items-center gap-3 px-4 py-2 text-[11px] font-bold text-santas-gray hover:text-white hover:bg-[#279da6]/10 transition-all text-left"
-                            >
-                                <Edit2 size={14} className="text-[#279da6]" />
-                                <span>Edit Member</span>
-                            </button>
-                            <div className="h-px bg-shark my-1" />
-                            <button
-                                onClick={() => handleDeleteClick(selectedMember)}
-                                className="w-full flex items-center gap-3 px-4 py-2 text-[11px] font-bold text-rose-500 hover:text-rose-400 hover:bg-rose-500/10 transition-all text-left"
-                            >
-                                <Trash2 size={14} />
-                                <span>Delete Member</span>
-                            </button>
-                        </div>,
-                        document.body
-                    )}
 
-                    {/* Create Modal */}
-                    {
-                        isModalOpen && (
-                            <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-fade-in">
-                                <div className="bg-[#18181B] border border-shark rounded-3xl p-8 max-w-2xl w-full shadow-2xl animate-slide-up max-h-[90vh] overflow-y-auto custom-scrollbar">
-                                    <div className="flex justify-between items-start mb-6">
-                                        <h2 className="text-2xl font-black text-white uppercase tracking-tight">Create Team Member</h2>
-                                        <button onClick={() => { setIsModalOpen(false); resetForm(); }} className="text-storm-gray hover:text-white transition-colors">
-                                            <X size={20} />
-                                        </button>
-                                    </div>
-
-                                    <div className="flex flex-col items-center mb-6">
-                                        <AvatarUpload
-                                            currentAvatarUrl={formData.avatarUrl}
-                                            onUploadSuccess={(url) => setFormData(prev => ({ ...prev, avatarUrl: url }))}
-                                            onRemove={() => setFormData(prev => ({ ...prev, avatarUrl: '' }))}
-                                            name={formData.name}
-                                            email={formData.email}
-                                        />
-                                        <p className="text-[10px] font-bold text-storm-gray uppercase tracking-widest mt-2">Member Photo</p>
-                                    </div>
-
-                                    <form onSubmit={handleSubmit} className="space-y-5">
-                                        <div className="grid grid-cols-2 gap-x-4 gap-y-2">
-                                            <label className="block text-[10px] font-black uppercase tracking-widest text-storm-gray">Full Name *</label>
-                                            <label className="block text-[10px] font-black uppercase tracking-widest text-storm-gray">Email Address *</label>
-                                            <input
-                                                type="text"
-                                                value={formData.name}
-                                                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                                                required
-                                                className="w-full bg-[#09090B] border border-shark rounded-lg px-4 py-2.5 text-sm text-iron focus:outline-none focus:border-[#279da6]/40 transition-all"
-                                                placeholder="Enter full name"
-                                            />
-                                            <input
-                                                type="email"
-                                                value={formData.email}
-                                                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                                                required
-                                                className="w-full bg-[#09090B] border border-shark rounded-lg px-4 py-2.5 text-sm text-iron focus:outline-none focus:border-[#279da6]/40 transition-all"
-                                                placeholder="email@example.com"
-                                            />
-                                        </div>
-
-                                        <div>
-                                            <label className="block text-[10px] font-black uppercase tracking-widest text-storm-gray mb-2">Role *</label>
-                                            <CustomDropdown
-                                                value={formData.role}
-                                                onChange={(val: any) => setFormData({ ...formData, role: val })}
-                                                options={[
-                                                    { label: 'Viewer – (view, chat)', value: 'viewer', icon: <Eye size={12} className="text-amber-400" />, color: 'text-amber-400' },
-                                                    { label: 'Editor – (view, add, edit, chat)', value: 'editor', icon: <Edit2 size={12} className="text-blue-400" />, color: 'text-blue-400' },
-                                                    { label: 'Admin – (view, add, edit, delete, chat)', value: 'admin', icon: <Shield size={12} className="text-purple-400" />, color: 'text-purple-400' },
-                                                ]}
-                                            />
-                                        </div>
-
-                                        <div>
-                                            <label className="block text-[10px] font-black uppercase tracking-widest text-storm-gray mb-3">Section Access Permissions</label>
-                                            <div className="grid grid-cols-3 gap-3">
-                                                {[
-                                                    { id: 'files', label: 'Files', icon: Box },
-                                                    { id: 'clients', label: 'Clients', icon: Users },
-                                                    { id: 'team', label: 'Team', icon: UserCog }
-                                                ].map((section) => (
-                                                    <label
-                                                        key={section.id}
-                                                        className={`flex items-center gap-3 p-3 rounded-xl border transition-all cursor-pointer ${formData.accessible_sections?.includes(section.id)
-                                                            ? 'bg-[#279da6]/5 border-[#279da6]/40 text-white'
-                                                            : 'bg-[#09090B] border-shark text-storm-gray hover:border-shark/60'
-                                                            }`}
-                                                    >
-                                                        <input
-                                                            type="checkbox"
-                                                            className="hidden"
-                                                            checked={formData.accessible_sections?.includes(section.id)}
-                                                            onChange={(e) => {
-                                                                const current = formData.accessible_sections || [];
-                                                                if (e.target.checked) {
-                                                                    setFormData({ ...formData, accessible_sections: [...current, section.id] });
-                                                                } else {
-                                                                    setFormData({ ...formData, accessible_sections: current.filter(id => id !== section.id) });
-                                                                }
-                                                            }}
-                                                        />
-                                                        <section.icon size={16} className={formData.accessible_sections?.includes(section.id) ? 'text-[#279da6]' : ''} />
-                                                        <span className="text-xs font-bold">{section.label}</span>
-                                                    </label>
-                                                ))}
-                                            </div>
-                                            <p className="text-[10px] text-storm-gray mt-2 opacity-60">Requests and Tasks are accessible by default</p>
-                                        </div>
-
-                                        <div className="grid grid-cols-2 gap-x-4 gap-y-2">
-                                            <label className="block text-[10px] font-black uppercase tracking-widest text-storm-gray">Password (Optional)</label>
-                                            <label className="block text-[10px] font-black uppercase tracking-widest text-storm-gray">Confirm Password</label>
-                                            <div>
-                                                <div className="relative">
-                                                    <input
-                                                        type={showPassword ? "text" : "password"}
-                                                        value={formData.password}
-                                                        onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                                                        className="w-full bg-[#09090B] border border-shark rounded-lg px-4 py-2.5 text-sm text-iron focus:outline-none focus:border-[#279da6]/40 transition-all pr-10"
-                                                        placeholder="••••••••"
-                                                    />
-                                                    <button
-                                                        type="button"
-                                                        onClick={() => setShowPassword(!showPassword)}
-                                                        className="absolute right-3 top-1/2 -translate-y-1/2 text-storm-gray hover:text-white transition-colors"
-                                                    >
-                                                        {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
-                                                    </button>
-                                                </div>
-                                                <p className="text-[10px] text-storm-gray mt-1.5">If provided, a login account will be created</p>
-                                            </div>
-                                            <div className="relative">
-                                                <input
-                                                    type={showPassword ? "text" : "password"}
-                                                    value={formData.confirmPassword}
-                                                    onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
-                                                    className="w-full bg-[#09090B] border border-shark rounded-lg px-4 py-2.5 text-sm text-iron focus:outline-none focus:border-[#279da6]/40 transition-all pr-10"
-                                                    placeholder="••••••••"
-                                                />
-                                                <button
-                                                    type="button"
-                                                    onClick={() => setShowPassword(!showPassword)}
-                                                    className="absolute right-3 top-1/2 -translate-y-1/2 text-storm-gray hover:text-white transition-colors"
-                                                >
-                                                    {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
-                                                </button>
-                                            </div>
-                                        </div>
-
-                                        <div className="flex justify-end gap-3 pt-4">
-                                            <button
-                                                type="button"
-                                                onClick={() => { setIsModalOpen(false); resetForm(); }}
-                                                className="px-5 py-2.5 bg-shark/50 hover:bg-shark text-iron rounded-lg font-bold text-sm transition-all"
-                                            >
-                                                Cancel
-                                            </button>
-                                            <button
-                                                type="submit"
-                                                disabled={isSubmitting}
-                                                className="px-5 py-2.5 bg-[#279da6] hover:bg-[#279da6]/90 text-white rounded-lg font-bold text-sm transition-all flex items-center gap-2 shadow-lg shadow-[#279da6]/20"
-                                            >
-                                                {isSubmitting ? <Loader2 size={16} className="animate-spin" /> : 'Create Member'}
-                                            </button>
-                                        </div>
-                                    </form>
-                                </div>
-                            </div>
-                        )
-                    }
-
-                    {/* Edit Modal */}
-                    {
-                        isEditModalOpen && selectedMember && (
-                            <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-fade-in">
-                                <div className="bg-[#18181B] border border-shark rounded-3xl p-8 max-w-2xl w-full shadow-2xl animate-slide-up max-h-[90vh] overflow-y-auto custom-scrollbar">
-                                    <div className="flex justify-between items-start mb-6">
-                                        <h2 className="text-2xl font-black text-white uppercase tracking-tight">Edit Team Member</h2>
-                                        <button onClick={() => { setIsEditModalOpen(false); resetForm(); }} className="text-storm-gray hover:text-white transition-colors">
-                                            <X size={20} />
-                                        </button>
-                                    </div>
-
-                                    <div className="flex flex-col items-center mb-6">
-                                        <AvatarUpload
-                                            currentAvatarUrl={formData.avatarUrl}
-                                            onUploadSuccess={(url) => setFormData(prev => ({ ...prev, avatarUrl: url }))}
-                                            onRemove={() => setFormData(prev => ({ ...prev, avatarUrl: '' }))}
-                                            name={formData.name}
-                                            email={formData.email}
-                                        />
-                                        <p className="text-[10px] font-bold text-storm-gray uppercase tracking-widest mt-2">Member Photo</p>
-                                    </div>
-
-                                    <form onSubmit={handleEditSubmit} className="space-y-5">
-                                        <div className="grid grid-cols-2 gap-x-4 gap-y-2">
-                                            <label className="block text-[10px] font-black uppercase tracking-widest text-storm-gray">Full Name *</label>
-                                            <label className="block text-[10px] font-black uppercase tracking-widest text-storm-gray">Email Address *</label>
-                                            <input
-                                                type="text"
-                                                value={formData.name}
-                                                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                                                required
-                                                className="w-full bg-[#09090B] border border-shark rounded-lg px-4 py-2.5 text-sm text-iron focus:outline-none focus:border-[#279da6]/40 transition-all"
-                                            />
-                                            <input
-                                                type="email"
-                                                value={formData.email}
-                                                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                                                required
-                                                className="w-full bg-[#09090B] border border-shark rounded-lg px-4 py-2.5 text-sm text-iron focus:outline-none focus:border-[#279da6]/40 transition-all"
-                                            />
-                                        </div>
-
-                                        <div>
-                                            <label className="block text-[10px] font-black uppercase tracking-widest text-storm-gray mb-2">Role *</label>
-                                            <CustomDropdown
-                                                value={formData.role}
-                                                onChange={(val: any) => setFormData({ ...formData, role: val })}
-                                                options={[
-                                                    { label: 'Viewer – (view, chat)', value: 'viewer', icon: <Eye size={12} className="text-amber-400" />, color: 'text-amber-400' },
-                                                    { label: 'Editor – (view, add, edit, chat)', value: 'editor', icon: <Edit2 size={12} className="text-blue-400" />, color: 'text-blue-400' },
-                                                    { label: 'Admin – (view, add, edit, delete, chat)', value: 'admin', icon: <Shield size={12} className="text-purple-400" />, color: 'text-purple-400' },
-                                                ]}
-                                            />
-                                        </div>
-
-                                        <div>
-                                            <label className="block text-[10px] font-black uppercase tracking-widest text-storm-gray mb-3">Section Access Permissions</label>
-                                            <div className="grid grid-cols-3 gap-3">
-                                                {[
-                                                    { id: 'files', label: 'Files', icon: Box },
-                                                    { id: 'clients', label: 'Clients', icon: Users },
-                                                    { id: 'team', label: 'Team', icon: UserCog }
-                                                ].map((section) => (
-                                                    <label
-                                                        key={section.id}
-                                                        className={`flex items-center gap-3 p-3 rounded-xl border transition-all cursor-pointer ${formData.accessible_sections?.includes(section.id)
-                                                            ? 'bg-[#279da6]/5 border-[#279da6]/40 text-white'
-                                                            : 'bg-[#09090B] border-shark text-storm-gray hover:border-shark/60'
-                                                            }`}
-                                                    >
-                                                        <input
-                                                            type="checkbox"
-                                                            className="hidden"
-                                                            checked={formData.accessible_sections?.includes(section.id)}
-                                                            onChange={(e) => {
-                                                                const current = formData.accessible_sections || [];
-                                                                if (e.target.checked) {
-                                                                    setFormData({ ...formData, accessible_sections: [...current, section.id] });
-                                                                } else {
-                                                                    setFormData({ ...formData, accessible_sections: current.filter(id => id !== section.id) });
-                                                                }
-                                                            }}
-                                                        />
-                                                        <section.icon size={16} className={formData.accessible_sections?.includes(section.id) ? 'text-[#279da6]' : ''} />
-                                                        <span className="text-xs font-bold">{section.label}</span>
-                                                    </label>
-                                                ))}
-                                            </div>
-                                            <p className="text-[10px] text-storm-gray mt-2 opacity-60">Requests and Tasks are accessible by default</p>
-                                        </div>
-
-                                        <div className="grid grid-cols-2 gap-x-4 gap-y-2">
-                                            <label className="block text-[10px] font-black uppercase tracking-widest text-storm-gray">New Password (Leave blank to keep current)</label>
-                                            <label className="block text-[10px] font-black uppercase tracking-widest text-storm-gray">Confirm Password</label>
-                                            <div className="relative">
-                                                <input
-                                                    type={showPassword ? "text" : "password"}
-                                                    value={formData.password}
-                                                    onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                                                    className="w-full bg-[#09090B] border border-shark rounded-lg px-4 py-2.5 text-sm text-iron focus:outline-none focus:border-[#279da6]/40 transition-all pr-10"
-                                                    placeholder="••••••••"
-                                                />
-                                                <button
-                                                    type="button"
-                                                    onClick={() => setShowPassword(!showPassword)}
-                                                    className="absolute right-3 top-1/2 -translate-y-1/2 text-storm-gray hover:text-white transition-colors"
-                                                >
-                                                    {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
-                                                </button>
-                                            </div>
-                                            <div className="relative">
-                                                <input
-                                                    type={showPassword ? "text" : "password"}
-                                                    value={formData.confirmPassword}
-                                                    onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
-                                                    className="w-full bg-[#09090B] border border-shark rounded-lg px-4 py-2.5 text-sm text-iron focus:outline-none focus:border-[#279da6]/40 transition-all pr-10"
-                                                    placeholder="••••••••"
-                                                />
-                                                <button
-                                                    type="button"
-                                                    onClick={() => setShowPassword(!showPassword)}
-                                                    className="absolute right-3 top-1/2 -translate-y-1/2 text-storm-gray hover:text-white transition-colors"
-                                                >
-                                                    {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
-                                                </button>
-                                            </div>
-                                        </div>
-
-                                        <div className="flex justify-between gap-3 pt-4">
-                                            <button
-                                                type="button"
-                                                onClick={() => handleDeleteClick(selectedMember)}
-                                                className="px-4 py-2.5 text-rose-500 hover:bg-rose-500/10 rounded-lg font-bold text-sm transition-all flex items-center gap-2 border border-rose-500/20"
-                                            >
-                                                <Trash2 size={16} />
-                                                Delete Member
-                                            </button>
-                                            <div className="flex gap-3">
-                                                <button
-                                                    type="button"
-                                                    onClick={() => { setIsEditModalOpen(false); resetForm(); }}
-                                                    className="px-5 py-2.5 bg-shark/50 hover:bg-shark text-iron rounded-lg font-bold text-sm transition-all"
-                                                >
-                                                    Cancel
-                                                </button>
-                                                <button
-                                                    type="submit"
-                                                    disabled={isSubmitting}
-                                                    className="px-5 py-2.5 bg-[#279da6] hover:bg-[#279da6]/90 text-white rounded-lg font-bold text-sm transition-all flex items-center gap-2 shadow-lg shadow-[#279da6]/20"
-                                                >
-                                                    {isSubmitting ? <Loader2 size={16} className="animate-spin" /> : 'Update Member'}
-                                                </button>
-                                            </div>
-                                        </div>
-                                    </form>
-                                </div>
-                            </div>
-                        )
-                    }
 
                     {/* Delete Modal */}
                     {
