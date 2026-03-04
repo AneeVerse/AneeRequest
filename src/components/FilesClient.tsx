@@ -83,13 +83,7 @@ export default function FilesClient({ initialRootId, initialDriveItems, initialD
         }
     }, [displayProfile, isAuthLoading, router]);
 
-    if (isAuthLoading || (displayProfile && displayProfile.role !== 'super_admin')) {
-        return (
-            <div className="flex items-center justify-center h-screen bg-[#09090B]">
-                <Loader2 size={32} className="animate-spin text-[#279da6]" />
-            </div>
-        );
-    }
+
     const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
     const [isLoadingInitial, setIsLoadingInitial] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
@@ -172,6 +166,15 @@ export default function FilesClient({ initialRootId, initialDriveItems, initialD
             root.classList.remove('light');
         }
     }, [theme]);
+
+    // Auth guard — placed after all hooks to satisfy React rules
+    if (isAuthLoading || (displayProfile && displayProfile.role !== 'super_admin')) {
+        return (
+            <div className="flex items-center justify-center h-screen bg-[#09090B]">
+                <Loader2 size={32} className="animate-spin text-[#279da6]" />
+            </div>
+        );
+    }
 
     const isSuperAdmin = displayProfile?.role === 'super_admin';
     const isAdmin = displayProfile?.role === 'admin' || isSuperAdmin;
@@ -649,6 +652,30 @@ export default function FilesClient({ initialRootId, initialDriveItems, initialD
                                             <Table className="size-3" />
                                         </div>
                                         <span className="text-xs font-medium">Google Sheets</span>
+                                    </div>
+                                    <ChevronRight size={12} className="text-storm-gray opacity-40 group-hover:opacity-100" />
+                                </button>
+                                <button
+                                    onClick={() => { handleCreateGoogleFile('presentation'); setIsNewMenuOpen(false); }}
+                                    className="w-full flex items-center justify-between px-4 py-2 hover:bg-white/5 text-iron transition-colors group"
+                                >
+                                    <div className="flex items-center gap-3">
+                                        <div className="w-5 h-5 rounded bg-orange-500/10 border border-orange-500/20 flex items-center justify-center text-[10px] font-black text-orange-500 shadow-sm">
+                                            <Presentation className="size-3" />
+                                        </div>
+                                        <span className="text-xs font-medium">Google Slides</span>
+                                    </div>
+                                    <ChevronRight size={12} className="text-storm-gray opacity-40 group-hover:opacity-100" />
+                                </button>
+                                <button
+                                    onClick={() => { handleCreateGoogleFile('form'); setIsNewMenuOpen(false); }}
+                                    className="w-full flex items-center justify-between px-4 py-2 hover:bg-white/5 text-iron transition-colors group"
+                                >
+                                    <div className="flex items-center gap-3">
+                                        <div className="w-5 h-5 rounded bg-purple-500/10 border border-purple-500/20 flex items-center justify-center text-[10px] font-black text-purple-500 shadow-sm">
+                                            <ClipboardList className="size-3" />
+                                        </div>
+                                        <span className="text-xs font-medium">Google Forms</span>
                                     </div>
                                     <ChevronRight size={12} className="text-storm-gray opacity-40 group-hover:opacity-100" />
                                 </button>

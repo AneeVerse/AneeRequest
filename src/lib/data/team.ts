@@ -71,8 +71,8 @@ export async function getTeamMembers(): Promise<TeamMember[]> {
             ...member,
             profile_id: profile?.id || member.profile_id || null,
             avatar_url: avatarUrl,
-            phone: profile?.phone || null,
-            country_code: profile?.country_code || null,
+            phone: (profile as any)?.phone || null,
+            country_code: (profile as any)?.country_code || null,
             role: profile?.role || member.role || null,
             last_login: authUser?.last_sign_in_at || member.last_login || null
         };
