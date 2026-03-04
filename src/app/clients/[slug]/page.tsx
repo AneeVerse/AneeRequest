@@ -347,6 +347,7 @@ export default function ClientDetailPage() {
             if (client.drive_folder_id && !isDriveBrowsing) {
                 // Validate to get name + auto-browse
                 (async () => {
+                    setIsValidatingFolder(true);
                     try {
                         const res = await fetch('/api/drive/validate', {
                             method: 'POST',
@@ -363,8 +364,13 @@ export default function ClientDetailPage() {
                         }
                     } catch (e) {
                         console.error('Validate error:', e);
+                    } finally {
+                        setIsValidatingFolder(false);
                     }
                 })();
+            } else if (!client.drive_folder_id && client.organization) {
+                // Auto-discover if no folder is linked
+                discoverFolder(client.organization);
             }
         }
     }, [client]);
@@ -375,6 +381,55 @@ export default function ClientDetailPage() {
     const [isValidatingFolder, setIsValidatingFolder] = useState(false);
     const [isSavingFolder, setIsSavingFolder] = useState(false);
     const [folderStatus, setFolderStatus] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+
+    // Discovery State
+    const [discoveredFolder, setDiscoveredFolder] = useState<{ id: string; name: string } | null>(null);
+    const [isDiscovering, setIsDiscovering] = useState(false);
+
+    const discoverFolder = async (name: string) => {
+        setIsDiscovering(true);
+        try {
+            const res = await fetch(`/api/drive/discover?name=${encodeURIComponent(name)}`);
+            if (res.ok) {
+                const data = await res.json();
+                if (data.found) {
+                    setDiscoveredFolder({ id: data.folderId, name: data.folderName });
+                }
+            }
+        } catch (e) {
+            console.error('Discovery error:', e);
+        } finally {
+            setIsDiscovering(false);
+        }
+    };
+
+    const handleAutoLinkFolder = async (folderId: string) => {
+        if (!client) return;
+        setIsSavingFolder(true);
+        try {
+            const res = await fetch('/api/clients', {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    id: client.id,
+                    drive_folder_id: folderId
+                })
+            });
+
+            if (res.ok) {
+                setFolderStatus({ type: 'success', message: 'Folder linked successfully' });
+                setClient({ ...client, drive_folder_id: folderId });
+                setDiscoveredFolder(null);
+            } else {
+                const data = await res.json();
+                setFolderStatus({ type: 'error', message: data.error || 'Failed to link folder' });
+            }
+        } catch (e: any) {
+            setFolderStatus({ type: 'error', message: e.message });
+        } finally {
+            setIsSavingFolder(false);
+        }
+    };
 
     // Drive Browser State
     interface DriveItem {
@@ -1114,9 +1169,40 @@ export default function ClientDetailPage() {
                                                 </div>
 
                                                 <h2 className="text-2xl font-black text-white tracking-tight uppercase mb-4">No Drive Linked</h2>
-                                                <p className="text-storm-gray text-sm font-bold leading-relaxed mb-10 uppercase tracking-widest opacity-60">
-                                                    Connect a Google Drive folder to manage {client?.name || 'this client'}'s project files directly from this dashboard.
-                                                </p>
+
+                                                {discoveredFolder ? (
+                                                    <div className="mb-10 w-full animate-in fade-in slide-in-from-bottom-4 duration-700">
+                                                        <p className="text-storm-gray text-[10px] font-black leading-relaxed mb-4 uppercase tracking-[0.2em] opacity-80">
+                                                            Found a matching folder in Drive:
+                                                        </p>
+                                                        <div className="p-4 bg-[#279da6]/5 border border-[#279da6]/20 rounded-2xl flex items-center justify-between group/suggest hover:bg-[#279da6]/10 transition-all">
+                                                            <div className="flex items-center gap-3">
+                                                                <FolderOpen size={20} className="text-[#279da6]" />
+                                                                <div className="text-left">
+                                                                    <p className="text-xs font-black text-white uppercase tracking-tight">{discoveredFolder.name}</p>
+                                                                    <p className="text-[10px] text-storm-gray font-bold">Matching Organization Name</p>
+                                                                </div>
+                                                            </div>
+                                                            <button
+                                                                onClick={() => handleAutoLinkFolder(discoveredFolder.id)}
+                                                                disabled={isSavingFolder}
+                                                                className="px-4 py-2 bg-[#279da6] text-white text-[9px] font-black uppercase tracking-widest rounded-xl hover:scale-105 active:scale-95 transition-all disabled:opacity-50"
+                                                            >
+                                                                {isSavingFolder ? <Loader2 size={12} className="animate-spin" /> : 'Link Now'}
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                ) : (
+                                                    <p className="text-storm-gray text-sm font-bold leading-relaxed mb-10 uppercase tracking-widest opacity-60">
+                                                        {isDiscovering ? (
+                                                            <span className="flex items-center justify-center gap-2">
+                                                                <Loader2 size={14} className="animate-spin" /> Checking Google Drive...
+                                                            </span>
+                                                        ) : (
+                                                            `Connect a Google Drive folder to manage ${client?.name || 'this client'}'s project files directly from this dashboard.`
+                                                        )}
+                                                    </p>
+                                                )}
 
                                                 <div className="flex flex-col gap-4 w-full">
                                                     <button
