@@ -2,29 +2,11 @@ import { NextResponse } from 'next/server';
 import { supabase, createServiceClient } from '@/lib/supabase';
 import { getOrCreateFolder, getRootFolderId } from '@/lib/googleDrive';
 
+import { getClients } from '@/lib/data/clients';
+
 export async function GET() {
     try {
-        // Fetch from both tables to bridge the gap
-        const [clientsRes, profilesRes] = await Promise.all([
-            supabase.from('clients').select('*').order('created_at', { ascending: false }),
-            supabase.from('profiles').select('id, email, full_name, role, avatar_url, phone, country_code')
-        ]);
-
-        if (clientsRes.error) throw clientsRes.error;
-        if (profilesRes.error) throw profilesRes.error;
-
-        // Merge by email
-        const mergedData = clientsRes.data.map(client => {
-            const profile = profilesRes.data.find(p => p.email.toLowerCase() === client.email.toLowerCase());
-            return {
-                ...client,
-                profile_id: profile?.id || null,
-                avatar_url: profile?.avatar_url || null,
-                phone: profile?.phone || null,
-                country_code: profile?.country_code || null
-            };
-        });
-
+        const mergedData = await getClients();
         return NextResponse.json(mergedData);
     } catch (error: any) {
         return NextResponse.json({ error: error.message }, { status: 500 });

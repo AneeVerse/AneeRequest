@@ -110,14 +110,22 @@ export default function ClientDetailPage() {
                 const response = await fetch('/api/clients');
                 const allClients = await response.json();
 
+                console.log('Client Detail Match Debug:', {
+                    slugFromUrl: slug,
+                    clientsAvailable: allClients.length,
+                    clientSlugs: allClients.map((c: any) => c.slug)
+                });
+
                 // Helper to match slug or ID
                 const foundClient = allClients.find((c: any) => {
-                    const clientSlug = slugify(c.organization || c.name);
-                    return clientSlug === slug || c.id === slug;
+                    return (c.slug && c.slug === slug) || c.id === slug;
                 });
 
                 if (foundClient) {
+                    console.log('Match found:', foundClient.organization || foundClient.name);
                     setClient(foundClient);
+                } else {
+                    console.warn('No client match found for slug:', slug);
                 }
             } catch (error) {
                 console.error('Failed to fetch client details:', error);
