@@ -277,7 +277,10 @@ export default function TaskDetailModal({
             <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
 
             {/* Drawer - wider to accommodate detail + chat */}
-            <div className="relative w-full max-w-4xl h-full bg-[#121214] border-l border-shark shadow-2xl flex flex-col md:flex-row animate-slide-left">
+            <div
+                className="relative w-full md:max-w-4xl h-[100dvh] md:h-full bg-[#121214] border-l border-shark shadow-2xl flex flex-col md:flex-row animate-slide-left"
+                onClick={(e) => e.stopPropagation()}
+            >
                 {/* Left Panel: Task Details */}
                 <div className="flex-1 flex flex-col md:border-r border-shark/30 min-w-0">
                     {/* Header */}

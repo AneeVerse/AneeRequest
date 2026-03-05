@@ -95,7 +95,7 @@ const Header: React.FC<HeaderProps> = ({
                         ) : (
                             <ListFilter size={16} className="text-[#279da6] hidden sm:block" />
                         )}
-                        <span className="text-[12px] sm:text-xs font-black text-white truncate max-w-[120px] sm:max-w-[200px] uppercase tracking-tight">{label}</span>
+                        <span className={`text-[12px] sm:text-xs font-black text-white truncate uppercase tracking-tight ${isCreating ? 'max-w-[80px]' : 'max-w-[120px]'} sm:max-w-[200px]`}>{label}</span>
                     </div>
 
                     <div className="hidden lg:block">
@@ -203,7 +203,7 @@ const Header: React.FC<HeaderProps> = ({
 
                     <div className="h-4 w-[1px] bg-shark/60 hidden lg:block" />
 
-                    <div className="flex items-center">
+                    <div className={`flex items-center ${isCreating ? 'hidden lg:flex' : ''}`}>
                         {rightToolbar}
                     </div>
                 </div>

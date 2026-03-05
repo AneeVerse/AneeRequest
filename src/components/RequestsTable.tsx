@@ -165,7 +165,7 @@ export default function RequestsTable({
 
             <div className="border border-shark/60 rounded-xl overflow-hidden bg-black/20">
                 {/* Mobile View: Stacked Cards */}
-                <div className="sm:hidden flex flex-col divide-y divide-shark/60 max-h-[70vh] overflow-y-auto custom-scrollbar">
+                <div className="sm:hidden flex flex-col divide-y divide-shark/60">
                     {sortedRequests.length === 0 ? (
                         <div className="px-6 py-20 text-center text-storm-gray uppercase text-[10px] font-black tracking-widest opacity-40">
                             No requests found for your criteria.

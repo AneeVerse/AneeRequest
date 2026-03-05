@@ -141,7 +141,7 @@ export default function CreateRequestModal({ isOpen, onClose, onSuccess, initial
 
             {/* Modal Container */}
             <div
-                className="relative w-full max-w-2xl bg-[#121214] border border-shark/50 rounded-3xl shadow-[0_32px_64px_-12px_rgba(0,0,0,0.8)] overflow-y-auto max-h-[90vh] custom-scrollbar animate-zoom-in"
+                className="relative w-full max-w-2xl bg-[#121214] border border-shark/50 rounded-3xl sm:rounded-3xl rounded-b-none shadow-[0_32px_64px_-12px_rgba(0,0,0,0.8)] overflow-y-auto max-h-[92dvh] sm:max-h-[90vh] custom-scrollbar animate-zoom-in mt-auto sm:mt-0"
                 onClick={(e) => e.stopPropagation()}
             >
 

@@ -482,27 +482,39 @@ export default function TeamClient({ initialMembers, initialCounts }: TeamClient
                             {/* Inline Creation Row */}
                             <div
                                 className={`overflow-hidden transition-all duration-700 ease-[cubic-bezier(0.16,1,0.3,1)] ${isCreating
-                                    ? 'max-h-[800px] opacity-100 mb-8 translate-y-0 scale-100 blur-0'
+                                    ? 'max-h-[2000px] opacity-100 mb-8 translate-y-0 scale-100 blur-0'
                                     : 'max-h-0 opacity-0 mb-0 -translate-y-4 scale-95 blur-md pointer-events-none'
                                     }`}
                             >
                                 <div className="p-1 bg-[#121214]/90 backdrop-blur-2xl border border-[#279da6]/30 rounded-[2rem] shadow-[0_25px_60px_rgba(0,0,0,0.4),0_0_40px_rgba(39,157,166,0.08)] ring-1 ring-white/5 relative overflow-hidden">
-                                    <div className="absolute top-4 left-1/2 -translate-x-1/2 px-4 py-1 bg-[#279da6]/20 border border-[#279da6]/30 rounded-full">
+                                    <div className="absolute top-4 left-4 sm:left-1/2 sm:-translate-x-1/2 px-4 py-1 bg-[#279da6]/20 border border-[#279da6]/30 rounded-full">
                                         <span className="text-[10px] font-black text-[#279da6] uppercase tracking-[0.2em]">
-                                            {panelMode === 'edit' ? 'Edit Team Member' : 'Add Team Member'}
+                                            {panelMode === 'edit' ? 'Edit Member' : 'Add Team Member'}
                                         </span>
                                     </div>
-                                    {panelMode === 'edit' && (
-                                        <div className="absolute top-4 right-8">
+
+                                    <div className="absolute top-4 right-4 flex items-center gap-2">
+                                        {panelMode === 'edit' && (
                                             <button
                                                 onClick={() => handleDeleteClick(selectedMember!)}
                                                 className="flex items-center gap-2 px-3 py-1 bg-rose-500/10 border border-rose-500/30 rounded-full text-rose-500 hover:bg-rose-500/20 transition-all cursor-pointer group"
                                             >
                                                 <Trash2 size={12} className="group-hover:scale-110 transition-transform" />
-                                                <span className="text-[9px] font-black uppercase tracking-widest">Delete Member</span>
+                                                <span className="hidden sm:inline text-[9px] font-black uppercase tracking-widest">Delete</span>
                                             </button>
-                                        </div>
-                                    )}
+                                        )}
+                                        <button
+                                            onClick={() => {
+                                                setIsCreating(false);
+                                                resetForm();
+                                                setPanelMode('create');
+                                            }}
+                                            className="p-1.5 bg-shark/40 border border-shark/60 rounded-full text-storm-gray hover:text-white hover:bg-shark transition-all"
+                                            title="Close Panel"
+                                        >
+                                            <X size={14} />
+                                        </button>
+                                    </div>
                                     <div className="p-6 pt-10 space-y-6">
                                         <div className="flex items-start gap-6">
                                             <div className="flex flex-col items-center gap-3 shrink-0">
@@ -619,7 +631,7 @@ export default function TeamClient({ initialMembers, initialCounts }: TeamClient
                             {/* Team Members Table */}
                             <div className="border border-shark/60 rounded-xl bg-black/20 overflow-hidden">
                                 {/* Mobile View: Stacked Cards */}
-                                <div className="sm:hidden flex flex-col divide-y divide-shark/60 max-h-[70vh] overflow-y-auto custom-scrollbar">
+                                <div className="sm:hidden flex flex-col divide-y divide-shark/60">
                                     {sortedMembers.length === 0 ? (
                                         <div className="px-6 py-20 text-center text-storm-gray uppercase text-[10px] font-black tracking-widest opacity-40">
                                             No team members found matching your criteria.
