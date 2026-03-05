@@ -758,6 +758,8 @@ export default function TeamClient({ initialMembers, initialCounts }: TeamClient
                                                     { label: 'Name', key: 'name', width: 'min-w-[200px]' },
                                                     { label: 'Email', key: 'email', width: 'min-w-[220px]' },
                                                     { label: 'Requests', key: 'request_count', width: 'min-w-[100px]' },
+                                                    { label: 'Tasks', key: 'task_count', width: 'min-w-[100px]' },
+                                                    { label: 'Last Login', key: 'last_login', width: 'min-w-[140px]' },
                                                     { label: 'Created', key: 'created_at', width: 'min-w-[140px]' }
                                                 ].map((header, idx) => (
                                                     <th
