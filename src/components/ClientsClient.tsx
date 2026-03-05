@@ -419,136 +419,148 @@ export default function ClientsClient({ initialClients }: ClientsClientProps) {
     }, [activeFilterHeader]);
 
     const filtersElement = (
-        <div className="relative">
-            <button
-                onClick={() => setIsFilterOpen(!isFilterOpen)}
-                className={`relative flex items-center gap-2 px-3 py-1.5 rounded-lg border transition-all text-xs font-bold z-10 ${Object.values(filters).some(v => v !== '') || searchQuery !== '' || (sortConfig.key !== '' && !(sortConfig.key === 'createdAtRaw' && sortConfig.direction === 'desc')) ? 'bg-[#279da6]/20 border-[#279da6]/60 text-[#279da6] active:scale-95' : 'border-shark bg-[#121214] text-santas-gray hover:text-white hover:bg-shark/40'}`}
-            >
-                <Filter size={14} className={Object.values(filters).some(v => v !== '') || searchQuery !== '' || (sortConfig.key !== '' && !(sortConfig.key === 'createdAtRaw' && sortConfig.direction === 'desc')) ? 'fill-[#279da6]/20' : ''} />
-                <span>Filters</span>
-                <ChevronDown size={14} className={isFilterOpen ? 'rotate-180 transition-transform' : 'transition-transform'} />
-            </button>
+        <div className="flex items-center gap-2 sm:gap-3 w-full sm:w-auto">
+            <div className="relative w-full sm:w-64">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-santas-gray" size={14} />
+                <input
+                    type="text"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    placeholder="Search users..."
+                    className="w-full bg-black/40 border border-shark/50 rounded-xl py-2 pl-9 pr-4 text-[11px] text-iron placeholder:text-storm-gray focus:outline-none focus:border-[#279da6]/40 transition-all font-bold uppercase tracking-tight"
+                />
+            </div>
+            <div className="relative">
+                <button
+                    onClick={() => setIsFilterOpen(!isFilterOpen)}
+                    className={`relative flex items-center gap-2 px-3 py-1.5 rounded-lg border transition-all text-xs font-bold z-10 ${Object.values(filters).some(v => v !== '') || searchQuery !== '' || (sortConfig.key !== '' && !(sortConfig.key === 'createdAtRaw' && sortConfig.direction === 'desc')) ? 'bg-[#279da6]/20 border-[#279da6]/60 text-[#279da6] active:scale-95' : 'border-shark bg-[#121214] text-santas-gray hover:text-white hover:bg-shark/40'}`}
+                >
+                    <Filter size={14} className={Object.values(filters).some(v => v !== '') || searchQuery !== '' || (sortConfig.key !== '' && !(sortConfig.key === 'createdAtRaw' && sortConfig.direction === 'desc')) ? 'fill-[#279da6]/20' : ''} />
+                    <span className="hidden sm:inline">Filters</span>
+                    <ChevronDown size={14} className={isFilterOpen ? 'rotate-180 transition-transform' : 'transition-transform'} />
+                </button>
 
-            {isFilterOpen && (
-                <div className="absolute right-0 mt-2 w-[calc(100vw-2rem)] sm:w-[500px] bg-[#121214] border border-shark rounded-xl shadow-2xl p-4 sm:p-5 z-50 space-y-4 animate-in fade-in slide-in-from-top-2 duration-200">
-                    <div className="flex items-center justify-between mb-1">
-                        <h4 className="text-[12px] font-black uppercase tracking-widest text-[#279da6]">Advanced Filters</h4>
-                        <button
-                            onClick={() => {
-                                setFilters({
-                                    name: '',
-                                    email: '',
-                                    organization: '',
-                                    date_from: '',
-                                    date_to: '',
-                                    status: ''
-                                });
-                                setSearchQuery('');
-                                setSortConfig({ key: 'createdAtRaw', direction: 'desc' });
-                                setIsFilterOpen(false);
-                            }}
-                            className="text-[10px] font-bold text-storm-gray hover:text-white underline underline-offset-4"
-                        >
-                            Reset all
-                        </button>
-                    </div>
-
-                    <div className="space-y-4">
-                        <div className="grid grid-cols-2 gap-4">
-                            <div className="space-y-1.5">
-                                <label className="text-[10px] font-black text-storm-gray uppercase tracking-widest ml-1">Organization</label>
-                                <div className="relative group">
-                                    <Building size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-storm-gray group-focus-within:text-[#279da6] transition-colors" />
-                                    <input
-                                        type="text"
-                                        value={filters.organization}
-                                        onChange={(e) => setFilters(f => ({ ...f, organization: e.target.value }))}
-                                        placeholder="Search org..."
-                                        className="w-full bg-black/40 border border-shark/50 rounded-xl py-2.5 pl-10 pr-10 text-[12px] font-black uppercase tracking-widest text-iron placeholder:text-storm-gray focus:outline-none focus:border-[#279da6]/40 transition-all font-bold"
-                                    />
-                                    {filters.organization && (
-                                        <button
-                                            onClick={() => setFilters(f => ({ ...f, organization: '' }))}
-                                            className="absolute right-3.5 top-1/2 -translate-y-1/2 p-1 hover:bg-shark rounded-md text-storm-gray hover:text-white transition-colors"
-                                        >
-                                            <X size={12} />
-                                        </button>
-                                    )}
-                                </div>
-                            </div>
-                            <div className="space-y-1.5">
-                                <label className="text-[10px] font-black text-storm-gray uppercase tracking-widest ml-1">Name</label>
-                                <div className="relative group">
-                                    <UsersIcon size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-storm-gray group-focus-within:text-[#279da6] transition-colors" />
-                                    <input
-                                        type="text"
-                                        value={filters.name}
-                                        onChange={(e) => setFilters(f => ({ ...f, name: e.target.value }))}
-                                        placeholder="Search name..."
-                                        className="w-full bg-black/40 border border-shark/50 rounded-xl py-2.5 pl-10 pr-10 text-[12px] font-black uppercase tracking-widest text-iron placeholder:text-storm-gray focus:outline-none focus:border-[#279da6]/40 transition-all font-bold"
-                                    />
-                                    {filters.name && (
-                                        <button
-                                            onClick={() => setFilters(f => ({ ...f, name: '' }))}
-                                            className="absolute right-3.5 top-1/2 -translate-y-1/2 p-1 hover:bg-shark rounded-md text-storm-gray hover:text-white transition-colors"
-                                        >
-                                            <X size={12} />
-                                        </button>
-                                    )}
-                                </div>
-                            </div>
+                {isFilterOpen && (
+                    <div className="absolute right-0 mt-2 w-[calc(100vw-2rem)] sm:w-[500px] bg-[#121214] border border-shark rounded-xl shadow-2xl p-4 sm:p-5 z-50 space-y-4 animate-in fade-in slide-in-from-top-2 duration-200">
+                        <div className="flex items-center justify-between mb-1">
+                            <h4 className="text-[12px] font-black uppercase tracking-widest text-[#279da6]">Advanced Filters</h4>
+                            <button
+                                onClick={() => {
+                                    setFilters({
+                                        name: '',
+                                        email: '',
+                                        organization: '',
+                                        date_from: '',
+                                        date_to: '',
+                                        status: ''
+                                    });
+                                    setSearchQuery('');
+                                    setSortConfig({ key: 'createdAtRaw', direction: 'desc' });
+                                    setIsFilterOpen(false);
+                                }}
+                                className="text-[10px] font-bold text-storm-gray hover:text-white underline underline-offset-4"
+                            >
+                                Reset all
+                            </button>
                         </div>
 
-                        <div className="grid grid-cols-2 gap-4">
-                            <div className="space-y-1.5">
-                                <label className="text-[10px] font-black text-storm-gray uppercase tracking-widest ml-1">Email</label>
-                                <div className="relative group">
-                                    <Search size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-storm-gray group-focus-within:text-[#279da6] transition-colors" />
-                                    <input
-                                        type="text"
-                                        value={filters.email}
-                                        onChange={(e) => setFilters(f => ({ ...f, email: e.target.value }))}
-                                        placeholder="Search email..."
-                                        className="w-full bg-black/40 border border-shark/50 rounded-xl py-2.5 pl-10 pr-10 text-[12px] font-black uppercase tracking-widest text-iron placeholder:text-storm-gray focus:outline-none focus:border-[#279da6]/40 transition-all font-bold"
-                                    />
-                                    {filters.email && (
-                                        <button
-                                            onClick={() => setFilters(f => ({ ...f, email: '' }))}
-                                            className="absolute right-3.5 top-1/2 -translate-y-1/2 p-1 hover:bg-shark rounded-md text-storm-gray hover:text-white transition-colors"
-                                        >
-                                            <X size={12} />
-                                        </button>
-                                    )}
+                        <div className="space-y-4">
+                            <div className="grid grid-cols-2 gap-4">
+                                <div className="space-y-1.5">
+                                    <label className="text-[10px] font-black text-storm-gray uppercase tracking-widest ml-1">Organization</label>
+                                    <div className="relative group">
+                                        <Building size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-storm-gray group-focus-within:text-[#279da6] transition-colors" />
+                                        <input
+                                            type="text"
+                                            value={filters.organization}
+                                            onChange={(e) => setFilters(f => ({ ...f, organization: e.target.value }))}
+                                            placeholder="Search org..."
+                                            className="w-full bg-black/40 border border-shark/50 rounded-xl py-2.5 pl-10 pr-10 text-[12px] font-black uppercase tracking-widest text-iron placeholder:text-storm-gray focus:outline-none focus:border-[#279da6]/40 transition-all font-bold"
+                                        />
+                                        {filters.organization && (
+                                            <button
+                                                onClick={() => setFilters(f => ({ ...f, organization: '' }))}
+                                                className="absolute right-3.5 top-1/2 -translate-y-1/2 p-1 hover:bg-shark rounded-md text-storm-gray hover:text-white transition-colors"
+                                            >
+                                                <X size={12} />
+                                            </button>
+                                        )}
+                                    </div>
+                                </div>
+                                <div className="space-y-1.5">
+                                    <label className="text-[10px] font-black text-storm-gray uppercase tracking-widest ml-1">Name</label>
+                                    <div className="relative group">
+                                        <UsersIcon size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-storm-gray group-focus-within:text-[#279da6] transition-colors" />
+                                        <input
+                                            type="text"
+                                            value={filters.name}
+                                            onChange={(e) => setFilters(f => ({ ...f, name: e.target.value }))}
+                                            placeholder="Search name..."
+                                            className="w-full bg-black/40 border border-shark/50 rounded-xl py-2.5 pl-10 pr-10 text-[12px] font-black uppercase tracking-widest text-iron placeholder:text-storm-gray focus:outline-none focus:border-[#279da6]/40 transition-all font-bold"
+                                        />
+                                        {filters.name && (
+                                            <button
+                                                onClick={() => setFilters(f => ({ ...f, name: '' }))}
+                                                className="absolute right-3.5 top-1/2 -translate-y-1/2 p-1 hover:bg-shark rounded-md text-storm-gray hover:text-white transition-colors"
+                                            >
+                                                <X size={12} />
+                                            </button>
+                                        )}
+                                    </div>
                                 </div>
                             </div>
+
+                            <div className="grid grid-cols-2 gap-4">
+                                <div className="space-y-1.5">
+                                    <label className="text-[10px] font-black text-storm-gray uppercase tracking-widest ml-1">Email</label>
+                                    <div className="relative group">
+                                        <Search size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-storm-gray group-focus-within:text-[#279da6] transition-colors" />
+                                        <input
+                                            type="text"
+                                            value={filters.email}
+                                            onChange={(e) => setFilters(f => ({ ...f, email: e.target.value }))}
+                                            placeholder="Search email..."
+                                            className="w-full bg-black/40 border border-shark/50 rounded-xl py-2.5 pl-10 pr-10 text-[12px] font-black uppercase tracking-widest text-iron placeholder:text-storm-gray focus:outline-none focus:border-[#279da6]/40 transition-all font-bold"
+                                        />
+                                        {filters.email && (
+                                            <button
+                                                onClick={() => setFilters(f => ({ ...f, email: '' }))}
+                                                className="absolute right-3.5 top-1/2 -translate-y-1/2 p-1 hover:bg-shark rounded-md text-storm-gray hover:text-white transition-colors"
+                                            >
+                                                <X size={12} />
+                                            </button>
+                                        )}
+                                    </div>
+                                </div>
+                                <div className="space-y-1.5">
+                                    <label className="text-[10px] font-black text-storm-gray uppercase tracking-widest ml-1">Status</label>
+                                    <CustomDropdown
+                                        value={filters.status}
+                                        onChange={(val) => setFilters(f => ({ ...f, status: val }))}
+                                        options={[
+                                            { label: 'All Statuses', value: '' },
+                                            { label: 'Ongoing', value: 'Ongoing', icon: <CheckCircle2 size={12} className="text-emerald-500" /> },
+                                            { label: 'Leads', value: 'Leads', icon: <UsersIcon size={12} className="text-[#279da6]" /> },
+                                            { label: 'Closed', value: 'Closed', icon: <XCircle size={12} className="text-rose-500" /> },
+                                            { label: 'Archive', value: 'Archive', icon: <Archive size={12} className="text-purple-500" /> }
+                                        ]}
+                                        showClear={true}
+                                    />
+                                </div>
+                            </div>
+
                             <div className="space-y-1.5">
-                                <label className="text-[10px] font-black text-storm-gray uppercase tracking-widest ml-1">Status</label>
-                                <CustomDropdown
-                                    value={filters.status}
-                                    onChange={(val) => setFilters(f => ({ ...f, status: val }))}
-                                    options={[
-                                        { label: 'All Statuses', value: '' },
-                                        { label: 'Ongoing', value: 'Ongoing', icon: <CheckCircle2 size={12} className="text-emerald-500" /> },
-                                        { label: 'Leads', value: 'Leads', icon: <UsersIcon size={12} className="text-[#279da6]" /> },
-                                        { label: 'Closed', value: 'Closed', icon: <XCircle size={12} className="text-rose-500" /> },
-                                        { label: 'Archive', value: 'Archive', icon: <Archive size={12} className="text-purple-500" /> }
-                                    ]}
-                                    showClear={true}
+                                <label className="text-[10px] font-black text-storm-gray uppercase tracking-widest ml-1">Created At</label>
+                                <CustomDateRangePicker
+                                    from={filters.date_from}
+                                    to={filters.date_to}
+                                    onChange={(from, to) => setFilters(f => ({ ...f, date_from: from, date_to: to }))}
                                 />
                             </div>
                         </div>
-
-                        <div className="space-y-1.5">
-                            <label className="text-[10px] font-black text-storm-gray uppercase tracking-widest ml-1">Created At</label>
-                            <CustomDateRangePicker
-                                from={filters.date_from}
-                                to={filters.date_to}
-                                onChange={(from, to) => setFilters(f => ({ ...f, date_from: from, date_to: to }))}
-                            />
-                        </div>
                     </div>
-                </div>
-            )}
+                )}
+            </div>
         </div>
     );
 
@@ -561,7 +573,7 @@ export default function ClientsClient({ initialClients }: ClientsClientProps) {
             />
 
             <div className="flex-1 flex flex-col min-w-0 bg-[#09090B] relative">
-                <div className={`flex-1 flex flex-col min-w-0 bg-[#121214] rounded-t-2xl overflow-hidden border-t border-l border-r mt-6 mr-6 responsive-content-wrapper transition-[border-color,box-shadow] duration-500 ${isImpersonating ? 'border-[#22c55e]/60 shadow-[0_0_15px_rgba(34,197,94,0.15),0_0_40px_rgba(34,197,94,0.08),inset_0_0_20px_rgba(34,197,94,0.03)]' : 'border-shark'}`}>
+                <div className={`flex-1 flex flex-col min-w-0 bg-[#121214] rounded-t-2xl overflow-hidden border-t border-l border-r mt-2 sm:mt-6 mr-2 sm:mr-6 responsive-content-wrapper transition-[border-color,box-shadow] duration-500 ${isImpersonating ? 'border-[#22c55e]/60 shadow-[0_0_15px_rgba(34,197,94,0.15),0_0_40px_rgba(34,197,94,0.08),inset_0_0_20px_rgba(34,197,94,0.03)]' : 'border-shark'}`}>
                     <div className="border-b border-shark">
                         <Header
 
@@ -595,7 +607,7 @@ export default function ClientsClient({ initialClients }: ClientsClientProps) {
                     </div>
 
                     <main className="flex-1 overflow-y-auto custom-scrollbar bg-[#18181B]">
-                        <div className="p-8">
+                        <div className="p-3 sm:p-4 lg:p-8">
 
                             {/* Inline Creation Row */}
                             <div

@@ -271,7 +271,7 @@ export default function RequestsClient({
                 className={`relative flex items-center gap-2 px-3 py-1.5 rounded-lg border transition-all text-xs font-bold z-10 ${Object.values(filters).some(v => v !== '') || searchQuery !== '' ? 'bg-[#279da6]/20 border-[#279da6]/60 text-[#279da6] active:scale-95' : 'border-shark bg-[#121214] text-santas-gray hover:text-white hover:bg-shark/40'}`}
             >
                 <Filter size={14} className={Object.values(filters).some(v => v !== '') || searchQuery !== '' ? 'fill-[#279da6]/20' : ''} />
-                <span>Filters</span>
+                <span className="hidden sm:inline">Filters</span>
                 <ChevronDown size={14} className={isFilterOpen ? 'rotate-180 transition-transform' : 'transition-transform'} />
             </button>
 
@@ -415,7 +415,7 @@ export default function RequestsClient({
             <Sidebar isCollapsed={isSidebarCollapsed} isMobileOpen={isMobileOpen} onMobileClose={() => setIsMobileOpen(false)} />
 
             <div className="flex-1 flex flex-col min-w-0 bg-[#09090B] relative">
-                <div className={`flex-1 flex flex-col min-w-0 bg-[#121214] rounded-t-2xl overflow-hidden border-t border-l border-r mt-6 mr-6 responsive-content-wrapper transition-all duration-500 ${isImpersonating ? 'border-[#22c55e]/60 shadow-[0_0_15px_rgba(34,197,94,0.15),0_0_40px_rgba(34,197,94,0.08),inset_0_0_20px_rgba(34,197,94,0.03)]' : 'border-shark'}`}>
+                <div className={`flex-1 flex flex-col min-w-0 bg-[#121214] rounded-t-2xl overflow-hidden border-t border-l border-r mt-2 sm:mt-6 mr-2 sm:mr-6 responsive-content-wrapper transition-all duration-500 ${isImpersonating ? 'border-[#22c55e]/60 shadow-[0_0_15px_rgba(34,197,94,0.15),0_0_40px_rgba(34,197,94,0.08),inset_0_0_20px_rgba(34,197,94,0.03)]' : 'border-shark'}`}>
                     <div className="border-b border-shark">
                         <Header
 
@@ -439,7 +439,7 @@ export default function RequestsClient({
                     </div>
 
                     <main className="flex-1 overflow-y-auto custom-scrollbar bg-[#18181B]">
-                        <div className="p-8">
+                        <div className="p-3 sm:p-4 lg:p-8">
 
                             {/* Inline Creation Row */}
                             <div

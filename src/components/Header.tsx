@@ -88,11 +88,19 @@ const Header: React.FC<HeaderProps> = ({
 
                     {/* Section Label */}
                     <div className="flex items-center gap-2 shrink-0 overflow-hidden ml-1 sm:ml-0">
-                        {labelIcon || <ListFilter size={16} className="text-[#279da6] hidden sm:block" />}
+                        {labelIcon ? (
+                            <div className="hidden sm:flex items-center">
+                                {labelIcon}
+                            </div>
+                        ) : (
+                            <ListFilter size={16} className="text-[#279da6] hidden sm:block" />
+                        )}
                         <span className="text-[12px] sm:text-xs font-black text-white truncate max-w-[120px] sm:max-w-[200px] uppercase tracking-tight">{label}</span>
                     </div>
 
-                    {children}
+                    <div className="hidden lg:block">
+                        {children}
+                    </div>
 
                     {/* DESKTOP Page Switcher (Hidden on Mobile Row 1) */}
                     {pageSwitcher && (
@@ -195,15 +203,22 @@ const Header: React.FC<HeaderProps> = ({
 
                     <div className="h-4 w-[1px] bg-shark/60 hidden lg:block" />
 
-                    <div className="lg:block hidden">
+                    <div className="flex items-center">
                         {rightToolbar}
                     </div>
                 </div>
             </div>
 
+            {/* --- ROW 1.5: MOBILE CHILDREN (Breadcrumbs, etc) --- */}
+            {children && (
+                <div className="lg:hidden flex items-center justify-between gap-2 px-3 sm:px-4 pb-2 animate-in fade-in slide-in-from-top-1 duration-300">
+                    {children}
+                </div>
+            )}
+
             {/* --- ROW 2: MOBILE PAGE SWITCHER (Clients / Team) --- */}
             {pageSwitcher && (
-                <div className="lg:hidden flex items-center px-0.5 pb-2 gap-2 animate-in fade-in slide-in-from-top-1 duration-300">
+                <div className="lg:hidden flex items-center px-0.5 pb-2 animate-in fade-in slide-in-from-top-1 duration-300">
                     <div className="flex items-center bg-black/40 border border-shark/50 p-0.5 rounded-xl overflow-hidden w-full">
                         {pageSwitcher.filter(page => {
                             if (viewAsProfile?.role === 'super_admin' || viewAsProfile?.role === 'admin') return true;
@@ -224,18 +239,12 @@ const Header: React.FC<HeaderProps> = ({
                             </Link>
                         ))}
                     </div>
-                    {/* Small Filter icon on mobile if toolbar exists */}
-                    {rightToolbar && (
-                        <div className="lg:hidden shrink-0">
-                            {rightToolbar}
-                        </div>
-                    )}
                 </div>
             )}
 
             {/* --- ROW 3: MOBILE TABS (Requests, Tasks, etc) --- */}
             {tabs && tabs.length > 0 && (
-                <div className="lg:hidden flex items-center h-9 px-0.5 pb-3 overflow-x-auto scrollbar-hide gap-1.5 animate-in fade-in slide-in-from-top-1 duration-300">
+                <div className="lg:hidden flex items-center min-h-[40px] px-0.5 pb-2 overflow-x-auto scrollbar-hide gap-1.5 animate-in fade-in slide-in-from-top-1 duration-300">
                     {tabs.map((tabItem) => {
                         const tabLabel = typeof tabItem === 'string' ? tabItem : tabItem.label;
                         const icon = typeof tabItem === 'string' ? null : tabItem.icon;
@@ -259,12 +268,6 @@ const Header: React.FC<HeaderProps> = ({
                             </button>
                         );
                     })}
-                    {/* If no pageSwitcher, show rightToolbar here next to tabs for space efficiency if needed, but normally Row 1 or 2 is better */}
-                    {!pageSwitcher && rightToolbar && (
-                        <div className="lg:hidden shrink-0 ml-auto border-l border-shark/40 pl-2 py-0.5">
-                            {rightToolbar}
-                        </div>
-                    )}
                 </div>
             )}
         </header>

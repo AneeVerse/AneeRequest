@@ -452,84 +452,77 @@ export default function FilesClient({ initialRootId, initialDriveItems, initialD
         return matchesSearch && matchesType;
     });
 
-    const filtersElement = (
-        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-3 w-full sm:w-auto">
-            <div className="relative w-full sm:w-64">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-santas-gray" size={14} />
-                <input
-                    type="text"
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    placeholder="Search files..."
-                    className="w-full bg-black/40 border border-shark/50 rounded-xl py-2 pl-9 pr-4 text-[11px] text-iron placeholder:text-storm-gray focus:outline-none focus:border-[#279da6]/40 transition-all font-bold"
-                />
+    const searchTool = (
+        <div className="relative flex-1 sm:flex-initial sm:w-64 min-w-[120px] max-w-[180px] sm:max-w-none">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-santas-gray" size={14} />
+            <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Search..."
+                className="w-full bg-black/40 border border-shark/50 rounded-xl py-2 pl-9 pr-4 text-[11px] text-iron placeholder:text-storm-gray focus:outline-none focus:border-[#279da6]/40 transition-all font-bold uppercase tracking-tight"
+            />
+        </div>
+    );
+
+    const filterActions = (
+        <div className="flex items-center gap-2 shrink-0">
+            {/* Filters Dropdown */}
+            <div className="relative" ref={filterMenuRef}>
+                <button
+                    onClick={() => setIsFilterMenuOpen(!isFilterMenuOpen)}
+                    className={`flex items-center gap-2 px-2.5 py-1.5 rounded-xl border border-shark/60 hover:border-[#279da6]/40 hover:bg-white/5 transition-all group ${filterType !== 'all' ? 'bg-[#279da6]/10 border-[#279da6]/40 text-[#279da6]' : 'text-santas-gray'}`}
+                >
+                    <Filter size={14} className={filterType !== 'all' ? 'text-[#279da6]' : 'group-hover:text-white'} />
+                    <span className="text-[11px] font-bold uppercase tracking-tight hidden md:inline">
+                        {filterType === 'all' ? 'Filters' : filterType}
+                    </span>
+                    <ChevronDown size={12} className={`hidden md:block transition-transform duration-300 ${isFilterMenuOpen ? 'rotate-180' : ''}`} />
+                </button>
+
+                {isFilterMenuOpen && (
+                    <div className="absolute top-full right-0 mt-2 w-48 bg-[#121214] border border-shark/60 rounded-xl shadow-2xl py-2 z-[60] animate-zoom-in backdrop-blur-xl bg-opacity-95">
+                        {[
+                            { id: 'all', label: 'All Files', icon: <FileIcon size={14} /> },
+                            { id: 'folder', label: 'Folders', icon: <FolderOpen size={14} /> },
+                            { id: 'doc', label: 'Google Docs', icon: <FileText size={14} className="text-blue-500" /> },
+                            { id: 'sheet', label: 'Google Sheets', icon: <Table size={14} className="text-green-500" /> },
+                            { id: 'slide', label: 'Google Slides', icon: <Presentation size={14} className="text-yellow-500" /> },
+                            { id: 'image', label: 'Images', icon: <ImageIcon size={14} className="text-emerald-500" /> },
+                            { id: 'pdf', label: 'PDFs', icon: <FileText size={14} className="text-rose-500" /> },
+                        ].map((opt) => (
+                            <button
+                                key={opt.id}
+                                onClick={() => { setFilterType(opt.id); setIsFilterMenuOpen(false); }}
+                                className={`w-full flex items-center gap-3 px-4 py-2 hover:bg-white/5 text-xs transition-colors ${filterType === opt.id ? 'text-[#279da6] bg-[#279da6]/5 font-bold' : 'text-iron'}`}
+                            >
+                                <span className="opacity-80 group-hover:opacity-100">{opt.icon}</span>
+                                <span className="uppercase tracking-widest text-[10px]">{opt.label}</span>
+                                {filterType === opt.id && <Check size={12} className="ml-auto" />}
+                            </button>
+                        ))}
+                    </div>
+                )}
             </div>
-            {/* ... other items will follow ... */}
 
-            <div className="hidden sm:block w-[1px] h-4 bg-shark/60 mx-1" />
-
-            <div className="flex items-center gap-2 w-full sm:w-auto">
-                {/* Filters Dropdown */}
-                <div className="relative flex-1 sm:flex-initial" ref={filterMenuRef}>
-                    <button
-                        onClick={() => setIsFilterMenuOpen(!isFilterMenuOpen)}
-                        className={`flex items-center justify-between sm:justify-start w-full sm:w-auto gap-2 px-3 py-1.5 rounded-xl border border-shark/60 hover:border-[#279da6]/40 hover:bg-white/5 transition-all group ${filterType !== 'all' ? 'bg-[#279da6]/10 border-[#279da6]/40 text-[#279da6]' : 'text-santas-gray'}`}
-                    >
-                        <div className="flex items-center gap-2">
-                            <Filter size={14} className={filterType !== 'all' ? 'text-[#279da6]' : 'group-hover:text-white'} />
-                            <span className="text-[11px] font-bold uppercase tracking-tight">
-                                {filterType === 'all' ? 'Filters' : filterType}
-                            </span>
-                        </div>
-                        <ChevronDown size={12} className={`transition-transform duration-300 ${isFilterMenuOpen ? 'rotate-180' : ''}`} />
-                    </button>
-
-                    {isFilterMenuOpen && (
-                        <div className="absolute top-full right-0 mt-2 w-full sm:w-48 bg-[#121214] border border-shark/60 rounded-xl shadow-2xl py-2 z-[60] animate-zoom-in backdrop-blur-xl bg-opacity-95">
-                            {[
-                                { id: 'all', label: 'All Files', icon: <FileIcon size={14} /> },
-                                { id: 'folder', label: 'Folders', icon: <FolderOpen size={14} /> },
-                                { id: 'doc', label: 'Google Docs', icon: <FileText size={14} className="text-blue-500" /> },
-                                { id: 'sheet', label: 'Google Sheets', icon: <Table size={14} className="text-green-500" /> },
-                                { id: 'slide', label: 'Google Slides', icon: <Presentation size={14} className="text-yellow-500" /> },
-                                { id: 'image', label: 'Images', icon: <ImageIcon size={14} className="text-emerald-500" /> },
-                                { id: 'pdf', label: 'PDFs', icon: <FileText size={14} className="text-rose-500" /> },
-                            ].map((opt) => (
-                                <button
-                                    key={opt.id}
-                                    onClick={() => { setFilterType(opt.id); setIsFilterMenuOpen(false); }}
-                                    className={`w-full flex items-center gap-3 px-4 py-2 hover:bg-white/5 text-xs transition-colors ${filterType === opt.id ? 'text-[#279da6] bg-[#279da6]/5 font-bold' : 'text-iron'}`}
-                                >
-                                    <span className="opacity-80 group-hover:opacity-100">{opt.icon}</span>
-                                    <span className="uppercase tracking-widest text-[10px]">{opt.label}</span>
-                                    {filterType === opt.id && <Check size={12} className="ml-auto" />}
-                                </button>
-                            ))}
-                        </div>
-                    )}
-                </div>
-
-                <div className="h-4 w-[1px] bg-shark mx-1 hidden sm:block" />
-
-                {/* View Mode Switcher */}
-                <div className="flex items-center flex-1 sm:flex-initial bg-black/40 border border-shark/60 rounded-xl p-0.5 overflow-hidden">
-                    <button
-                        onClick={() => setViewMode('list')}
-                        className={`flex-1 sm:flex-initial p-1.5 rounded-lg transition-all flex items-center justify-center gap-2 ${viewMode === 'list' ? 'bg-[#279da6] text-white shadow-lg shadow-[#279da6]/20' : 'text-santas-gray hover:text-white hover:bg-white/5'}`}
-                        title="List view"
-                    >
-                        <List size={14} />
-                        {viewMode === 'list' && <span className="text-[10px] font-black uppercase pr-1">List</span>}
-                    </button>
-                    <button
-                        onClick={() => setViewMode('grid')}
-                        className={`flex-1 sm:flex-initial p-1.5 rounded-lg transition-all flex items-center justify-center gap-2 ${viewMode === 'grid' ? 'bg-[#279da6] text-white shadow-lg shadow-[#279da6]/20' : 'text-santas-gray hover:text-white hover:bg-white/5'}`}
-                        title="Grid view"
-                    >
-                        <LayoutGrid size={14} />
-                        {viewMode === 'grid' && <span className="text-[10px] font-black uppercase pr-1">Grid</span>}
-                    </button>
-                </div>
+            {/* View Mode Switcher */}
+            <div className="flex items-center bg-black/40 border border-shark/60 rounded-xl p-0.5 overflow-hidden">
+                <button
+                    onClick={() => setViewMode('list')}
+                    className={`p-1.5 rounded-lg transition-all flex items-center justify-center gap-2 ${viewMode === 'list' ? 'bg-[#279da6] text-white shadow-lg shadow-[#279da6]/20' : 'text-santas-gray hover:text-white hover:bg-white/5'}`}
+                    title="List view"
+                >
+                    <List size={14} />
+                    {viewMode === 'list' && <span className="text-[10px] font-black uppercase pr-1 hidden md:inline">List</span>}
+                </button>
+                <button
+                    onClick={() => setViewMode('grid')}
+                    className={`p-1.5 rounded-lg transition-all flex items-center justify-center gap-2 ${viewMode === 'grid' ? 'bg-[#279da6] text-white shadow-lg shadow-[#279da6]/20' : 'text-santas-gray hover:text-white hover:bg-white/5'}`}
+                    title="Grid view"
+                >
+                    <LayoutGrid size={14} />
+                    {viewMode === 'grid' && <span className="text-[10px] font-black uppercase pr-1 hidden md:inline">Grid</span>}
+                </button>
             </div>
         </div>
     );
@@ -543,13 +536,13 @@ export default function FilesClient({ initialRootId, initialDriveItems, initialD
             />
 
             <div className="flex-1 flex flex-col min-w-0 bg-[#09090B] relative">
-                <div className={`flex-1 flex flex-col min-w-0 bg-[#121214] rounded-t-2xl overflow-hidden border-t border-l border-r mt-6 mr-6 responsive-content-wrapper transition-all duration-500 ${isImpersonating ? 'border-[#22c55e]/60 shadow-[0_0_15px_rgba(34,197,94,0.15)]' : 'border-shark'}`}>
+                <div className={`flex-1 flex flex-col min-w-0 bg-[#121214] rounded-t-2xl overflow-hidden border-t border-l border-r mt-2 sm:mt-6 mr-2 sm:mr-6 responsive-content-wrapper transition-all duration-500 ${isImpersonating ? 'border-[#22c55e]/60 shadow-[0_0_15px_rgba(34,197,94,0.15)]' : 'border-shark'}`}>
                     <div className="border-b border-shark">
                         <Header
 
                             onMobileMenuToggle={() => setIsMobileOpen(true)}
-                            label="Files"
-                            labelIcon={<HardDrive size={16} className="text-[#279da6]" />}
+                            label={<span className="hidden sm:inline">Files</span>}
+                            labelIcon={<HardDrive size={16} className="text-[#279da6] hidden sm:block" />}
                             onCreate={(displayProfile?.role === 'super_admin' || displayProfile?.team_role === 'admin') ? () => setIsNewMenuOpen(!isNewMenuOpen) : undefined}
                             isCreating={isCreatingFolder}
                             onConfirm={handleCreateFolder}
@@ -558,34 +551,38 @@ export default function FilesClient({ initialRootId, initialDriveItems, initialD
                                 setNewFolderName('');
                             }}
                             isSubmitting={isDriveLoading}
-                            rightToolbar={filtersElement}
+                            rightToolbar={searchTool}
                         >
-                            {/* Breadcrumbs */}
-                            <div className="flex items-center gap-2 text-sm ml-2 overflow-hidden">
+                            {/* Breadcrumbs Row (Breadcrumbs on left, Actions on right) */}
+                            <div className="flex items-center gap-2 text-sm overflow-hidden min-w-0">
                                 {driveBreadcrumbs.length > 1 && (
                                     <button
                                         onClick={() => navigateToBreadcrumb(driveBreadcrumbs.length - 2)}
-                                        className="p-1 text-santas-gray hover:text-white transition-colors group active:scale-95"
+                                        className="p-0.5 text-santas-gray hover:text-white transition-colors group active:scale-95 shrink-0"
                                         title="Go to parent folder"
                                     >
-                                        <ChevronLeft size={20} className="group-hover:-translate-x-0.5 transition-transform" />
+                                        <ChevronLeft size={18} className="group-hover:-translate-x-0.5 transition-transform" />
                                     </button>
                                 )}
-                                {driveBreadcrumbs.map((crumb, i) => (
-                                    <React.Fragment key={crumb.id}>
-                                        {i > 0 && <ChevronRight size={14} className="text-storm-gray shrink-0" />}
-                                        <button
-                                            onClick={() => navigateToBreadcrumb(i)}
-                                            className={`font-black uppercase tracking-widest text-[10px] transition-all truncate max-w-[80px] sm:max-w-[120px] ${i === driveBreadcrumbs.length - 1 ? 'text-[#279da6]' : 'text-storm-gray hover:text-iron'} ${i < driveBreadcrumbs.length - 2 ? 'hidden md:block' : ''}`}
-                                        >
-                                            {i < driveBreadcrumbs.length - 2 && i !== 0 ? '...' : crumb.name}
-                                        </button>
-                                    </React.Fragment>
-                                ))}
+                                <div className="flex items-center gap-1.5 overflow-hidden min-w-0">
+                                    {driveBreadcrumbs.map((crumb, i) => (
+                                        <React.Fragment key={crumb.id}>
+                                            {i > 0 && <ChevronRight size={12} className="text-storm-gray shrink-0" />}
+                                            <button
+                                                onClick={() => navigateToBreadcrumb(i)}
+                                                className={`font-black uppercase tracking-widest text-[9px] transition-all truncate ${i === driveBreadcrumbs.length - 1 ? 'text-[#279da6]' : 'text-storm-gray hover:text-iron'} ${i < driveBreadcrumbs.length - 2 ? 'hidden md:block' : ''}`}
+                                            >
+                                                {i < driveBreadcrumbs.length - 2 && i !== 0 ? '...' : crumb.name}
+                                            </button>
+                                        </React.Fragment>
+                                    ))}
+                                </div>
                             </div>
 
-                            {/* Consolidated Actions */}
-                            <div className="flex items-center gap-2 ml-auto">
+                            {/* Consolidated Actions Row */}
+                            <div className="flex items-center gap-1.5 shrink-0 ml-auto">
+                                {filterActions}
+                                <div className="hidden md:block h-4 w-[1px] bg-shark/40 mx-1" />
                                 <button
                                     onClick={refreshFolder}
                                     className="p-1.5 text-santas-gray hover:text-white transition-all shrink-0"
@@ -595,7 +592,7 @@ export default function FilesClient({ initialRootId, initialDriveItems, initialD
                                 </button>
 
                                 {isUploading && uploadStatus && (
-                                    <div className="flex items-center gap-2 px-3 py-1.5 bg-[#279da6]/10 border border-[#279da6]/20 rounded-lg animate-pulse">
+                                    <div className="flex items-center gap-2 px-3 py-1.5 bg-[#279da6]/10 border border-[#279da6]/20 rounded-lg animate-pulse lg:flex hidden">
                                         <Loader2 size={14} className="text-[#279da6] animate-spin" />
                                         <span className="text-[10px] font-bold text-[#279da6] uppercase tracking-wider truncate max-w-[200px]">
                                             {uploadStatus}
@@ -672,7 +669,7 @@ export default function FilesClient({ initialRootId, initialDriveItems, initialD
                                 </button>
                             </div>
                         )}
-                        <div className="p-6">
+                        <div className="p-3 sm:p-4 lg:p-6">
 
                             {/* New Folder Creation Input */}
                             <div
