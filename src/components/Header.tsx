@@ -20,7 +20,7 @@ import ImpersonationWarning from '@/components/ImpersonationWarning';
 interface HeaderProps {
     onToggleSidebar?: () => void;
     onMobileMenuToggle?: () => void;
-    label: string;
+    label: React.ReactNode;
     labelIcon?: React.ReactNode;
     tabs?: (string | { label: string; icon?: React.ReactNode })[];
     activeTab?: string;
