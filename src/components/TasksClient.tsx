@@ -46,7 +46,7 @@ export default function TasksClient({ initialTasks, profiles, teamMembers, reque
 
     const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
     const [isMobileOpen, setIsMobileOpen] = useState(false);
-    const [activeTab, setActiveTab] = useState('UNASSIGNED');
+    const [activeTab, setActiveTab] = useState('IN PROGRESS');
     const [tasks, setTasks] = useState<TaskItem[]>(initialTasks);
     const [searchQuery, setSearchQuery] = useState('');
     const [isCreating, setIsCreating] = useState(false);
@@ -79,7 +79,7 @@ export default function TasksClient({ initialTasks, profiles, teamMembers, reque
     const [activeFilterHeader, setActiveFilterHeader] = useState<string | null>(null);
     const dateInputRefs = React.useRef<{ [key: string]: HTMLInputElement | null }>({});
 
-    const taskTabs = ['UNASSIGNED', 'TODO', 'IN PROGRESS', 'REVIEW', 'LOW', 'MEDIUM', 'HIGH', 'CRITICAL', 'DONE', 'All'];
+    const taskTabs = ['IN PROGRESS', 'COMPLETED', 'All'];
 
     // Update state when initial props change (from SSR refresh)
     React.useEffect(() => {
@@ -186,15 +186,8 @@ export default function TasksClient({ initialTasks, profiles, teamMembers, reque
 
         // Tab filters
         let matchesTab = true;
-        if (activeTab === 'UNASSIGNED') matchesTab = !task.assigned_to;
-        else if (activeTab === 'TODO') matchesTab = task.status === 'Todo';
-        else if (activeTab === 'IN PROGRESS') matchesTab = task.status === 'In Progress';
-        else if (activeTab === 'REVIEW') matchesTab = task.status === 'Review';
-        else if (activeTab === 'LOW') matchesTab = task.priority === 'Low';
-        else if (activeTab === 'MEDIUM') matchesTab = task.priority === 'Medium';
-        else if (activeTab === 'HIGH') matchesTab = task.priority === 'High';
-        else if (activeTab === 'CRITICAL') matchesTab = task.priority === 'Critical';
-        else if (activeTab === 'DONE') matchesTab = task.status === 'Done';
+        if (activeTab === 'IN PROGRESS') matchesTab = ['Todo', 'In Progress', 'Review'].includes(task.status || '');
+        else if (activeTab === 'COMPLETED') matchesTab = task.status === 'Done';
 
         // Advanced filters
         const matchesTitle = !filters.title || task.title?.toLowerCase().includes(filters.title.toLowerCase());
@@ -262,15 +255,8 @@ export default function TasksClient({ initialTasks, profiles, teamMembers, reque
         taskTabs.forEach(tab => {
             counts[tab] = visibleTasks.filter(task => {
                 if (tab === 'All') return true;
-                if (tab === 'UNASSIGNED') return !task.assigned_to;
-                if (tab === 'TODO') return task.status === 'Todo';
-                if (tab === 'IN PROGRESS') return task.status === 'In Progress';
-                if (tab === 'REVIEW') return task.status === 'Review';
-                if (tab === 'LOW') return task.priority === 'Low';
-                if (tab === 'MEDIUM') return task.priority === 'Medium';
-                if (tab === 'HIGH') return task.priority === 'High';
-                if (tab === 'CRITICAL') return task.priority === 'Critical';
-                if (tab === 'DONE') return task.status === 'Done';
+                if (tab === 'IN PROGRESS') return ['Todo', 'In Progress', 'Review'].includes(task.status || '');
+                if (tab === 'COMPLETED') return task.status === 'Done';
                 return true;
             }).length;
         });
