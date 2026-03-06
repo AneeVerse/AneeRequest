@@ -845,7 +845,6 @@ export default function ClientsClient({ initialClients }: ClientsClientProps) {
                                                             </div>
                                                         </div>
                                                         <div className="mt-1 flex flex-col gap-0.5">
-                                                            <span className="text-[9px] text-storm-gray font-black uppercase opacity-40">ID: {client.id.slice(0, 8)}</span>
                                                             <p className="text-[10px] font-bold text-storm-gray uppercase tracking-tight truncate opacity-60">
                                                                 {client.name}
                                                             </p>
@@ -1035,13 +1034,7 @@ export default function ClientsClient({ initialClients }: ClientsClientProps) {
                                                                 <div className="flex flex-col min-w-0">
                                                                     <span className="text-iron font-black group-hover/cell:text-[#279da6] transition-colors uppercase tracking-tight truncate leading-tight text-[12px]">{client.organization}</span>
                                                                     <div className="flex items-center gap-2">
-                                                                        <span className="text-[9px] text-storm-gray font-black uppercase opacity-40">ID: {client.id.slice(0, 8)}</span>
-                                                                        <button
-                                                                            onClick={(e) => handleCopy(e, client.organization, client.id)}
-                                                                            className="p-1 rounded-md text-storm-gray hover:text-[#279da6] hover:bg-[#279da6]/10 transition-all opacity-0 group-hover:opacity-100"
-                                                                        >
-                                                                            {copiedId === client.id ? <Check size={10} className="text-emerald-500" /> : <Copy size={10} />}
-                                                                        </button>
+                                                                        {/* ID hidden */}
                                                                     </div>
                                                                 </div>
                                                             </div>
