@@ -17,10 +17,10 @@ export async function GET(
         const id = await resolveRequestSlug(idOrSlug);
         const supabase = createServiceClient();
 
-        // 1. Get request details (title + client_id)
+        // 1. Get request details (title + client_link_id)
         const { data: req, error: reqErr } = await supabase
             .from('requests')
-            .select('title, client_id')
+            .select('title, client_link_id')
             .eq('id', id)
             .single();
 
@@ -28,20 +28,14 @@ export async function GET(
             return NextResponse.json({ error: 'Request not found' }, { status: 404 });
         }
 
-        // 2. Get client info to find Drive folder
-        const { data: clientProfile } = await supabase
-            .from('profiles')
-            .select('email, full_name')
-            .eq('id', req.client_id)
-            .single();
-
+        // 2. Get client info directly from clients table
         const { data: client } = await supabase
             .from('clients')
             .select('organization, name, drive_folder_id')
-            .ilike('email', clientProfile?.email || '')
+            .eq('id', req.client_link_id)
             .maybeSingle();
 
-        const clientName = client?.organization || client?.name || clientProfile?.full_name || 'Unknown';
+        const clientName = client?.organization || client?.name || 'Unknown';
 
         // 3. Navigate Drive folder structure
         let baseFolderId: string;
@@ -144,7 +138,7 @@ export async function POST(
         // 1. Get request details
         const { data: req, error: reqErr } = await supabase
             .from('requests')
-            .select('title, client_id')
+            .select('title, client_link_id')
             .eq('id', id)
             .single();
 
@@ -153,19 +147,13 @@ export async function POST(
         }
 
         // 2. Get client info
-        const { data: clientProfile } = await supabase
-            .from('profiles')
-            .select('email, full_name')
-            .eq('id', req.client_id)
-            .single();
-
         const { data: client } = await supabase
             .from('clients')
             .select('organization, name, drive_folder_id')
-            .ilike('email', clientProfile?.email || '')
+            .eq('id', req.client_link_id)
             .maybeSingle();
 
-        const clientName = client?.organization || client?.name || clientProfile?.full_name || 'Unknown';
+        const clientName = client?.organization || client?.name || 'Unknown';
 
         // 3. Ensure folder path exists
         // This will create Client Folder > Request Folder > production & distributed

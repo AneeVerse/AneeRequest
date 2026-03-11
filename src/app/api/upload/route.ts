@@ -23,29 +23,23 @@ export async function POST(request: Request) {
         // If requestId is provided, upload to Google Drive (chat attachments)
         if (requestId) {
             const supabase = createServiceClient();
+            // 1. Get request details (title + client_link_id)
             const { data: req, error: reqErr } = await supabase
                 .from('requests')
-                .select('id, title, client_id')
+                .select('id, title, client_link_id')
                 .eq('id', requestId)
                 .single();
 
             if (reqErr || !req) throw new Error(reqErr?.message || 'Request not found');
 
-            // Get client profile (where email is stored)
-            const { data: clientProfile } = await supabase
-                .from('profiles')
-                .select('id, full_name, email')
-                .eq('id', req.client_id)
-                .single();
-
-            // Get client metadata (where organization/drive_folder_id are stored)
+            // 2. Get client info directly from clients table
             const { data: clientData } = await supabase
                 .from('clients')
                 .select('organization, name, drive_folder_id')
-                .ilike('email', clientProfile?.email || '')
+                .eq('id', req.client_link_id)
                 .maybeSingle();
 
-            const clientName = clientData?.organization || clientData?.name || clientProfile?.full_name || 'Unknown';
+            const clientName = clientData?.organization || clientData?.name || 'Unknown';
 
             let folder: 'production' | 'distributed' = 'production';
             if (senderId) {

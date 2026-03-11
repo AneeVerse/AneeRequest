@@ -59,13 +59,29 @@ export async function GET(request: Request) {
             .from('requests')
             .select(`
                 *,
-                client:client_id (id, full_name, email),
+                client:client_id (id, full_name:name, organization, email),
                 assignee:assigned_to (id, full_name)
             `);
 
         // 3. Apply role-based filtering
         if (activeRole === 'client') {
-            query.eq('client_id', activeProfileId);
+            // Get the client record ID for this profile's email
+            const currentUserEmail = impersonateId ? (await supabase.from('profiles').select('email').eq('id', activeProfileId).single()).data?.email : user.email;
+
+            if (currentUserEmail) {
+                const { data: clientRecord } = await supabase
+                    .from('clients')
+                    .select('id')
+                    .ilike('email', currentUserEmail)
+                    .maybeSingle();
+
+                if (clientRecord) {
+                    query.eq('client_id', clientRecord.id);
+                } else {
+                    // If no client record found, they see nothing
+                    query.eq('client_id', '00000000-0000-0000-0000-000000000000');
+                }
+            }
         } else if (activeRole === 'team_member') {
             // Team members only see assigned requests unless they are admin-role team members
             const { data: teamData } = await supabase
@@ -88,7 +104,7 @@ export async function GET(request: Request) {
                 .from('requests')
                 .select(`
                     *,
-                    client:client_id (id, full_name, email),
+                    client:client_id (id, full_name:name, organization, email),
                     assignee:assigned_to (id, full_name)
                 `)
                 .eq(isUuid ? 'id' : 'slug', id)
@@ -101,19 +117,21 @@ export async function GET(request: Request) {
                 return NextResponse.json({ error: "Request not found" }, { status: 404 });
             }
 
-            // Fetch organization from clients table
+            // Fetch avatar from profiles for the single request
             if (data.client?.email) {
-                const { data: clientData } = await supabase
-                    .from('clients')
-                    .select('organization')
+                const { data: profile } = await supabase
+                    .from('profiles')
+                    .select('avatar_url')
                     .eq('email', data.client.email)
                     .maybeSingle();
 
-                if (clientData) {
-                    data.client.organization = clientData.organization;
+                if (profile) {
+                    data.client.avatar_url = profile.avatar_url;
                 }
+            }
 
-                // Calculate request number for this client
+            // Calculate request number for this client
+            if (data.client_id) {
                 const { count } = await supabase
                     .from('requests')
                     .select('*', { count: 'exact', head: true })
@@ -129,22 +147,24 @@ export async function GET(request: Request) {
         const { data, error } = await query.order('created_at', { ascending: false });
         if (error) throw error;
 
-        // Fetch organizations for all clients if it's a list
-        const clientEmails = data
+        // Fetch avatars from profiles table for all clients
+        const emails = (data || [])
             .map(r => r.client?.email)
             .filter(Boolean);
 
-        if (clientEmails.length > 0) {
-            const { data: clientsData } = await supabase
-                .from('clients')
-                .select('email, organization')
-                .in('email', clientEmails);
+        if (emails.length > 0) {
+            const { data: profilesData } = await supabase
+                .from('profiles')
+                .select('email, avatar_url')
+                .in('email', emails);
 
-            if (clientsData) {
-                data.forEach(r => {
+            if (profilesData) {
+                data?.forEach(r => {
                     if (r.client?.email) {
-                        const c = clientsData.find(cd => cd.email === r.client.email);
-                        if (c) r.client.organization = c.organization;
+                        const profile = profilesData.find(p => p.email.toLowerCase() === r.client!.email.toLowerCase());
+                        if (profile) {
+                            (r.client as any).avatar_url = profile.avatar_url;
+                        }
                     }
                 });
             }
@@ -188,7 +208,7 @@ export async function POST(request: Request) {
                     title: numberedTitle,
                     slug: initialSlug, // We'll update it with ID part after we have the ID or just use it as is if unique
                     description,
-                    client_id,
+                    client_id: client_id, // Saving to the new aligned column
                     priority: priority || 'Medium',
                     due_date,
                     status: 'Todo'
@@ -202,20 +222,14 @@ export async function POST(request: Request) {
         // Auto-create Google Drive folder for this request (only if requested)
         if (body.create_folder !== false) {
             try {
-                // Fetch client name for folder structure
-                const { data: profile } = await supabase
-                    .from('profiles')
-                    .select('email, full_name')
-                    .eq('id', client_id)
-                    .single();
-
+                // Fetch client name for folder structure from the clients table directly
                 const { data: client } = await supabase
                     .from('clients')
                     .select('organization, name, drive_folder_id')
-                    .ilike('email', profile?.email || '')
+                    .eq('id', client_id)
                     .maybeSingle();
 
-                const clientName = client?.organization || client?.name || profile?.full_name || 'Unknown';
+                const clientName = client?.organization || client?.name || 'Unknown';
 
                 // Create the folder structure using the numbered title
                 await ensureFolderPath(clientName, numberedTitle, 'production', client?.drive_folder_id);

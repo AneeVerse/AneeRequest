@@ -48,7 +48,7 @@ export async function GET(request: Request) {
 
             for (const reqFolder of requestFolders) {
                 const matchingReq = allRequests?.find(r =>
-                    r.title === reqFolder.name && r.client_id === matchingClient?.id
+                    r.title === reqFolder.name && r.client_link_id === matchingClient?.id
                 );
 
                 // Team access control: restricted team members only see assigned requests
@@ -107,28 +107,23 @@ export async function POST(request: Request) {
 
         const supabase = createServiceClient();
 
-        // Get request client profile email
+        // Get request details
         const { data: req, error: reqErr } = await supabase
             .from('requests')
-            .select('title, client_id')
+            .select('title, client_link_id')
             .eq('id', requestId)
             .single();
 
         if (reqErr) throw reqErr;
 
-        const { data: profile } = await supabase
-            .from('profiles')
-            .select('email, full_name')
-            .eq('id', req.client_id)
-            .single();
-
+        // Get client metadata directly
         const { data: client } = await supabase
             .from('clients')
             .select('organization, name, drive_folder_id')
-            .ilike('email', profile?.email || '')
+            .eq('id', req.client_link_id)
             .maybeSingle();
 
-        const clientName = client?.organization || client?.name || profile?.full_name || 'Unknown';
+        const clientName = client?.organization || client?.name || 'Unknown';
 
         // Upload to Drive (use client-specific folder if set)
         const folderId = await ensureFolderPath(clientName, req.title, folder as any, client?.drive_folder_id);

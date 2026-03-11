@@ -185,8 +185,8 @@ export default function CreateRequestModal({ isOpen, onClose, onSuccess, initial
                                     placeholder="Select a client..."
                                     options={clients.map(client => ({
                                         label: `${client.full_name || client.name} (${client.organization || client.email}) ${!client.profile_id ? '- (Account Not Activated)' : ''}`,
-                                        value: client.profile_id || '',
-                                        disabled: !client.profile_id,
+                                        value: client.id || '',
+                                        disabled: false,
                                         icon: <User size={16} className="text-[#279da6]" />
                                     }))}
                                 />

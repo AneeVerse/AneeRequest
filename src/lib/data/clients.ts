@@ -70,18 +70,18 @@ export async function getClients(): Promise<ClientItem[]> {
 export async function getClientCounts() {
     const supabase = createServiceClient();
 
-    // Fetch all requests and tasks to count by client_id
+    // Fetch all requests and tasks to count by client_link_id
     const [requestsRes, tasksRes] = await Promise.all([
-        supabase.from('requests').select('client_id'),
-        supabase.from('tasks').select('id, task_request_links(request:request_id(client_id))')
+        supabase.from('requests').select('client_link_id'),
+        supabase.from('tasks').select('id, task_request_links(request:request_id(client_link_id))')
     ]);
 
     const requestCounts: Record<string, number> = {};
     const taskCounts: Record<string, number> = {};
 
     requestsRes.data?.forEach(req => {
-        if (req.client_id) {
-            requestCounts[req.client_id] = (requestCounts[req.client_id] || 0) + 1;
+        if (req.client_link_id) {
+            requestCounts[req.client_link_id] = (requestCounts[req.client_link_id] || 0) + 1;
         }
     });
 
@@ -90,8 +90,8 @@ export async function getClientCounts() {
         // We'll count unique clients per task to avoid double counting if linked to multiple requests of same client. Or just pick first.
         const clientIds = new Set<string>();
         task.task_request_links?.forEach((link: any) => {
-            if (link.request?.client_id) {
-                clientIds.add(link.request.client_id);
+            if (link.request?.client_link_id) {
+                clientIds.add(link.request.client_link_id);
             }
         });
 
@@ -114,8 +114,7 @@ export async function getEnrichedClients() {
 
     return clients.map(client => ({
         ...client,
-        request_count: (client.profile_id && counts.requestCounts[client.profile_id]) || 0,
-        task_count: (client.profile_id && counts.taskCounts[client.profile_id]) || 0
+        request_count: counts.requestCounts[client.id] || 0,
+        task_count: counts.taskCounts[client.id] || 0
     }));
 }
-

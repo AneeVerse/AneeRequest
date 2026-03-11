@@ -32,6 +32,18 @@ export interface TeamMember {
     position?: string;
 }
 
+export interface Client {
+    id: string;
+    name: string;
+    email: string;
+    organization: string;
+    status: string;
+    created_at: string;
+    drive_folder_id?: string | null;
+    avatar_url?: string | null;
+    profile_id?: string | null;
+}
+
 /**
  * Fetches requests with role-based filtering
  * @param userId - The ID of the user making the request
@@ -66,13 +78,22 @@ export async function getRequestsData(
         .from('requests')
         .select(`
             *,
-            client:client_id (id, full_name, email, avatar_url),
+            client:client_id (id, full_name:name, organization, email),
             assignee:assigned_to (id, full_name)
         `);
 
     // Apply role-based filtering
     if (activeRole === 'client' && activeProfileId) {
-        query.eq('client_id', activeProfileId);
+        // Find the client record for this profile's email
+        const { data: profile } = await supabase.from('profiles').select('email').eq('id', activeProfileId).single();
+        if (profile?.email) {
+            const { data: client } = await supabase.from('clients').select('id').ilike('email', profile.email).maybeSingle();
+            if (client) {
+                query.eq('client_id', client.id);
+            } else {
+                query.eq('client_id', '00000000-0000-0000-0000-000000000000');
+            }
+        }
     } else if (activeRole === 'team_member' && activeProfileId) {
         // Team members only see assigned requests unless they are admin-role team members
         const { data: teamData } = await supabase
@@ -105,15 +126,26 @@ export async function getRequestsData(
             .select('email, organization')
             .in('email', clientEmails);
 
+        const { data: profilesData } = await supabase
+            .from('profiles')
+            .select('email, avatar_url')
+            .in('email', clientEmails);
+
         if (clientsData) {
             data?.forEach(r => {
                 if (r.client?.email) {
-                    const c = clientsData.find(cd => cd.email === r.client!.email);
+                    const c = clientsData.find(cd => cd.email.toLowerCase() === r.client!.email.toLowerCase());
+                    const p = profilesData?.find(pd => pd.email.toLowerCase() === r.client!.email.toLowerCase());
+
                     if (c) {
                         (r.client as any).organization = c.organization;
                         (r.client as any).slug = slugify(c.organization || r.client!.full_name);
                     } else {
                         (r.client as any).slug = slugify(r.client!.full_name);
+                    }
+
+                    if (p) {
+                        (r.client as any).avatar_url = p.avatar_url;
                     }
                 }
             });
@@ -131,7 +163,7 @@ export async function getProfiles(): Promise<Profile[]> {
 
     const { data, error } = await supabase
         .from('profiles')
-        .select('id, full_name, email, role');
+        .select('id, full_name, email, role, avatar_url'); // Added avatar_url
 
     if (error) {
         console.error('Error fetching profiles:', error);
@@ -160,22 +192,43 @@ export async function getTeamMembers(): Promise<TeamMember[]> {
 }
 
 /**
+ * Fetches all clients
+ */
+export async function getClients(): Promise<Client[]> {
+    const supabase = createServiceClient();
+
+    const { data, error } = await supabase
+        .from('clients')
+        .select('*')
+        .order('organization', { ascending: true });
+
+    if (error) {
+        console.error('Error fetching clients:', error);
+        return [];
+    }
+
+    return data || [];
+}
+
+/**
  * Fetches all data needed for the requests page
  */
 export async function getAllRequestsData(
     userId?: string,
     userRole?: string,
     impersonateId?: string
-) {
-    const [requests, profiles, teamMembers] = await Promise.all([
+): Promise<{ requests: RequestItem[]; profiles: Profile[]; teamMembers: TeamMember[]; clients: Client[] }> {
+    const [requests, profiles, teamMembers, clients] = await Promise.all([
         getRequestsData(userId, userRole, impersonateId),
         getProfiles(),
-        getTeamMembers()
+        getTeamMembers(),
+        getClients() // Fetch all clients
     ]);
 
     return {
-        requests,
-        profiles,
-        teamMembers
+        requests: requests || [],
+        profiles: profiles || [],
+        teamMembers: teamMembers || [],
+        clients: clients || []
     };
 }

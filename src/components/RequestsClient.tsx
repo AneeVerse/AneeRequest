@@ -30,18 +30,20 @@ import RequestsTable from '@/components/RequestsTable';
 import CustomDropdown from '@/components/CustomDropdown';
 import CustomDateRangePicker from '@/components/CustomDateRangePicker';
 
-import type { RequestItem, Profile, TeamMember } from '@/lib/data/requests';
+import type { RequestItem, Profile, TeamMember, Client } from '@/lib/data/requests';
 
 interface RequestsClientProps {
     initialRequests: RequestItem[];
     initialProfiles: Profile[];
     initialTeamMembers: TeamMember[];
+    initialClients: Client[];
 }
 
 export default function RequestsClient({
     initialRequests,
     initialProfiles,
-    initialTeamMembers
+    initialTeamMembers,
+    initialClients
 }: RequestsClientProps) {
     const router = useRouter();
     const { isImpersonating, profile, viewAsProfile } = useAuth();
@@ -83,13 +85,15 @@ export default function RequestsClient({
     const [requests, setRequests] = useState<RequestItem[]>(initialRequests);
     const [profiles, setProfiles] = useState<Profile[]>(initialProfiles);
     const [teamMembers, setTeamMembers] = useState<TeamMember[]>(initialTeamMembers);
+    const [clients, setClients] = useState<Client[]>(initialClients);
 
     // Update state when initial props change (from SSR refresh)
     React.useEffect(() => {
         setRequests(initialRequests);
         setProfiles(initialProfiles);
         setTeamMembers(initialTeamMembers);
-    }, [initialRequests, initialProfiles, initialTeamMembers]);
+        setClients(initialClients);
+    }, [initialRequests, initialProfiles, initialTeamMembers, initialClients]);
 
     useEffect(() => {
         // Initial check for mobile to auto-collapse
@@ -179,7 +183,12 @@ export default function RequestsClient({
 
     const visibleRequests = (() => {
         if (isClient) {
-            return requests.filter((req: RequestItem) => req.client?.id === displayProfile?.id);
+            // Find the client record for this profile's email to match against requests.client.id
+            const myClientRecord = clients.find(c => c.email === displayProfile?.email);
+            if (myClientRecord) {
+                return requests.filter((req: RequestItem) => req.client?.id === myClientRecord.id);
+            }
+            return [];
         }
         if (isTeamMember && !isTeamAdmin) {
             return requests.filter((req: RequestItem) => req.assigned_to === displayProfile?.id);
@@ -495,9 +504,9 @@ export default function RequestsClient({
                                                             onChange={(val: any) => setRequestFormData({ ...requestFormData, client_id: val })}
                                                             options={[
                                                                 { label: 'Select Client', value: '' },
-                                                                ...profiles.filter(p => p.role === 'client').map(p => ({
-                                                                    label: p.full_name || p.email,
-                                                                    value: p.id,
+                                                                ...clients.map(c => ({
+                                                                    label: `${c.organization || c.name} (${c.email})`,
+                                                                    value: c.id,
                                                                     icon: <Building size={14} className="text-[#279da6]" />
                                                                 }))
                                                             ]}

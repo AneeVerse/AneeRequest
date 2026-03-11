@@ -56,7 +56,7 @@ export async function getTasksData() {
                     id, 
                     slug, 
                     title,
-                    client:client_id (id, full_name, email, avatar_url)
+                    client:client_id (id, full_name:name, email)
                 )
             )
         `)

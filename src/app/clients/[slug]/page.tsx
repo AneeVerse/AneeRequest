@@ -150,9 +150,9 @@ export default function ClientDetailPage() {
                     fetch(`/api/tasks`).then(res => res.json())
                 ]);
 
-                // Filter requests by client_id
+                // Filter requests by clients.id (using logic from new schema)
                 const clientRequests = Array.isArray(reqRes)
-                    ? reqRes.filter((r: RequestItem) => r.client?.id === client.profile_id)
+                    ? reqRes.filter((r: RequestItem) => r.client?.id === client.id)
                     : [];
                 setRequests(clientRequests);
 
@@ -239,7 +239,7 @@ export default function ClientDetailPage() {
     };
 
     const handleInlineCreateRequest = async () => {
-        if (!requestFormData.title.trim() || !client?.profile_id) return;
+        if (!requestFormData.title.trim() || !client?.id) return;
 
         setIsSubmittingInline(true);
         try {
@@ -249,7 +249,7 @@ export default function ClientDetailPage() {
                 body: JSON.stringify({
                     title: requestFormData.title,
                     description: requestFormData.description || `New request for ${client?.name}`,
-                    client_id: client?.profile_id,
+                    client_id: client?.id,
                     priority: requestFormData.priority,
                     due_date: requestFormData.due_date,
                     status: 'Todo',
@@ -315,7 +315,7 @@ export default function ClientDetailPage() {
             ]);
 
             const clientRequests = Array.isArray(reqRes)
-                ? reqRes.filter((r: RequestItem) => r.client?.id === client?.profile_id)
+                ? reqRes.filter((r: RequestItem) => r.client?.id === client?.id)
                 : [];
             setRequests(clientRequests);
 

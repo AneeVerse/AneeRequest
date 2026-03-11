@@ -30,6 +30,7 @@ export default async function RequestsPage() {
                 initialRequests={[]}
                 initialProfiles={[]}
                 initialTeamMembers={[]}
+                initialClients={[]}
             />
         );
     }
@@ -54,6 +55,7 @@ export default async function RequestsPage() {
             initialRequests={data.requests}
             initialProfiles={data.profiles}
             initialTeamMembers={data.teamMembers}
+            initialClients={data.clients}
         />
     );
 }
