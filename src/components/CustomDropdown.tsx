@@ -93,7 +93,7 @@ export default function CustomDropdown({
                 minWidth: `${coords.width}px`,
                 transform: variant === 'minimal' ? 'translateX(-50%)' : 'none'
             }}
-            className="z-[9999] bg-[#18181B] border border-shark rounded-xl shadow-[0_20px_50px_rgba(0,0,0,0.6)] overflow-y-auto max-h-72 custom-scrollbar py-1 animate-in fade-in zoom-in-95 duration-200 origin-top"
+            className="z-[9999] bg-[#18181B] border border-shark rounded-xl shadow-[0_20px_50px_rgba(0,0,0,0.6)] overflow-y-auto max-h-96 custom-scrollbar py-1 animate-in fade-in zoom-in-95 duration-200 origin-top"
         >
             {options.map((option) => (
                 <button
