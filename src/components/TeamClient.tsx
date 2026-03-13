@@ -707,7 +707,7 @@ export default function TeamClient({ initialMembers, initialCounts }: TeamClient
                                                                 </button>
                                                             </div>
                                                         </div>
-                                                        <p className="text-[10px] font-black text-[#279da6] tracking-widest truncate mt-0.5 opacity-80">
+                                                        <p className="text-[12px] font-black text-[#279da6] tracking-widest truncate mt-0.5 opacity-80">
                                                             {member.email}
                                                         </p>
                                                     </div>
@@ -916,7 +916,7 @@ export default function TeamClient({ initialMembers, initialCounts }: TeamClient
                                                                     }
                                                                 }}
                                                             >
-                                                                <div className="w-12 h-12 rounded-full bg-shark flex items-center justify-center text-[11px] font-black text-white overflow-hidden border border-white/5 group-hover/name:ring-2 ring-[#279da6]/30 transition-all shrink-0 bg-gradient-to-br from-[#279da6]/10 to-transparent">
+                                                                <div className="w-12 h-12 rounded-full bg-shark flex items-center justify-center text-[12px] font-black text-white overflow-hidden border border-white/5 group-hover/name:ring-2 ring-[#279da6]/30 transition-all shrink-0 bg-gradient-to-br from-[#279da6]/10 to-transparent">
                                                                     {member.avatar_url ? (
                                                                         <img src={member.avatar_url} alt={member.name} className="w-full h-full object-cover" />
                                                                     ) : (
@@ -929,7 +929,7 @@ export default function TeamClient({ initialMembers, initialCounts }: TeamClient
                                                                 </div>
                                                             </div>
                                                         </td>
-                                                        <td className="px-6 py-3 border-r border-shark/60 text-storm-gray font-black uppercase tracking-tight hover:bg-white/5 transition-colors text-[11px] opacity-60 truncate">{member.email}</td>
+                                                        <td className="px-6 py-3 border-r border-shark/60 text-storm-gray font-black uppercase tracking-tight hover:bg-white/5 transition-colors text-[12px] opacity-60 truncate">{member.email}</td>
                                                         <td className="px-4 py-3 border-r border-shark/60 hover:bg-white/5 transition-colors text-center">
                                                             <div
                                                                 className="flex items-center gap-2 justify-center cursor-pointer hover:opacity-70 transition-opacity group/stat"
@@ -972,7 +972,7 @@ export default function TeamClient({ initialMembers, initialCounts }: TeamClient
                                                                 <span className="text-iron font-black text-xs">{member.task_count || 0}</span>
                                                             </div>
                                                         </td>
-                                                        <td className="px-6 py-3 border-r border-shark/60 text-storm-gray font-black whitespace-nowrap text-[10px] hover:bg-white/5 transition-colors uppercase text-center">
+                                                        <td className="px-6 py-3 border-r border-shark/60 text-storm-gray font-black whitespace-nowrap text-[12px] hover:bg-white/5 transition-colors uppercase text-center">
                                                             {member.last_login ? (
                                                                 <div className="flex flex-col">
                                                                     <span className="text-iron font-black">{formatDate(member.last_login)}</span>
@@ -980,7 +980,7 @@ export default function TeamClient({ initialMembers, initialCounts }: TeamClient
                                                                 </div>
                                                             ) : <span className="opacity-40 tracking-widest">NEVER</span>}
                                                         </td>
-                                                        <td className="px-6 py-3 border-r border-shark/60 text-storm-gray font-black whitespace-nowrap text-[10px] hover:bg-white/5 transition-colors uppercase text-center">
+                                                        <td className="px-6 py-3 border-r border-shark/60 text-storm-gray font-black whitespace-nowrap text-[12px] hover:bg-white/5 transition-colors uppercase text-center">
                                                             <div className="flex flex-col">
                                                                 <span className="text-iron font-black">{formatDate(member.created_at)}</span>
                                                                 <span className="opacity-40 font-bold scale-90">{formatTime(member.created_at)}</span>
