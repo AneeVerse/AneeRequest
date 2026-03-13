@@ -1,5 +1,6 @@
 import { createServiceClient } from '@/lib/supabase';
 import { slugify } from '@/lib/utils';
+import { getTeamMembers } from './team';
 
 export interface TaskItem {
     id: string;
@@ -69,26 +70,43 @@ export async function getTasksData() {
 
     const tasks = (data || []) as any[];
 
-    // Fetch organizations for all clients linked to these tasks
+    // Fetch organizations and avatars for all clients linked to these tasks
     const clientEmails = tasks
         .flatMap(t => t.request_links || [])
         .map(rl => rl.request?.client?.email)
         .filter(Boolean) as string[];
 
     if (clientEmails.length > 0) {
-        const { data: clientsData } = await supabase
-            .from('clients')
-            .select('email, organization')
-            .in('email', clientEmails);
+        const [clientsRes, profilesRes] = await Promise.all([
+            supabase
+                .from('clients')
+                .select('email, organization')
+                .in('email', clientEmails),
+            supabase
+                .from('profiles')
+                .select('email, avatar_url')
+                .in('email', clientEmails)
+        ]);
 
-        if (clientsData) {
+        const clientsData = clientsRes.data;
+        const profilesData = profilesRes.data;
+
+        if (clientsData || profilesData) {
             tasks.forEach(t => {
                 t.request_links?.forEach((rl: any) => {
                     const client = rl.request?.client;
                     if (client?.email) {
-                        const c = clientsData.find(cd => cd.email === client.email);
-                        if (c) {
-                            client.organization = c.organization;
+                        if (clientsData) {
+                            const c = clientsData.find(cd => cd.email.toLowerCase() === client.email.toLowerCase());
+                            if (c) {
+                                client.organization = c.organization;
+                            }
+                        }
+                        if (profilesData) {
+                            const p = profilesData.find(pd => pd.email.toLowerCase() === client.email.toLowerCase());
+                            if (p) {
+                                client.avatar_url = p.avatar_url;
+                            }
                         }
                     }
                 });
@@ -106,17 +124,17 @@ export async function getAllTasksData() {
     const supabase = createServiceClient();
 
     // Fetch tasks, profiles (for assignment), team members, and requests
-    const [tasks, profilesRes, teamRes, requestsRes] = await Promise.all([
+    const [tasks, profilesRes, teamMembers, requestsRes] = await Promise.all([
         getTasksData(),
         supabase.from('profiles').select('id, full_name, email, role'),
-        supabase.from('team_members').select('*'),
+        getTeamMembers(),
         supabase.from('requests').select('id, title').order('created_at', { ascending: false })
     ]);
 
     return {
         tasks,
         profiles: profilesRes.data || [],
-        teamMembers: teamRes.data || [],
+        teamMembers,
         requests: requestsRes.data || []
     };
 }

@@ -1,5 +1,6 @@
 import { createServiceClient } from '@/lib/supabase';
 import { slugify } from '@/lib/utils';
+import { getTeamMembers, type TeamMember } from './team';
 
 export interface RequestItem {
     id: string;
@@ -25,12 +26,7 @@ export interface Profile {
     accessible_sections?: string[];
 }
 
-export interface TeamMember {
-    id: string;
-    name: string;
-    profile_id: string;
-    position?: string;
-}
+
 
 export interface Client {
     id: string;
@@ -173,23 +169,7 @@ export async function getProfiles(): Promise<Profile[]> {
     return data || [];
 }
 
-/**
- * Fetches all team members
- */
-export async function getTeamMembers(): Promise<TeamMember[]> {
-    const supabase = createServiceClient();
 
-    const { data, error } = await supabase
-        .from('team_members')
-        .select('*');
-
-    if (error) {
-        console.error('Error fetching team members:', error);
-        return [];
-    }
-
-    return data || [];
-}
 
 /**
  * Fetches all clients

@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import React, { useState, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
@@ -427,7 +427,7 @@ export default function ClientsClient({ initialClients }: ClientsClientProps) {
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     placeholder="Search users..."
-                    className="w-full bg-black/40 border border-shark/50 rounded-xl py-2 pl-9 pr-4 text-[11px] text-iron placeholder:text-storm-gray focus:outline-none focus:border-[#279da6]/40 transition-all font-bold uppercase tracking-tight"
+                    className="w-full bg-black/40 border border-shark/50 rounded-xl py-2 pl-9 pr-4 text-[12px] text-iron placeholder:text-storm-gray focus:outline-none focus:border-[#279da6]/40 transition-all font-bold uppercase tracking-tight"
                 />
             </div>
             <div className="relative">
@@ -799,7 +799,7 @@ export default function ClientsClient({ initialClients }: ClientsClientProps) {
                                 {/* Mobile View: Stacked Cards */}
                                 <div className="sm:hidden flex flex-col divide-y divide-shark/60">
                                     {sortedClients.length === 0 ? (
-                                        <div className="px-6 py-20 text-center text-storm-gray uppercase text-[10px] font-black tracking-widest opacity-40">
+                                        <div className="px-6 py-20 text-center text-storm-gray uppercase text-[12px] font-black tracking-widest opacity-40">
                                             No clients found matching your criteria.
                                         </div>
                                     ) : (
@@ -898,7 +898,7 @@ export default function ClientsClient({ initialClients }: ClientsClientProps) {
                                 <div className="hidden sm:block overflow-x-auto custom-scrollbar">
                                     <table className="w-full text-left border-collapse">
                                         <thead>
-                                            <tr className="border-b border-shark text-storm-gray text-xs uppercase font-black tracking-widest bg-[#17171a]">
+                                            <tr className="border-b border-shark text-storm-gray text-[12px] uppercase font-black tracking-widest bg-[#17171a]">
                                                 <th className="px-5 py-3 w-10 sm:w-16 border-r border-shark/60 text-center text-storm-gray font-black">#</th>
                                                 {[
                                                     { label: 'Organization', key: 'organization', filter: 'organization', width: 'min-w-[200px]' },
@@ -923,7 +923,7 @@ export default function ClientsClient({ initialClients }: ClientsClientProps) {
                                                                         value={(filters as any).organization}
                                                                         onChange={(e) => setFilters(f => ({ ...f, organization: e.target.value }))}
                                                                         placeholder="ORGANIZATION"
-                                                                        className="w-full bg-transparent border-none py-1.5 pl-8 pr-6 text-[11px] font-black uppercase tracking-widest text-iron placeholder:text-storm-gray focus:outline-none transition-all font-bold"
+                                                                        className="w-full bg-transparent border-none py-1.5 pl-8 pr-6 text-[12px] font-black uppercase tracking-widest text-iron placeholder:text-storm-gray focus:outline-none transition-all font-bold"
                                                                     />
                                                                     {(filters as any).organization && (
                                                                         <button
@@ -936,7 +936,7 @@ export default function ClientsClient({ initialClients }: ClientsClientProps) {
                                                                 </div>
                                                             ) : (
                                                                 <>
-                                                                    <span className="cursor-default text-[10px] font-black">{header.label}</span>
+                                                                    <span className="cursor-default text-[12px] font-black">{header.label}</span>
                                                                     <button
                                                                         onClick={() => toggleFilter(header.filter)}
                                                                         className={`p-1 rounded hover:bg-shark/40 transition-colors ${(filters as any)[header.filter] || sortConfig.key === header.key ? 'text-[#279da6]' : 'text-storm-gray'}`}
@@ -960,14 +960,14 @@ export default function ClientsClient({ initialClients }: ClientsClientProps) {
                                                                     <div className="text-[9px] font-black text-storm-gray uppercase mb-1 px-1 tracking-widest">Sort</div>
                                                                     <button
                                                                         onClick={() => { setSortConfig({ key: header.key, direction: 'asc' }); setActiveFilterHeader(null); }}
-                                                                        className={`flex items-center gap-2 w-full px-2 py-1.5 rounded-lg text-[10px] uppercase font-black tracking-wider hover:bg-[#279da6]/10 hover:text-white transition-all ${sortConfig.key === header.key && sortConfig.direction === 'asc' ? 'text-[#279da6] bg-[#279da6]/5' : 'text-storm-gray'}`}
+                                                                        className={`flex items-center gap-2 w-full px-2 py-1.5 rounded-lg text-[12px] uppercase font-black tracking-wider hover:bg-[#279da6]/10 hover:text-white transition-all ${sortConfig.key === header.key && sortConfig.direction === 'asc' ? 'text-[#279da6] bg-[#279da6]/5' : 'text-storm-gray'}`}
                                                                     >
                                                                         <SortAsc size={12} />
                                                                         <span>Ascending</span>
                                                                     </button>
                                                                     <button
                                                                         onClick={() => { setSortConfig({ key: header.key, direction: 'desc' }); setActiveFilterHeader(null); }}
-                                                                        className={`flex items-center gap-2 w-full px-2 py-1.5 rounded-lg text-[10px] uppercase font-black tracking-wider hover:bg-[#279da6]/10 hover:text-white transition-all ${sortConfig.key === header.key && sortConfig.direction === 'desc' ? 'text-[#279da6] bg-[#279da6]/5' : 'text-storm-gray'}`}
+                                                                        className={`flex items-center gap-2 w-full px-2 py-1.5 rounded-lg text-[12px] uppercase font-black tracking-wider hover:bg-[#279da6]/10 hover:text-white transition-all ${sortConfig.key === header.key && sortConfig.direction === 'desc' ? 'text-[#279da6] bg-[#279da6]/5' : 'text-storm-gray'}`}
                                                                     >
                                                                         <SortDesc size={12} />
                                                                         <span>Descending</span>
@@ -982,7 +982,7 @@ export default function ClientsClient({ initialClients }: ClientsClientProps) {
                                                                                 placeholder={`Filter...`}
                                                                                 value={(filters as any)[header.filter]}
                                                                                 onChange={(e) => setFilters(f => ({ ...f, [header.filter]: e.target.value }))}
-                                                                                className="w-full bg-[#09090B] border border-shark/50 rounded-lg py-1.5 px-2 text-[10px] font-bold text-iron focus:outline-none focus:border-[#279da6]/40 transition-all"
+                                                                                className="w-full bg-[#09090B] border border-shark/50 rounded-lg py-1.5 px-2 text-[12px] font-bold text-iron focus:outline-none focus:border-[#279da6]/40 transition-all"
                                                                                 autoFocus
                                                                             />
                                                                         </div>
@@ -993,7 +993,7 @@ export default function ClientsClient({ initialClients }: ClientsClientProps) {
                                                                                 type="date"
                                                                                 value={(filters as any)[header.filter]}
                                                                                 onChange={(e) => setFilters(f => ({ ...f, [header.filter]: e.target.value }))}
-                                                                                className="w-full bg-[#09090B] border border-shark/50 rounded-lg py-1.5 px-2 text-[10px] font-black text-iron focus:outline-none focus:border-[#279da6]/40 [color-scheme:dark]"
+                                                                                className="w-full bg-[#09090B] border border-shark/50 rounded-lg py-1.5 px-2 text-[12px] font-black text-iron focus:outline-none focus:border-[#279da6]/40 [color-scheme:dark]"
                                                                             />
                                                                         </div>
                                                                     )}
@@ -1009,14 +1009,14 @@ export default function ClientsClient({ initialClients }: ClientsClientProps) {
                                         <tbody className="divide-y divide-shark/60">
                                             {sortedClients.length === 0 ? (
                                                 <tr>
-                                                    <td colSpan={10} className="px-6 py-20 text-center text-storm-gray uppercase text-[10px] font-black tracking-widest opacity-40">
+                                                    <td colSpan={10} className="px-6 py-20 text-center text-storm-gray uppercase text-[12px] font-black tracking-widest opacity-40">
                                                         No clients found matching your criteria.
                                                     </td>
                                                 </tr>
                                             ) : (
                                                 sortedClients.map((client: ClientItem, index: number) => (
-                                                    <tr key={client.id} className="hover:bg-shark/10 transition-colors group text-sm">
-                                                        <td className="px-5 py-3 border-r border-shark/60 text-center font-black text-storm-gray">
+                                                    <tr key={client.id} className="hover:bg-shark/10 transition-colors group text-[12px]">
+                                                        <td className="px-5 py-3 border-r border-shark/60 text-center font-black text-storm-gray text-[12px]">
                                                             {(index + 1).toString().padStart(2, '0')}
                                                         </td>
                                                         <td
@@ -1024,7 +1024,7 @@ export default function ClientsClient({ initialClients }: ClientsClientProps) {
                                                             onClick={() => router.push(`/clients/${client.slug}`)}
                                                         >
                                                             <div className="flex items-center gap-4">
-                                                                <div className="w-10 h-10 rounded-xl bg-shark/80 border border-white/5 overflow-hidden flex items-center justify-center text-[11px] text-white font-black bg-gradient-to-br from-[#279da6]/20 to-transparent group-hover/cell:scale-105 transition-transform shrink-0">
+                                                                <div className="w-10 h-10 rounded-full bg-shark/80 border border-white/5 overflow-hidden flex items-center justify-center text-[12px] text-white font-black bg-gradient-to-br from-[#279da6]/20 to-transparent group-hover/cell:scale-105 transition-transform shrink-0">
                                                                     {client.avatar_url ? (
                                                                         <img src={client.avatar_url} alt={client.organization} className="w-full h-full object-cover" />
                                                                     ) : (
@@ -1039,8 +1039,8 @@ export default function ClientsClient({ initialClients }: ClientsClientProps) {
                                                                 </div>
                                                             </div>
                                                         </td>
-                                                        <td className="px-6 py-3 border-r border-shark/60 text-iron font-black tracking-tight uppercase text-xs opacity-70 truncate">{client.name}</td>
-                                                        <td className="px-6 py-3 text-santas-gray border-r border-shark/60 font-black text-[11px] truncate opacity-50">
+                                                        <td className="px-6 py-3 border-r border-shark/60 text-iron font-black tracking-tight uppercase text-[12px] opacity-70 truncate">{client.name}</td>
+                                                        <td className="px-6 py-3 text-santas-gray border-r border-shark/60 font-black text-[12px] truncate opacity-50">
                                                             {client.email}
                                                         </td>
                                                         <td className="px-4 py-3 border-r border-shark/60 hover:bg-white/5 transition-colors">
@@ -1051,7 +1051,7 @@ export default function ClientsClient({ initialClients }: ClientsClientProps) {
                                                                     title="Requests"
                                                                 >
                                                                     <MessageSquare size={13} className="text-[#279da6]" />
-                                                                    <span className="text-iron font-black text-xs">{client.request_count || 0}</span>
+                                                                    <span className="text-iron font-black text-[12px]">{client.request_count || 0}</span>
                                                                 </div>
                                                                 <div
                                                                     className="flex items-center gap-1.5 cursor-pointer hover:opacity-70 transition-opacity"
@@ -1059,7 +1059,7 @@ export default function ClientsClient({ initialClients }: ClientsClientProps) {
                                                                     title="Tasks"
                                                                 >
                                                                     <CheckSquare size={13} className="text-amber-400" />
-                                                                    <span className="text-iron font-black text-xs">{client.task_count || 0}</span>
+                                                                    <span className="text-iron font-black text-[12px]">{client.task_count || 0}</span>
                                                                 </div>
                                                             </div>
                                                         </td>
@@ -1078,7 +1078,7 @@ export default function ClientsClient({ initialClients }: ClientsClientProps) {
                                                                 className="w-full scale-90"
                                                             />
                                                         </td>
-                                                        <td className="px-4 py-3 border-r border-shark/60 text-storm-gray font-black whitespace-nowrap text-[10px] uppercase text-center">
+                                                        <td className="px-4 py-3 border-r border-shark/60 text-storm-gray font-black whitespace-nowrap text-[12px] uppercase text-center">
                                                             {client.lastLoginRaw ? (
                                                                 <div className="flex flex-col">
                                                                     <span className="text-iron font-black">{formatDate(client.lastLoginRaw)}</span>
@@ -1086,7 +1086,7 @@ export default function ClientsClient({ initialClients }: ClientsClientProps) {
                                                                 </div>
                                                             ) : 'NEVER'}
                                                         </td>
-                                                        <td className="px-4 py-3 border-r border-shark/60 text-storm-gray font-black whitespace-nowrap text-[10px] uppercase text-center">
+                                                        <td className="px-4 py-3 border-r border-shark/60 text-storm-gray font-black whitespace-nowrap text-[12px] uppercase text-center">
                                                             {client.createdAtRaw ? (
                                                                 <div className="flex flex-col">
                                                                     <span className="text-iron font-black">{formatDate(client.createdAtRaw)}</span>

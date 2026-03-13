@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import React, { useState, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
@@ -349,13 +349,13 @@ export default function TeamClient({ initialMembers, initialCounts }: TeamClient
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     placeholder="Search team..."
-                    className="w-full bg-black/40 border border-shark/50 rounded-xl py-2 pl-9 pr-4 text-[11px] text-iron placeholder:text-storm-gray focus:outline-none focus:border-[#279da6]/40 transition-all font-bold uppercase tracking-tight"
+                    className="w-full bg-black/40 border border-shark/50 rounded-xl py-2 pl-9 pr-4 text-[12px] text-iron placeholder:text-storm-gray focus:outline-none focus:border-[#279da6]/40 transition-all font-bold uppercase tracking-tight"
                 />
             </div>
             <div className="relative">
                 <button
                     onClick={() => setIsFilterOpen(!isFilterOpen)}
-                    className={`relative flex items-center gap-2 px-3 py-1.5 rounded-xl border transition-all text-[11px] font-bold z-10 ${Object.values(filters).some(v => v !== '') || searchQuery !== '' || (sortConfig.key !== '' && !(sortConfig.key === 'created_at' && sortConfig.direction === 'desc')) ? 'bg-[#279da6]/20 border-[#279da6]/60 text-[#279da6]' : 'border-shark bg-black/40 text-santas-gray hover:text-white hover:bg-shark/40'}`}
+                    className={`relative flex items-center gap-2 px-3 py-1.5 rounded-xl border transition-all text-[12px] font-bold z-10 ${Object.values(filters).some(v => v !== '') || searchQuery !== '' || (sortConfig.key !== '' && !(sortConfig.key === 'created_at' && sortConfig.direction === 'desc')) ? 'bg-[#279da6]/20 border-[#279da6]/60 text-[#279da6]' : 'border-shark bg-black/40 text-santas-gray hover:text-white hover:bg-shark/40'}`}
                 >
                     <Filter size={14} className={Object.values(filters).some(v => v !== '') || searchQuery !== '' || (sortConfig.key !== '' && !(sortConfig.key === 'created_at' && sortConfig.direction === 'desc')) ? 'fill-[#279da6]/20' : ''} />
                     <span className="hidden sm:inline">Filters</span>
@@ -395,7 +395,7 @@ export default function TeamClient({ initialMembers, initialCounts }: TeamClient
                                         value={filters.name}
                                         onChange={(e) => setFilters(f => ({ ...f, name: e.target.value }))}
                                         placeholder="Search name..."
-                                        className="w-full bg-black/40 border border-shark/50 rounded-xl py-2.5 pl-10 pr-10 text-[11px] text-iron placeholder:text-storm-gray focus:outline-none focus:border-[#279da6]/40 transition-all font-bold"
+                                        className="w-full bg-black/40 border border-shark/50 rounded-xl py-2.5 pl-10 pr-10 text-[12px] text-iron placeholder:text-storm-gray focus:outline-none focus:border-[#279da6]/40 transition-all font-bold"
                                     />
                                     {filters.name && (
                                         <button
@@ -642,7 +642,7 @@ export default function TeamClient({ initialMembers, initialCounts }: TeamClient
                                                 {/* Card Header: Avatar & Member Info */}
                                                 <div className="flex items-start gap-3">
                                                     <div
-                                                        className="w-12 h-12 rounded-2xl bg-shark flex items-center justify-center text-[12px] font-black text-white overflow-hidden border border-white/5 bg-gradient-to-br from-[#279da6]/20 to-transparent shrink-0 cursor-pointer"
+                                                        className="w-12 h-12 rounded-full bg-shark flex items-center justify-center text-[12px] font-black text-white overflow-hidden border border-white/5 bg-gradient-to-br from-[#279da6]/20 to-transparent shrink-0 cursor-pointer"
                                                         onClick={() => {
                                                             if (member.profile_id) {
                                                                 impersonate({
@@ -798,7 +798,7 @@ export default function TeamClient({ initialMembers, initialCounts }: TeamClient
                                                                         value={(filters as any).name || ''}
                                                                         onChange={(e) => setFilters({ ...filters, name: e.target.value })}
                                                                         placeholder="NAME"
-                                                                        className="w-full bg-transparent border-none py-1.5 pl-8 pr-6 text-[11px] font-black uppercase tracking-widest text-iron placeholder:text-storm-gray focus:outline-none transition-all font-bold"
+                                                                        className="w-full bg-transparent border-none py-1.5 pl-8 pr-6 text-[12px] font-black uppercase tracking-widest text-iron placeholder:text-storm-gray focus:outline-none transition-all font-bold"
                                                                     />
                                                                     {(filters as any).name && (
                                                                         <button
@@ -811,7 +811,7 @@ export default function TeamClient({ initialMembers, initialCounts }: TeamClient
                                                                 </div>
                                                             ) : (
                                                                 <>
-                                                                    <span className="cursor-default text-[10px] font-black">{header.label}</span>
+                                                                    <span className="cursor-default text-[12px] font-black">{header.label}</span>
                                                                     <button
                                                                         onClick={() => toggleFilter(header.key)}
                                                                         className={`p-1 rounded hover:bg-shark/40 transition-colors ${filters[header.key as keyof typeof filters] || sortConfig.key === header.key ? 'text-[#279da6]' : 'text-storm-gray'}`}
@@ -916,7 +916,7 @@ export default function TeamClient({ initialMembers, initialCounts }: TeamClient
                                                                     }
                                                                 }}
                                                             >
-                                                                <div className="w-12 h-12 rounded-xl bg-shark flex items-center justify-center text-[11px] font-black text-white overflow-hidden border border-white/5 group-hover/name:ring-2 ring-[#279da6]/30 transition-all shrink-0 bg-gradient-to-br from-[#279da6]/10 to-transparent">
+                                                                <div className="w-12 h-12 rounded-full bg-shark flex items-center justify-center text-[11px] font-black text-white overflow-hidden border border-white/5 group-hover/name:ring-2 ring-[#279da6]/30 transition-all shrink-0 bg-gradient-to-br from-[#279da6]/10 to-transparent">
                                                                     {member.avatar_url ? (
                                                                         <img src={member.avatar_url} alt={member.name} className="w-full h-full object-cover" />
                                                                     ) : (

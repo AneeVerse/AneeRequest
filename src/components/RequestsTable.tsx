@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import React, { useState } from 'react';
 import { createPortal } from 'react-dom';
@@ -22,7 +22,8 @@ import {
     LayoutList,
     UserPlus
 } from 'lucide-react';
-import { RequestItem, Profile, TeamMember } from '@/lib/data/requests';
+import { RequestItem, Profile } from '@/lib/data/requests';
+import { type TeamMember } from '@/lib/data/team';
 import { formatDate, formatTime } from '@/lib/dateUtils';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
@@ -309,7 +310,7 @@ export default function RequestsTable({
                                                 </div>
                                             ) : (
                                                 <>
-                                                    <span className="cursor-default text-[10px] font-black">{header.label}</span>
+                                                    <span className="cursor-default text-[12px] font-black">{header.label}</span>
                                                     <button
                                                         onClick={() => toggleFilter(header.filter)}
                                                         className={`p-1 rounded hover:bg-shark/40 transition-colors ${((filters as any)[header.filter] && !['updated_at', 'created_at'].includes(header.filter)) || sortConfig.key === header.key ? 'text-[#279da6]' : 'text-storm-gray'}`}
@@ -334,14 +335,14 @@ export default function RequestsTable({
                                                     <div className="text-[9px] font-black text-storm-gray uppercase mb-1 px-1 tracking-widest">Sort</div>
                                                     <button
                                                         onClick={() => { setSortConfig({ key: header.key, direction: 'asc' }); setActiveFilterHeader(null); }}
-                                                        className={`flex items-center gap-2 w-full px-2 py-1.5 rounded-lg text-[10px] uppercase font-black tracking-wider hover:bg-[#279da6]/10 hover:text-white transition-all ${sortConfig.key === header.key && sortConfig.direction === 'asc' ? 'text-[#279da6] bg-[#279da6]/5' : 'text-storm-gray'}`}
+                                                        className={`flex items-center gap-2 w-full px-2 py-1.5 rounded-lg text-[12px] uppercase font-black tracking-wider hover:bg-[#279da6]/10 hover:text-white transition-all ${sortConfig.key === header.key && sortConfig.direction === 'asc' ? 'text-[#279da6] bg-[#279da6]/5' : 'text-storm-gray'}`}
                                                     >
                                                         <SortAsc size={12} />
                                                         <span>Ascending</span>
                                                     </button>
                                                     <button
                                                         onClick={() => { setSortConfig({ key: header.key, direction: 'desc' }); setActiveFilterHeader(null); }}
-                                                        className={`flex items-center gap-2 w-full px-2 py-1.5 rounded-lg text-[10px] uppercase font-black tracking-wider hover:bg-[#279da6]/10 hover:text-white transition-all ${sortConfig.key === header.key && sortConfig.direction === 'desc' ? 'text-[#279da6] bg-[#279da6]/5' : 'text-storm-gray'}`}
+                                                        className={`flex items-center gap-2 w-full px-2 py-1.5 rounded-lg text-[12px] uppercase font-black tracking-wider hover:bg-[#279da6]/10 hover:text-white transition-all ${sortConfig.key === header.key && sortConfig.direction === 'desc' ? 'text-[#279da6] bg-[#279da6]/5' : 'text-storm-gray'}`}
                                                     >
                                                         <SortDesc size={12} />
                                                         <span>Descending</span>
@@ -358,7 +359,7 @@ export default function RequestsTable({
                                                                     type="text"
                                                                     value={(filters as any)[header.filter]}
                                                                     onChange={(e) => setFilters(f => ({ ...f, [header.filter]: e.target.value }))}
-                                                                    className="w-full bg-[#09090B] border border-shark/50 rounded-lg py-1.5 px-8 text-[10px] text-iron focus:outline-none focus:border-[#279da6]/40 transition-all font-bold"
+                                                                    className="w-full bg-[#09090B] border border-shark/50 rounded-lg py-1.5 px-8 text-[12px] text-iron focus:outline-none focus:border-[#279da6]/40 transition-all font-bold"
                                                                     placeholder={`Search...`}
                                                                     autoFocus
                                                                 />
@@ -416,7 +417,7 @@ export default function RequestsTable({
                                                                     type="date"
                                                                     value={filters.due_date}
                                                                     onChange={(e) => { setFilters(f => ({ ...f, due_date: e.target.value })); setActiveFilterHeader(null); }}
-                                                                    className="w-full bg-[#09090B] border border-shark/50 rounded-lg py-1.5 px-2 text-[10px] font-black text-iron focus:outline-none focus:border-[#279da6]/40 [color-scheme:dark]"
+                                                                    className="w-full bg-[#09090B] border border-shark/50 rounded-lg py-1.5 px-2 text-[12px] font-black text-iron focus:outline-none focus:border-[#279da6]/40 [color-scheme:dark]"
                                                                 />
                                                             </div>
                                                         )}
@@ -432,28 +433,28 @@ export default function RequestsTable({
                         <tbody className="divide-y divide-shark/60">
                             {sortedRequests.length === 0 ? (
                                 <tr>
-                                    <td colSpan={10} className="px-6 py-20 text-center text-storm-gray uppercase text-[10px] font-black tracking-widest opacity-40">
+                                    <td colSpan={10} className="px-6 py-20 text-center text-storm-gray uppercase text-[12px] font-black tracking-widest opacity-40">
                                         No requests found for your criteria.
                                     </td>
                                 </tr>
                             ) : (
                                 sortedRequests.map((item, index) => (
-                                    <tr key={item.id} className="hover:bg-shark/10 transition-colors group text-sm">
-                                        <td className="px-5 py-3 border-r border-shark/60 text-center font-black text-storm-gray">
+                                    <tr key={item.id} className="hover:bg-shark/10 transition-colors group text-[12px]">
+                                        <td className="px-5 py-3 border-r border-shark/60 text-center font-black text-storm-gray text-[12px]">
                                             {(index + 1).toString().padStart(2, '0')}
                                         </td>
                                         <td
                                             className="px-6 py-3 font-black text-iron border-r border-shark/60 group-hover:text-[#279da6] transition-colors cursor-pointer hover:bg-white/5"
                                             onClick={() => router.push(`/requests/${item.slug || item.id}`)}
                                         >
-                                            <div className="line-clamp-2 leading-tight uppercase tracking-tight font-black text-xs">
+                                            <div className="line-clamp-2 leading-tight uppercase tracking-tight font-black text-[12px]">
                                                 {item.title}
                                             </div>
                                         </td>
                                         {showClientColumn && (
                                             <td className="px-6 py-3 border-r border-shark/60 hover:bg-white/5 transition-colors">
                                                 <div className="flex items-center gap-3">
-                                                    <div className="w-6 h-6 rounded flex items-center justify-center bg-shark/40 border border-shark/60 text-[10px] font-black text-[#279da6] shrink-0 overflow-hidden">
+                                                    <div className="w-10 h-10 rounded-full flex items-center justify-center bg-shark/40 border border-shark/60 text-[12px] font-black text-[#279da6] shrink-0 overflow-hidden">
                                                         {(item.client as any)?.avatar_url ? (
                                                             <img
                                                                 src={(item.client as any).avatar_url}
@@ -469,12 +470,12 @@ export default function RequestsTable({
                                                         )}
                                                     </div>
                                                     <div className="flex flex-col min-w-0">
-                                                        <span className="font-black text-iron truncate max-w-[140px] uppercase tracking-tighter leading-tight text-[11px] group-hover:text-[#279da6] transition-colors">
+                                                        <span className="font-black text-iron truncate max-w-[140px] uppercase tracking-tighter leading-tight text-[12px] group-hover:text-[#279da6] transition-colors">
                                                             {(item.client?.organization && item.client.organization.toLowerCase() !== 'individual')
                                                                 ? item.client.organization
                                                                 : item.client?.full_name}
                                                         </span>
-                                                        <span className="text-[9px] text-storm-gray font-bold truncate tracking-widest mt-0.5 opacity-40 uppercase">
+                                                        <span className="text-[12px] text-storm-gray font-bold truncate tracking-widest mt-0.5 opacity-40 uppercase">
                                                             {(item.client?.organization && item.client.organization.toLowerCase() !== 'individual')
                                                                 ? item.client?.full_name
                                                                 : 'Individual Client'}
@@ -507,17 +508,17 @@ export default function RequestsTable({
                                                         label: (m.full_name || (m as any).name)?.toUpperCase(),
                                                         value: m.profile_id || m.id,
                                                         icon: m.avatar_url ? (
-                                                            <div className="w-3.5 h-3.5 rounded-full overflow-hidden shrink-0 border border-shark/60">
+                                                            <div className="w-7 h-7 rounded-full overflow-hidden shrink-0 border border-shark/60">
                                                                 <img src={m.avatar_url} alt={m.full_name} className="w-full h-full object-cover" />
                                                             </div>
-                                                        ) : <User size={10} className="text-[#279da6]" />
+                                                        ) : <User size={14} className="text-[#279da6]" />
                                                     }))
                                                 ]}
                                                 variant="minimal"
                                                 className="w-full scale-90"
                                             />
                                         </td>
-                                        <td className="px-3 py-3 border-r border-shark/60 text-storm-gray font-black whitespace-nowrap text-[11px] uppercase text-center hover:bg-white/5 transition-colors leading-tight">
+                                        <td className="px-3 py-3 border-r border-shark/60 text-storm-gray font-black whitespace-nowrap text-[12px] uppercase text-center hover:bg-white/5 transition-colors leading-tight">
                                             <CustomDropdown
                                                 value={item.priority}
                                                 onChange={(val) => handleUpdate(item.id, 'priority', val)}
@@ -537,17 +538,17 @@ export default function RequestsTable({
                                                     type="date"
                                                     value={item.due_date ? new Date(item.due_date).toISOString().split('T')[0] : ''}
                                                     onChange={(e) => handleUpdate(item.id, 'due_date', e.target.value)}
-                                                    className="bg-transparent text-iron border border-transparent hover:border-shark/40 rounded px-1.5 py-1 focus:outline-none cursor-pointer hover:text-white transition-all text-[11px] font-black uppercase w-full [color-scheme:dark]"
+                                                    className="bg-transparent text-iron border border-transparent hover:border-shark/40 rounded px-1.5 py-1 focus:outline-none cursor-pointer hover:text-white transition-all text-[12px] font-black uppercase w-full [color-scheme:dark]"
                                                 />
                                             </div>
                                         </td>
-                                        <td className="px-5 py-3 text-storm-gray border-r border-shark/60 whitespace-nowrap text-[10px] text-center uppercase border-shark/60">
+                                        <td className="px-5 py-3 text-storm-gray border-r border-shark/60 whitespace-nowrap text-[12px] text-center uppercase border-shark/60">
                                             <div className="flex flex-col">
                                                 <span className="text-iron font-black">{formatDate(item.updated_at)}</span>
                                                 <span className="opacity-40 font-bold tracking-tighter scale-90">{formatTime(item.updated_at)}</span>
                                             </div>
                                         </td>
-                                        <td className="px-5 py-3 text-storm-gray whitespace-nowrap text-[10px] text-center uppercase">
+                                        <td className="px-5 py-3 text-storm-gray whitespace-nowrap text-[12px] text-center uppercase">
                                             <div className="flex flex-col">
                                                 <span className="text-iron font-black">{formatDate(item.created_at)}</span>
                                                 <span className="opacity-40 font-bold tracking-tighter scale-90">{formatTime(item.created_at)}</span>

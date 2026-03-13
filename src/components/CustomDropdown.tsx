@@ -106,9 +106,14 @@ export default function CustomDropdown({
                         : 'text-santas-gray hover:bg-white/5 hover:text-white'
                         }`}
                 >
-                    {option.icon && React.isValidElement(option.icon) && (
-                        <span className={`shrink-0 ${value === option.value ? 'text-[#279da6]' : ''}`}>
-                            {React.cloneElement(option.icon as React.ReactElement, { size: 12 } as any)}
+                    {option.icon && (
+                        <span className={`shrink-0 flex items-center justify-center ${value === option.value ? 'text-[#279da6]' : ''}`}>
+                            {React.isValidElement(option.icon) && (option.icon as any).type === 'div'
+                                ? option.icon
+                                : React.isValidElement(option.icon)
+                                    ? React.cloneElement(option.icon as React.ReactElement, { size: 12 } as any)
+                                    : option.icon
+                            }
                         </span>
                     )}
                     <span className={option.color}>{option.label}</span>
@@ -131,9 +136,14 @@ export default function CustomDropdown({
                 }
             >
                 <div className="flex items-center gap-2 truncate">
-                    {selectedOption?.icon && React.isValidElement(selectedOption.icon) && (
-                        <span className="shrink-0">
-                            {React.cloneElement(selectedOption.icon as React.ReactElement, { size: variant === 'minimal' ? 14 : 12 } as any)}
+                    {selectedOption?.icon && (
+                        <span className="shrink-0 flex items-center justify-center">
+                            {React.isValidElement(selectedOption.icon) && (selectedOption.icon as any).type === 'div' 
+                                ? selectedOption.icon 
+                                : React.isValidElement(selectedOption.icon)
+                                    ? React.cloneElement(selectedOption.icon as React.ReactElement, { size: variant === 'minimal' ? 14 : 12 } as any)
+                                    : selectedOption.icon
+                            }
                         </span>
                     )}
                     <span className={`${selectedOption?.color || 'text-iron'} ${variant === 'minimal' ? 'font-black text-[12px] uppercase tracking-wider' : 'font-black text-[12px] uppercase tracking-wider'}`}>
