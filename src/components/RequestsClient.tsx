@@ -30,7 +30,8 @@ import RequestsTable from '@/components/RequestsTable';
 import CustomDropdown from '@/components/CustomDropdown';
 import CustomDateRangePicker from '@/components/CustomDateRangePicker';
 
-import type { RequestItem, Profile, TeamMember, Client } from '@/lib/data/requests';
+import type { RequestItem, Profile, Client } from '@/lib/data/requests';
+import type { TeamMember } from '@/lib/data/team';
 
 interface RequestsClientProps {
     initialRequests: RequestItem[];

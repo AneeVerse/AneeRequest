@@ -1,6 +1,7 @@
 import { createServiceClient } from '@/lib/supabase';
 import { slugify } from '@/lib/utils';
 import { getTeamMembers, type TeamMember } from './team';
+export type { TeamMember };
 
 export interface RequestItem {
     id: string;
