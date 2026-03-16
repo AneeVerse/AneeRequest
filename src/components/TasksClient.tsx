@@ -354,7 +354,7 @@ export default function TasksClient({ initialTasks, profiles, teamMembers, reque
                                     options={[
                                         { label: 'All Statuses', value: '' },
                                         { label: 'Todo', value: 'Todo', icon: <Circle size={12} className="text-[#279da6]" />, color: 'text-[#279da6]' },
-                                        { label: 'In Progress', value: 'In Progress', icon: <Loader2 size={12} className="text-amber-500 animate-spin" />, color: 'text-amber-500' },
+                                        { label: 'In Progress', value: 'In Progress', icon: <Loader2 size={12} className="text-amber-500" />, color: 'text-amber-500' },
                                         { label: 'Review', value: 'Review', icon: <Eye size={12} className="text-blue-400" />, color: 'text-blue-400' },
                                         { label: 'Done', value: 'Done', icon: <Check size={12} className="text-emerald-500" />, color: 'text-emerald-500' },
                                     ]}

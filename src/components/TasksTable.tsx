@@ -244,7 +244,7 @@ export default function TasksTable({
                                         onChange={(val) => handleUpdate(item.id, 'status', val)}
                                         options={[
                                             { label: 'TODO', value: 'Todo', icon: <Circle size={10} className="text-[#279da6]" />, color: 'text-[#279da6]' },
-                                            { label: 'IN PROGRESS', value: 'In Progress', icon: <Loader2 size={10} className="text-amber-500 animate-spin" />, color: 'text-amber-500' },
+                                            { label: 'IN PROGRESS', value: 'In Progress', icon: <Loader2 size={10} className="text-amber-500" />, color: 'text-amber-500' },
                                             { label: 'REVIEW', value: 'Review', icon: <Eye size={10} className="text-blue-400" />, color: 'text-blue-400' },
                                             { label: 'DONE', value: 'Done', icon: <Check size={10} className="text-emerald-500" />, color: 'text-emerald-500' },
                                         ]}
@@ -409,7 +409,7 @@ export default function TasksTable({
                                                             options={[
                                                                 { label: 'ALL STATUS', value: '' },
                                                                 { label: 'TODO', value: 'Todo', icon: <Circle size={10} className="text-[#279da6]" />, color: 'text-[#279da6]' },
-                                                                { label: 'IN PROGRESS', value: 'In Progress', icon: <Loader2 size={10} className="text-amber-500 animate-spin" />, color: 'text-amber-500' },
+                                                                { label: 'IN PROGRESS', value: 'In Progress', icon: <Loader2 size={10} className="text-amber-500" />, color: 'text-amber-500' },
                                                                 { label: 'REVIEW', value: 'Review', icon: <Eye size={10} className="text-blue-400" />, color: 'text-blue-400' },
                                                                 { label: 'DONE', value: 'Done', icon: <Check size={10} className="text-emerald-500" />, color: 'text-emerald-500' },
                                                             ]}
@@ -562,7 +562,7 @@ export default function TasksTable({
                                             onChange={(val) => handleUpdate(item.id, 'status', val)}
                                             options={[
                                                 { label: 'TODO', value: 'Todo', icon: <Circle size={10} className="text-[#279da6]" />, color: 'text-[#279da6]' },
-                                                { label: 'IN PROGRESS', value: 'In Progress', icon: <Loader2 size={10} className="text-amber-500 animate-spin" />, color: 'text-amber-500' },
+                                                { label: 'IN PROGRESS', value: 'In Progress', icon: <Loader2 size={10} className="text-amber-500" />, color: 'text-amber-500' },
                                                 { label: 'REVIEW', value: 'Review', icon: <Eye size={10} className="text-blue-400" />, color: 'text-blue-400' },
                                                 { label: 'DONE', value: 'Done', icon: <Check size={10} className="text-emerald-500" />, color: 'text-emerald-500' },
                                             ]}
