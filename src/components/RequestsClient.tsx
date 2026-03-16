@@ -81,7 +81,7 @@ export default function RequestsClient({
 
     const inlineRequestInputRef = React.useRef<HTMLInputElement>(null);
 
-    const subTabs = ['ONGOING', 'TODO', 'IN PROGRESS', 'REVIEW', 'LOW', 'MEDIUM', 'HIGH', 'CRITICAL', 'DONE', 'All'];
+    const subTabs = ['ONGOING', 'COMPLETED', 'ALL'];
 
     const [requests, setRequests] = useState<RequestItem[]>(initialRequests);
     const [profiles, setProfiles] = useState<Profile[]>(initialProfiles);
@@ -201,14 +201,7 @@ export default function RequestsClient({
         // Tab filters
         let matchesTab = true;
         if (activeTab === 'ONGOING') matchesTab = req.status !== 'Done';
-        else if (activeTab === 'TODO') matchesTab = req.status === 'Todo';
-        else if (activeTab === 'IN PROGRESS') matchesTab = req.status === 'In Progress';
-        else if (activeTab === 'REVIEW') matchesTab = req.status === 'Review';
-        else if (activeTab === 'LOW') matchesTab = req.priority === 'Low';
-        else if (activeTab === 'MEDIUM') matchesTab = req.priority === 'Medium';
-        else if (activeTab === 'HIGH') matchesTab = req.priority === 'High';
-        else if (activeTab === 'CRITICAL') matchesTab = req.priority === 'Critical';
-        else if (activeTab === 'DONE') matchesTab = req.status === 'Done';
+        else if (activeTab === 'COMPLETED') matchesTab = req.status === 'Done';
 
         if (!matchesTab) return false;
 
@@ -258,16 +251,9 @@ export default function RequestsClient({
         const counts: Record<string, number> = {};
         subTabs.forEach(tab => {
             counts[tab] = visibleRequests.filter(req => {
-                if (tab === 'All') return true;
+                if (tab === 'ALL' || tab === 'All') return true;
                 if (tab === 'ONGOING') return req.status !== 'Done';
-                if (tab === 'TODO') return req.status === 'Todo';
-                if (tab === 'IN PROGRESS') return req.status === 'In Progress';
-                if (tab === 'REVIEW') return req.status === 'Review';
-                if (tab === 'LOW') return req.priority === 'Low';
-                if (tab === 'MEDIUM') return req.priority === 'Medium';
-                if (tab === 'HIGH') return req.priority === 'High';
-                if (tab === 'CRITICAL') return req.priority === 'Critical';
-                if (tab === 'DONE') return req.status === 'Done';
+                if (tab === 'COMPLETED') return req.status === 'Done';
                 return true;
             }).length;
         });

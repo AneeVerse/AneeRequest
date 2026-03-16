@@ -79,7 +79,7 @@ export default function TasksClient({ initialTasks, profiles, teamMembers, reque
     const [activeFilterHeader, setActiveFilterHeader] = useState<string | null>(null);
     const dateInputRefs = React.useRef<{ [key: string]: HTMLInputElement | null }>({});
 
-    const taskTabs = ['ONGOING', 'COMPLETED', 'All'];
+    const taskTabs = ['ONGOING', 'COMPLETED', 'ALL'];
 
     // Update state when initial props change (from SSR refresh)
     React.useEffect(() => {
@@ -254,7 +254,7 @@ export default function TasksClient({ initialTasks, profiles, teamMembers, reque
         const counts: Record<string, number> = {};
         taskTabs.forEach(tab => {
             counts[tab] = visibleTasks.filter(task => {
-                if (tab === 'All') return true;
+                if (tab === 'ALL' || tab === 'All') return true;
                 if (tab === 'ONGOING') return ['Todo', 'In Progress', 'Review'].includes(task.status || '');
                 if (tab === 'COMPLETED') return task.status === 'Done';
                 return true;
