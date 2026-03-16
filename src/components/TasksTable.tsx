@@ -24,6 +24,7 @@ import {
 } from 'lucide-react';
 import Image from 'next/image';
 import CustomDropdown from '@/components/CustomDropdown';
+import CustomDatePicker from '@/components/CustomDatePicker';
 import { TaskItem } from '@/lib/data/tasks';
 import { formatDate, formatTime } from '@/lib/dateUtils';
 
@@ -289,14 +290,12 @@ export default function TasksTable({
                                 </div>
                                 <div className="space-y-1">
                                     <label className="text-[12px] font-black text-storm-gray uppercase tracking-widest block opacity-50">Due Date</label>
-                                    <div className="relative group/date">
-                                        <input
-                                            type="date"
-                                            value={item.due_date ? new Date(item.due_date).toISOString().split('T')[0] : ''}
-                                            onChange={(e) => handleUpdate(item.id, 'due_date', e.target.value)}
-                                            className="bg-transparent text-iron border border-shark/30 hover:border-[#279da6]/40 rounded-lg px-2 py-1.5 focus:outline-none cursor-pointer hover:text-white transition-all text-[12px] font-black uppercase w-full [color-scheme:dark]"
-                                        />
-                                    </div>
+                                    <CustomDatePicker
+                                        value={item.due_date}
+                                        onChange={(date) => handleUpdate(item.id, 'due_date', date)}
+                                        variant="minimal"
+                                        className="w-full"
+                                    />
                                 </div>
                             </div>
                         </div>
@@ -451,11 +450,14 @@ export default function TasksTable({
                                                     )}
                                                     {header.filter === 'due_date' && (
                                                         <div className="px-1">
-                                                            <input
-                                                                type="date"
+                                                            <CustomDatePicker
                                                                 value={filters.due_date}
-                                                                onChange={(e) => { setFilters(f => ({ ...f, due_date: e.target.value })); setActiveFilterHeader(null); }}
-                                                                className="w-full bg-[#09090B] border border-shark/50 rounded-lg py-1.5 px-2 text-[12px] font-black text-iron focus:outline-none focus:border-[#279da6]/40 [color-scheme:dark]"
+                                                                onChange={(date) => {
+                                                                    setFilters(f => ({ ...f, due_date: date }));
+                                                                    setActiveFilterHeader(null);
+                                                                }}
+                                                                variant="minimal"
+                                                                className="w-full"
                                                             />
                                                         </div>
                                                     )}
@@ -603,14 +605,12 @@ export default function TasksTable({
                                         />
                                     </td>
                                     <td className="px-5 py-3 text-storm-gray border-r border-shark/60 whitespace-nowrap hover:bg-white/5 transition-colors">
-                                        <div className="relative group/date">
-                                            <input
-                                                type="date"
-                                                value={item.due_date ? new Date(item.due_date).toISOString().split('T')[0] : ''}
-                                                onChange={(e) => handleUpdate(item.id, 'due_date', e.target.value)}
-                                                className="bg-transparent text-iron border border-transparent hover:border-shark/40 rounded px-1.5 py-1 focus:outline-none cursor-pointer hover:text-white transition-all text-[12px] font-black uppercase w-full [color-scheme:dark]"
-                                            />
-                                        </div>
+                                        <CustomDatePicker
+                                            value={item.due_date}
+                                            onChange={(date) => handleUpdate(item.id, 'due_date', date)}
+                                            variant="minimal"
+                                            className="w-full"
+                                        />
                                     </td>
                                     <td className="px-5 py-3 text-storm-gray border-r border-shark/60 whitespace-nowrap text-[12px] text-center uppercase border-shark/60">
                                         <div className="flex flex-col">

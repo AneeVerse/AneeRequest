@@ -27,19 +27,29 @@ export default function CustomDateRangePicker({ from, to, onChange, placeholder 
         if (isOpen && containerRef.current) {
             const rect = containerRef.current.getBoundingClientRect();
             const popoverWidth = 688; // Approximate width of dual calendars + gap + padding
+            const popoverHeight = 450; // Estimated height
             const viewportWidth = window.innerWidth;
+            const viewportHeight = window.innerHeight;
 
             // Align right edge of popover with right edge of container
             let left = rect.right - popoverWidth;
 
-            // Boundary checks
+            // Horizontal boundary checks
             if (left < 20) left = 20;
             if (left + popoverWidth > viewportWidth - 20) {
                 left = viewportWidth - popoverWidth - 20;
             }
 
+            // Vertical boundary checks
+            let top = rect.bottom + window.scrollY + 12;
+
+            // If it would go off the bottom, show it above the input
+            if (rect.bottom + popoverHeight > viewportHeight - 20) {
+                top = rect.top + window.scrollY - popoverHeight - 12;
+            }
+
             setPopoverCoords({
-                top: rect.bottom + window.scrollY + 12,
+                top,
                 left: left + window.scrollX
             });
         }

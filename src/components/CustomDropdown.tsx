@@ -138,8 +138,8 @@ export default function CustomDropdown({
                 <div className="flex items-center gap-2 truncate">
                     {selectedOption?.icon && (
                         <span className="shrink-0 flex items-center justify-center">
-                            {React.isValidElement(selectedOption.icon) && (selectedOption.icon as any).type === 'div' 
-                                ? selectedOption.icon 
+                            {React.isValidElement(selectedOption.icon) && (selectedOption.icon as any).type === 'div'
+                                ? selectedOption.icon
                                 : React.isValidElement(selectedOption.icon)
                                     ? React.cloneElement(selectedOption.icon as React.ReactElement, { size: variant === 'minimal' ? 14 : 12 } as any)
                                     : selectedOption.icon

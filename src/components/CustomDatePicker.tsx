@@ -32,8 +32,10 @@ export default function CustomDatePicker({
     const updatePosition = () => {
         if (isOpen && containerRef.current) {
             const rect = containerRef.current.getBoundingClientRect();
-            const popoverWidth = 320; // Approximate width of single calendar
+            const popoverWidth = 280; // Width of the popover as defined in style
+            const popoverHeight = 350; // Estimated height of calendar + controls
             const viewportWidth = window.innerWidth;
+            const viewportHeight = window.innerHeight;
 
             // Calculate center of the container
             const containerCenter = rect.left + rect.width / 2;
@@ -41,14 +43,22 @@ export default function CustomDatePicker({
             // Align center of popover with center of container
             let left = containerCenter - popoverWidth / 2;
 
-            // Boundary checks
+            // Horizontal boundary checks
             if (left < 20) left = 20;
             if (left + popoverWidth > viewportWidth - 20) {
                 left = viewportWidth - popoverWidth - 20;
             }
 
+            // Vertical boundary checks
+            let top = rect.bottom + window.scrollY + 8;
+
+            // If it would go off the bottom, show it above the input
+            if (rect.bottom + popoverHeight > viewportHeight - 20) {
+                top = rect.top + window.scrollY - popoverHeight - 8;
+            }
+
             setPopoverCoords({
-                top: rect.bottom + window.scrollY + 8,
+                top,
                 left: left + window.scrollX
             });
         }
