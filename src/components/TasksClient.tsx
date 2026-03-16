@@ -46,7 +46,7 @@ export default function TasksClient({ initialTasks, profiles, teamMembers, reque
 
     const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
     const [isMobileOpen, setIsMobileOpen] = useState(false);
-    const [activeTab, setActiveTab] = useState('IN PROGRESS');
+    const [activeTab, setActiveTab] = useState('ONGOING');
     const [tasks, setTasks] = useState<TaskItem[]>(initialTasks);
     const [searchQuery, setSearchQuery] = useState('');
     const [isCreating, setIsCreating] = useState(false);
@@ -79,7 +79,7 @@ export default function TasksClient({ initialTasks, profiles, teamMembers, reque
     const [activeFilterHeader, setActiveFilterHeader] = useState<string | null>(null);
     const dateInputRefs = React.useRef<{ [key: string]: HTMLInputElement | null }>({});
 
-    const taskTabs = ['IN PROGRESS', 'COMPLETED', 'All'];
+    const taskTabs = ['ONGOING', 'COMPLETED', 'All'];
 
     // Update state when initial props change (from SSR refresh)
     React.useEffect(() => {
@@ -186,7 +186,7 @@ export default function TasksClient({ initialTasks, profiles, teamMembers, reque
 
         // Tab filters
         let matchesTab = true;
-        if (activeTab === 'IN PROGRESS') matchesTab = ['Todo', 'In Progress', 'Review'].includes(task.status || '');
+        if (activeTab === 'ONGOING') matchesTab = ['Todo', 'In Progress', 'Review'].includes(task.status || '');
         else if (activeTab === 'COMPLETED') matchesTab = task.status === 'Done';
 
         // Advanced filters
@@ -255,7 +255,7 @@ export default function TasksClient({ initialTasks, profiles, teamMembers, reque
         taskTabs.forEach(tab => {
             counts[tab] = visibleTasks.filter(task => {
                 if (tab === 'All') return true;
-                if (tab === 'IN PROGRESS') return ['Todo', 'In Progress', 'Review'].includes(task.status || '');
+                if (tab === 'ONGOING') return ['Todo', 'In Progress', 'Review'].includes(task.status || '');
                 if (tab === 'COMPLETED') return task.status === 'Done';
                 return true;
             }).length;

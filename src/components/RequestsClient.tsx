@@ -52,7 +52,7 @@ export default function RequestsClient({
 
     const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
     const [isMobileOpen, setIsMobileOpen] = useState(false);
-    const [activeTab, setActiveTab] = useState('UNASSIGNED');
+    const [activeTab, setActiveTab] = useState('ONGOING');
     const [selectedRequest, setSelectedRequest] = useState<RequestItem | null>(null);
     const [isChatOpen, setIsChatOpen] = useState(false);
     const [isCreating, setIsCreating] = useState(false);
@@ -81,7 +81,7 @@ export default function RequestsClient({
 
     const inlineRequestInputRef = React.useRef<HTMLInputElement>(null);
 
-    const subTabs = ['UNASSIGNED', 'TODO', 'IN PROGRESS', 'REVIEW', 'LOW', 'MEDIUM', 'HIGH', 'CRITICAL', 'DONE', 'All'];
+    const subTabs = ['ONGOING', 'TODO', 'IN PROGRESS', 'REVIEW', 'LOW', 'MEDIUM', 'HIGH', 'CRITICAL', 'DONE', 'All'];
 
     const [requests, setRequests] = useState<RequestItem[]>(initialRequests);
     const [profiles, setProfiles] = useState<Profile[]>(initialProfiles);
@@ -200,7 +200,7 @@ export default function RequestsClient({
     const tabFilteredRequests = visibleRequests.filter((req: RequestItem) => {
         // Tab filters
         let matchesTab = true;
-        if (activeTab === 'UNASSIGNED') matchesTab = !req.assigned_to;
+        if (activeTab === 'ONGOING') matchesTab = req.status !== 'Done';
         else if (activeTab === 'TODO') matchesTab = req.status === 'Todo';
         else if (activeTab === 'IN PROGRESS') matchesTab = req.status === 'In Progress';
         else if (activeTab === 'REVIEW') matchesTab = req.status === 'Review';
@@ -259,7 +259,7 @@ export default function RequestsClient({
         subTabs.forEach(tab => {
             counts[tab] = visibleRequests.filter(req => {
                 if (tab === 'All') return true;
-                if (tab === 'UNASSIGNED') return !req.assigned_to;
+                if (tab === 'ONGOING') return req.status !== 'Done';
                 if (tab === 'TODO') return req.status === 'Todo';
                 if (tab === 'IN PROGRESS') return req.status === 'In Progress';
                 if (tab === 'REVIEW') return req.status === 'Review';
