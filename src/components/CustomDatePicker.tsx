@@ -6,7 +6,7 @@ import { Calendar as CalendarIcon, ChevronLeft, ChevronRight, X, Trash2 } from '
 import { formatDate as formatDateStandard } from '@/lib/dateUtils';
 
 interface CustomDatePickerProps {
-    value?: string;
+    value?: string | null;
     onChange: (date: string) => void;
     placeholder?: string;
     className?: string;
