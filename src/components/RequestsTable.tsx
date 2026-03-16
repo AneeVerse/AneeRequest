@@ -168,7 +168,7 @@ export default function RequestsTable({
                 {/* Mobile View: Stacked Cards */}
                 <div className="sm:hidden flex flex-col divide-y divide-shark/60">
                     {sortedRequests.length === 0 ? (
-                        <div className="px-6 py-20 text-center text-storm-gray uppercase text-[10px] font-black tracking-widest opacity-40">
+                        <div className="px-6 py-20 text-center text-storm-gray uppercase text-[12px] font-black tracking-widest opacity-40">
                             No requests found for your criteria.
                         </div>
                     ) : (
@@ -176,20 +176,20 @@ export default function RequestsTable({
                             <div key={item.id} className="p-4 bg-shark/5 flex flex-col gap-4">
                                 {/* Card Header: Index & Title */}
                                 <div className="flex items-start gap-3">
-                                    <div className="shrink-0 flex items-center justify-center w-8 h-8 rounded-lg bg-shark/40 text-[10px] font-black text-storm-gray border border-shark/60">
+                                    <div className="shrink-0 flex items-center justify-center w-8 h-8 rounded-lg bg-shark/40 text-[12px] font-black text-storm-gray border border-shark/60">
                                         {(index + 1).toString().padStart(2, '0')}
                                     </div>
                                     <div
                                         className="flex-1 cursor-pointer group"
                                         onClick={() => router.push(`/requests/${item.slug || item.id}`)}
                                     >
-                                        <h3 className="text-xs font-black text-iron uppercase leading-tight group-hover:text-[#279da6] transition-colors line-clamp-2">
+                                        <h3 className="text-[12px] font-black text-iron uppercase leading-tight group-hover:text-[#279da6] transition-colors line-clamp-2">
                                             {item.title}
                                         </h3>
                                         {showClientColumn && (
                                             <div className="mt-1 flex items-center gap-1.5 overflow-hidden">
-                                                <span className="text-[9px] font-black text-storm-gray/40 uppercase tracking-widest shrink-0">ORG:</span>
-                                                <span className="text-[10px] font-bold text-cyan-400/80 truncate uppercase tracking-tight">
+                                                <span className="text-[12px] font-black text-storm-gray/40 uppercase tracking-widest shrink-0">ORG:</span>
+                                                <span className="text-[12px] font-bold text-cyan-400/80 truncate uppercase tracking-tight">
                                                     {(item.client as any)?.organization || 'Individual'}
                                                 </span>
                                             </div>
@@ -200,7 +200,7 @@ export default function RequestsTable({
                                 {/* Card Body: Status, Priority, Assignee */}
                                 <div className="grid grid-cols-2 gap-3">
                                     <div className="space-y-1">
-                                        <label className="text-[9px] font-black text-storm-gray uppercase tracking-widest block opacity-50">Status</label>
+                                        <label className="text-[12px] font-black text-storm-gray uppercase tracking-widest block opacity-50">Status</label>
                                         <CustomDropdown
                                             value={item.status}
                                             onChange={(val) => handleUpdate(item.id, 'status', val)}
@@ -215,7 +215,7 @@ export default function RequestsTable({
                                         />
                                     </div>
                                     <div className="space-y-1">
-                                        <label className="text-[9px] font-black text-storm-gray uppercase tracking-widest block opacity-50">Priority</label>
+                                        <label className="text-[12px] font-black text-storm-gray uppercase tracking-widest block opacity-50">Priority</label>
                                         <CustomDropdown
                                             value={item.priority}
                                             onChange={(val) => handleUpdate(item.id, 'priority', val)}
@@ -230,7 +230,7 @@ export default function RequestsTable({
                                         />
                                     </div>
                                     <div className="space-y-1">
-                                        <label className="text-[9px] font-black text-storm-gray uppercase tracking-widest block opacity-50">Assigned To</label>
+                                        <label className="text-[12px] font-black text-storm-gray uppercase tracking-widest block opacity-50">Assigned To</label>
                                         <CustomDropdown
                                             value={item.assigned_to || ''}
                                             onChange={(val) => handleUpdate(item.id, 'assigned_to', val)}
@@ -240,10 +240,10 @@ export default function RequestsTable({
                                                     label: (m.full_name || (m as any).name)?.toUpperCase(),
                                                     value: m.profile_id || m.id,
                                                     icon: m.avatar_url ? (
-                                                        <div className="w-3.5 h-3.5 rounded-full overflow-hidden shrink-0 border border-shark/60">
+                                                        <div className="w-[38px] h-[38px] rounded-full overflow-hidden shrink-0 border border-shark/60">
                                                             <img src={m.avatar_url} alt={m.full_name} className="w-full h-full object-cover" />
                                                         </div>
-                                                    ) : <User size={10} className="text-[#279da6]" />
+                                                    ) : <User size={20} className="text-[#279da6]" />
                                                 }))
                                             ]}
                                             variant="minimal"
@@ -251,13 +251,13 @@ export default function RequestsTable({
                                         />
                                     </div>
                                     <div className="space-y-1">
-                                        <label className="text-[9px] font-black text-storm-gray uppercase tracking-widest block opacity-50">Due Date</label>
+                                        <label className="text-[12px] font-black text-storm-gray uppercase tracking-widest block opacity-50">Due Date</label>
                                         <div className="relative group/date">
                                             <input
                                                 type="date"
                                                 value={item.due_date ? new Date(item.due_date).toISOString().split('T')[0] : ''}
                                                 onChange={(e) => handleUpdate(item.id, 'due_date', e.target.value)}
-                                                className="bg-transparent text-iron border border-shark/30 hover:border-[#279da6]/40 rounded-lg px-2 py-1.5 focus:outline-none cursor-pointer hover:text-white transition-all text-[10px] font-black uppercase w-full [color-scheme:dark]"
+                                                className="bg-transparent text-iron border border-shark/30 hover:border-[#279da6]/40 rounded-lg px-2 py-1.5 focus:outline-none cursor-pointer hover:text-white transition-all text-[12px] font-black uppercase w-full [color-scheme:dark]"
                                             />
                                         </div>
                                     </div>
@@ -271,7 +271,7 @@ export default function RequestsTable({
                 <div className="hidden sm:block overflow-x-auto custom-scrollbar">
                     <table className="w-full text-left border-collapse">
                         <thead>
-                            <tr className="border-b border-shark text-storm-gray text-xs uppercase font-black tracking-widest bg-[#17171a]">
+                            <tr className="border-b border-shark text-storm-gray text-[12px] uppercase font-black tracking-widest bg-[#17171a]">
                                 <th className="px-5 py-3 w-10 sm:w-16 border-r border-shark/60 text-center font-black text-storm-gray">#</th>
                                 {[
                                     { label: 'Title', key: 'title', filter: 'title', width: 'min-w-[240px]' },
@@ -297,7 +297,7 @@ export default function RequestsTable({
                                                         value={filters.title}
                                                         onChange={(e) => setFilters(f => ({ ...f, title: e.target.value }))}
                                                         placeholder="TITLE"
-                                                        className="w-full bg-transparent border-none py-1.5 pl-8 pr-6 text-xs font-black uppercase tracking-widest text-iron placeholder:text-storm-gray focus:outline-none transition-all font-bold"
+                                                        className="w-full bg-transparent border-none py-1.5 pl-8 pr-6 text-[12px] font-black uppercase tracking-widest text-iron placeholder:text-storm-gray focus:outline-none transition-all font-bold"
                                                     />
                                                     {filters.title && (
                                                         <button
@@ -332,7 +332,7 @@ export default function RequestsTable({
                                                 onClick={(e) => e.stopPropagation()}
                                             >
                                                 <div className="mb-2 border-b border-shark/40 pb-2">
-                                                    <div className="text-[9px] font-black text-storm-gray uppercase mb-1 px-1 tracking-widest">Sort</div>
+                                                    <div className="text-[12px] font-black text-storm-gray uppercase mb-1 px-1 tracking-widest">Sort</div>
                                                     <button
                                                         onClick={() => { setSortConfig({ key: header.key, direction: 'asc' }); setActiveFilterHeader(null); }}
                                                         className={`flex items-center gap-2 w-full px-2 py-1.5 rounded-lg text-[12px] uppercase font-black tracking-wider hover:bg-[#279da6]/10 hover:text-white transition-all ${sortConfig.key === header.key && sortConfig.direction === 'asc' ? 'text-[#279da6] bg-[#279da6]/5' : 'text-storm-gray'}`}
@@ -351,7 +351,7 @@ export default function RequestsTable({
 
                                                 {['client', 'status', 'assigned_to', 'priority', 'due_date'].includes(header.filter) && (
                                                     <div>
-                                                        <div className="text-[9px] font-black text-storm-gray uppercase mb-1 px-1 tracking-widest">Filter</div>
+                                                        <div className="text-[12px] font-black text-storm-gray uppercase mb-1 px-1 tracking-widest">Filter</div>
                                                         {header.filter === 'client' && (
                                                             <div className="relative px-1 pt-1 pb-2">
                                                                 <Search size={10} className="absolute left-3 top-1/2 -translate-y-1/2 text-storm-gray" />
@@ -495,7 +495,7 @@ export default function RequestsTable({
                                                     { label: 'DONE', value: 'Done', icon: <Check size={10} className="text-emerald-500" />, color: 'text-emerald-500' },
                                                 ]}
                                                 variant="minimal"
-                                                className="w-full scale-90"
+                                                className="w-full"
                                             />
                                         </td>
                                         <td className="px-3 py-3 text-santas-gray border-r border-shark/60 whitespace-nowrap hover:bg-white/5 transition-colors">
@@ -504,18 +504,18 @@ export default function RequestsTable({
                                                 onChange={(val) => handleUpdate(item.id, 'assigned_to', val)}
                                                 options={[
                                                     { label: 'UNASSIGNED', value: '', icon: <UserPlus size={10} className="text-storm-gray" /> },
-                                                    ...teamMembers.map((m: any) => ({
-                                                        label: (m.full_name || (m as any).name)?.toUpperCase(),
-                                                        value: m.profile_id || m.id,
-                                                        icon: m.avatar_url ? (
-                                                            <div className="w-7 h-7 rounded-full overflow-hidden shrink-0 border border-shark/60">
-                                                                <img src={m.avatar_url} alt={m.full_name} className="w-full h-full object-cover" />
+                                                    ...teamMembers.filter((tm: any) => tm.profile_id).map((tm: any) => ({
+                                                        label: (tm.name || tm.full_name)?.toUpperCase(),
+                                                        value: tm.profile_id,
+                                                        icon: tm.avatar_url ? (
+                                                            <div className="w-[38px] h-[38px] rounded-full overflow-hidden shrink-0 border border-shark/60">
+                                                                <img src={tm.avatar_url} alt={tm.name} className="w-full h-full object-cover" />
                                                             </div>
-                                                        ) : <User size={14} className="text-[#279da6]" />
+                                                        ) : <User size={20} className="text-[#279da6]" />
                                                     }))
                                                 ]}
                                                 variant="minimal"
-                                                className="w-full scale-90"
+                                                className="w-full"
                                             />
                                         </td>
                                         <td className="px-3 py-3 border-r border-shark/60 text-storm-gray font-black whitespace-nowrap text-[12px] uppercase text-center hover:bg-white/5 transition-colors leading-tight">
@@ -529,7 +529,7 @@ export default function RequestsTable({
                                                     { label: 'CRITICAL', value: 'Critical', icon: <Flag size={10} className="text-rose-500" />, color: 'text-rose-500' },
                                                 ]}
                                                 variant="minimal"
-                                                className="w-full scale-90"
+                                                className="w-full"
                                             />
                                         </td>
                                         <td className="px-5 py-3 text-storm-gray border-r border-shark/60 whitespace-nowrap hover:bg-white/5 transition-colors">
@@ -545,13 +545,13 @@ export default function RequestsTable({
                                         <td className="px-5 py-3 text-storm-gray border-r border-shark/60 whitespace-nowrap text-[12px] text-center uppercase border-shark/60">
                                             <div className="flex flex-col">
                                                 <span className="text-iron font-black">{formatDate(item.updated_at)}</span>
-                                                <span className="opacity-40 font-bold tracking-tighter scale-90">{formatTime(item.updated_at)}</span>
+                                                <span className="opacity-40 font-bold tracking-tighter">{formatTime(item.updated_at)}</span>
                                             </div>
                                         </td>
                                         <td className="px-5 py-3 text-storm-gray whitespace-nowrap text-[12px] text-center uppercase">
                                             <div className="flex flex-col">
                                                 <span className="text-iron font-black">{formatDate(item.created_at)}</span>
-                                                <span className="opacity-40 font-bold tracking-tighter scale-90">{formatTime(item.created_at)}</span>
+                                                <span className="opacity-40 font-bold tracking-tighter">{formatTime(item.created_at)}</span>
                                             </div>
                                         </td>
                                     </tr>
