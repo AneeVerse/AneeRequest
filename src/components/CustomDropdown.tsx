@@ -34,7 +34,7 @@ export default function CustomDropdown({
     showClear = false
 }: CustomDropdownProps) {
     const [isOpen, setIsOpen] = useState(false);
-    const [coords, setCoords] = useState({ top: 0, left: 0, width: 0 });
+    const [coords, setCoords] = useState({ top: 0, left: 0, width: 0, isAbove: false });
     const [mounted, setMounted] = useState(false);
     const dropdownRef = useRef<HTMLDivElement>(null);
     const menuRef = useRef<HTMLDivElement>(null);
@@ -69,13 +69,26 @@ export default function CustomDropdown({
     useEffect(() => {
         if (isOpen && buttonRef.current) {
             const rect = buttonRef.current.getBoundingClientRect();
+            const viewportHeight = window.innerHeight;
+            const estimatedMenuHeight = Math.min(options.length * 40 + 8, 384); // 40px per item + padding, max-h-96 (384px)
+
+            let isAbove = false;
+            let top = rect.bottom + window.scrollY;
+
+            // If it would overflow the bottom, flip it
+            if (rect.bottom + estimatedMenuHeight > viewportHeight - 20 && rect.top > estimatedMenuHeight + 20) {
+                isAbove = true;
+                top = rect.top + window.scrollY - estimatedMenuHeight - 16;
+            }
+
             setCoords({
-                top: rect.bottom + window.scrollY,
+                top,
                 left: rect.left + window.scrollX,
-                width: rect.width
+                width: rect.width,
+                isAbove
             });
         }
-    }, [isOpen]);
+    }, [isOpen, options.length]);
 
     const handleSelect = (optionValue: string) => {
         onChange(optionValue);
@@ -93,7 +106,7 @@ export default function CustomDropdown({
                 minWidth: `${coords.width}px`,
                 transform: variant === 'minimal' ? 'translateX(-50%)' : 'none'
             }}
-            className="z-[9999] bg-[#18181B] border border-shark rounded-xl shadow-[0_20px_50px_rgba(0,0,0,0.6)] overflow-y-auto max-h-96 custom-scrollbar py-1 animate-in fade-in zoom-in-95 duration-200 origin-top"
+            className={`z-[9999] bg-[#18181B] border border-shark rounded-xl shadow-[0_20px_50px_rgba(0,0,0,0.6)] overflow-y-auto max-h-96 custom-scrollbar py-1 animate-in fade-in zoom-in-95 duration-200 ${coords.isAbove ? 'origin-bottom' : 'origin-top'}`}
         >
             {options.map((option) => (
                 <button
