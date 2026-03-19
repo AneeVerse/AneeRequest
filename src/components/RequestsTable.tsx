@@ -80,7 +80,14 @@ export default function RequestsTable({
         key: 'created_at',
         direction: 'desc'
     });
-    const [filters, setFilters] = useState({
+    const [filters, setFilters] = useState<{
+        title: string;
+        client: string;
+        status: string;
+        assigned_to: string;
+        priority: string;
+        due_date: string | null;
+    }>({
         title: '',
         client: '',
         status: '',

@@ -78,7 +78,14 @@ export default function TasksTable({
         }
     };
 
-    const [filters, setFilters] = useState({
+    const [filters, setFilters] = useState<{
+        title: string;
+        organization: string;
+        assigned_to: string;
+        status: string;
+        priority: string;
+        due_date: string | null;
+    }>({
         title: '',
         organization: '',
         assigned_to: '',
