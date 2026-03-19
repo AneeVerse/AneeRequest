@@ -550,14 +550,14 @@ export default function FilesClient({ initialRootId, initialDriveItems, initialD
                                     </button>
                                 )}
                                 <div className="flex items-center gap-1.5 overflow-hidden min-w-0">
-                                    {driveBreadcrumbs.map((crumb, i) => (
+                                    {driveBreadcrumbs.slice(1).map((crumb, i) => (
                                         <React.Fragment key={crumb.id}>
-                                            {i > 0 && <ChevronRight size={12} className="text-storm-gray shrink-0" />}
+                                            <ChevronRight size={12} className="text-storm-gray shrink-0" />
                                             <button
-                                                onClick={() => navigateToBreadcrumb(i)}
-                                                className={`font-black uppercase tracking-widest text-[12px] transition-all truncate ${i === driveBreadcrumbs.length - 1 ? 'text-[#279da6]' : 'text-storm-gray hover:text-iron'} ${i < driveBreadcrumbs.length - 2 ? 'hidden md:block' : ''}`}
+                                                onClick={() => navigateToBreadcrumb(i + 1)}
+                                                className={`font-black uppercase tracking-widest text-[12px] transition-all truncate ${i === driveBreadcrumbs.length - 2 ? 'text-[#279da6]' : 'text-storm-gray hover:text-iron'} ${i < driveBreadcrumbs.length - 3 ? 'hidden md:block' : ''}`}
                                             >
-                                                {i < driveBreadcrumbs.length - 2 && i !== 0 ? '...' : crumb.name}
+                                                {i < driveBreadcrumbs.length - 3 && (i + 1) !== 0 ? '...' : crumb.name}
                                             </button>
                                         </React.Fragment>
                                     ))}
