@@ -130,7 +130,7 @@ export default function ImageCropModal({
             />
 
             {/* Modal Container */}
-            <div className="relative w-full max-w-lg bg-[#121214] border border-[#279da6]/30 rounded-3xl overflow-hidden shadow-[0_0_50px_rgba(0,0,0,0.5),0_0_20px_rgba(39,157,166,0.1)] animate-zoom-in flex flex-col max-h-[90vh]">
+            <div className="relative w-full max-w-lg bg-[#101011] border border-[#279da6]/30 rounded-3xl overflow-hidden shadow-[0_0_50px_rgba(0,0,0,0.5),0_0_20px_rgba(39,157,166,0.1)] animate-zoom-in flex flex-col max-h-[90vh]">
                 {/* Header */}
                 <div className="flex items-center justify-between p-5 border-b border-shark shrink-0 bg-[#18181B]/50 backdrop-blur-md">
                     <div className="flex items-center gap-3">

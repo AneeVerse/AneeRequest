@@ -179,7 +179,7 @@ export default function TaskMessagesDrawer({ isOpen, onClose, taskId, taskTitle 
             <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
 
             {/* Drawer */}
-            <div className="relative w-full max-w-md h-full bg-[#121214] border-l border-shark shadow-2xl flex flex-col animate-slide-left">
+            <div className="relative w-full max-w-md h-full bg-[#101011] border-l border-shark shadow-2xl flex flex-col animate-slide-left">
                 {/* Header */}
                 <div className="h-20 px-6 border-b border-shark flex items-center justify-between bg-[#09090B]/50 backdrop-blur-md sticky top-0 z-10">
                     <div className="flex flex-col">

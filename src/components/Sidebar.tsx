@@ -194,7 +194,7 @@ export default function Sidebar({ isCollapsed, isMobileOpen = false, onMobileClo
             {/* User Avatar — icon only with tooltip + popup menu */}
             <div className="p-2 mt-auto relative">
                 {showProfileMenu && (
-                    <div className="absolute bottom-0 left-full ml-2 w-56 bg-[#121214] border border-shark/60 rounded-2xl shadow-2xl z-[100] overflow-hidden animate-slide-up">
+                    <div className="absolute bottom-0 left-full ml-2 w-56 bg-[#101011] border border-shark/60 rounded-2xl shadow-2xl z-[100] overflow-hidden animate-slide-up">
                         <div className="p-4 border-b border-shark/40 flex items-center gap-3">
                             <div className="w-10 h-10 rounded-full bg-shark flex items-center justify-center text-sm font-black text-white bg-gradient-to-br from-[#279da6]/30 to-transparent ring-1 ring-white/5 relative overflow-hidden shrink-0">
                                 {displayProfile?.avatar_url ? (
@@ -329,7 +329,7 @@ export default function Sidebar({ isCollapsed, isMobileOpen = false, onMobileClo
             {/* User Footer */}
             <div className="p-4 mt-auto relative">
                 {showProfileMenu && (
-                    <div className="absolute bottom-full left-4 right-4 mb-2 bg-[#121214] border border-shark/60 rounded-2xl shadow-2xl z-50 overflow-hidden animate-slide-up">
+                    <div className="absolute bottom-full left-4 right-4 mb-2 bg-[#101011] border border-shark/60 rounded-2xl shadow-2xl z-50 overflow-hidden animate-slide-up">
                         <div className="p-4 border-b border-shark/40 flex items-center gap-3">
                             <div className="w-10 h-10 rounded-full bg-shark flex items-center justify-center text-sm font-black text-white bg-gradient-to-br from-[#279da6]/30 to-transparent ring-1 ring-white/5 relative overflow-hidden">
                                 {displayProfile?.avatar_url ? (

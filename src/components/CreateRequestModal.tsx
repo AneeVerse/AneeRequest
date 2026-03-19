@@ -141,7 +141,7 @@ export default function CreateRequestModal({ isOpen, onClose, onSuccess, initial
 
             {/* Modal Container */}
             <div
-                className="relative w-full max-w-2xl bg-[#121214] border border-shark/50 rounded-3xl sm:rounded-3xl rounded-b-none shadow-[0_32px_64px_-12px_rgba(0,0,0,0.8)] overflow-y-auto max-h-[92dvh] sm:max-h-[90vh] custom-scrollbar animate-zoom-in mt-auto sm:mt-0"
+                className="relative w-full max-w-2xl bg-[#101011] border border-shark/50 rounded-3xl sm:rounded-3xl rounded-b-none shadow-[0_32px_64px_-12px_rgba(0,0,0,0.8)] overflow-y-auto max-h-[92dvh] sm:max-h-[90vh] custom-scrollbar animate-zoom-in mt-auto sm:mt-0"
                 onClick={(e) => e.stopPropagation()}
             >
 
@@ -237,7 +237,7 @@ export default function CreateRequestModal({ isOpen, onClose, onSuccess, initial
                                     Description <span className="text-rose-500">(Required)</span>
                                 </label>
                                 <div className="bg-[#18181B] border border-shark/60 rounded-2xl overflow-hidden focus-within:border-[#279da6]/50 transition-all">
-                                    <div className="px-4 py-2 border-b border-shark bg-[#121214] flex items-center gap-4 text-storm-gray">
+                                    <div className="px-4 py-2 border-b border-shark bg-[#101011] flex items-center gap-4 text-storm-gray">
                                         <button type="button" className="hover:text-white transition-colors font-bold text-sm">B</button>
                                         <button type="button" className="hover:text-white transition-colors italic text-sm">I</button>
                                         <button type="button" className="hover:text-white transition-colors underline text-sm">U</button>

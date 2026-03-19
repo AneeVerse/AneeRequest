@@ -347,7 +347,7 @@ export default function RequestsTable({
                                                     top: `${filterCoords.top + 4}px`,
                                                     left: idx > 4 ? `${filterCoords.left + filterCoords.width - 192}px` : `${filterCoords.left}px`,
                                                 }}
-                                                className={`w-48 bg-[#121214] border border-shark rounded-xl shadow-2xl p-2 z-[9999] normal-case tracking-normal animate-zoom-in`}
+                                                className={`w-48 bg-[#101011] border border-shark rounded-xl shadow-2xl p-2 z-[9999] normal-case tracking-normal animate-zoom-in`}
                                                 onClick={(e) => e.stopPropagation()}
                                             >
                                                 <div className="mb-2 border-b border-shark/40 pb-2">

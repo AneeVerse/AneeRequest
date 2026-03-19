@@ -804,7 +804,7 @@ export default function RequestDetailsPage() {
                 <Sidebar isCollapsed={isSidebarCollapsed} isMobileOpen={isMobileOpen} onMobileClose={() => setIsMobileOpen(false)} />
 
                 <div className="flex-1 flex flex-col min-w-0 bg-[#09090B] relative">
-                    <div className={`flex-1 flex flex-col min-w-0 bg-[#101011] rounded-t-2xl overflow-hidden border-t border-l border-r mt-6 mr-6 responsive-content-wrapper transition-all duration-500 ${isImpersonating ? 'border-[#22c55e]/60 shadow-[0_0_15px_rgba(34,197,94,0.15),0_0_40px_rgba(34,197,94,0.08),inset_0_0_20px_rgba(34,197,94,0.03)]' : 'border-shark'}`}>
+                    <div className={`flex-1 flex flex-col min-w-0 bg-[#101011] rounded-t-2xl overflow-hidden border-t border-l border-r mt-6 responsive-content-wrapper transition-all duration-500 ${isImpersonating ? 'border-[#22c55e]/60 shadow-[0_0_15px_rgba(34,197,94,0.15),0_0_40px_rgba(34,197,94,0.08),inset_0_0_20px_rgba(34,197,94,0.03)]' : 'border-shark'}`}>
 
                         {/* Header */}
                         <div className="border-b border-shark">
@@ -933,7 +933,7 @@ export default function RequestDetailsPage() {
                                                         <div className="absolute inset-0 flex items-center">
                                                             <div className="w-full border-t border-shark/40"></div>
                                                         </div>
-                                                        <span className="relative px-4 py-1.5 bg-[#121214] border border-shark rounded-full text-[12px] font-bold text-storm-gray uppercase tracking-[0.2em] shadow-2xl">
+                                                        <span className="relative px-4 py-1.5 bg-[#101011] border border-shark rounded-full text-[12px] font-bold text-storm-gray uppercase tracking-[0.2em] shadow-2xl">
                                                             Discussion Started
                                                         </span>
                                                     </div>
@@ -1191,7 +1191,7 @@ export default function RequestDetailsPage() {
                                                     : 'max-h-0 opacity-0 mb-0 -translate-y-4 scale-95 blur-md pointer-events-none'
                                                     }`}
                                             >
-                                                <div className="p-1 bg-[#121214]/90 backdrop-blur-2xl border border-[#279da6]/30 rounded-[2rem] shadow-[0_25px_60px_rgba(0,0,0,0.4),0_0_40px_rgba(39,157,166,0.08)] ring-1 ring-white/5 relative overflow-hidden">
+                                                <div className="p-1 bg-[#101011]/90 backdrop-blur-2xl border border-[#279da6]/30 rounded-[2rem] shadow-[0_25px_60px_rgba(0,0,0,0.4),0_0_40px_rgba(39,157,166,0.08)] ring-1 ring-white/5 relative overflow-hidden">
                                                     <div className="p-6 space-y-6">
                                                         <div className="flex items-start gap-6">
                                                             <div className="flex flex-col items-center gap-3 shrink-0">

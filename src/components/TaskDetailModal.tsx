@@ -276,7 +276,7 @@ export default function TaskDetailModal({
 
             {/* Drawer - wider to accommodate detail + chat */}
             <div
-                className="relative w-full md:max-w-4xl h-[100dvh] md:h-full bg-[#121214] border-l border-shark shadow-2xl flex flex-col md:flex-row animate-slide-left"
+                className="relative w-full md:max-w-4xl h-[100dvh] md:h-full bg-[#101011] border-l border-shark shadow-2xl flex flex-col md:flex-row animate-slide-left"
                 onClick={(e) => e.stopPropagation()}
             >
                 {/* Left Panel: Task Details */}

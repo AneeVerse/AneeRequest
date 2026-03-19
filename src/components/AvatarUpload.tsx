@@ -161,7 +161,7 @@ export default function AvatarUpload({
                         />
 
                         {/* Modal Container */}
-                        <div className="relative w-full max-w-sm bg-[#121214] border border-[#279da6]/30 rounded-[2.5rem] overflow-hidden shadow-[0_0_50px_rgba(0,0,0,0.5),0_0_20px_rgba(39,157,166,0.1)] animate-zoom-in">
+                        <div className="relative w-full max-w-sm bg-[#101011] border border-[#279da6]/30 rounded-[2.5rem] overflow-hidden shadow-[0_0_50px_rgba(0,0,0,0.5),0_0_20px_rgba(39,157,166,0.1)] animate-zoom-in">
                             {showMenu && !showLinkInput && (
                                 <div className="flex flex-col p-8 gap-4">
                                     <h3 className="text-center text-xs font-black text-white uppercase tracking-[0.2em] mb-2">Select Image Source</h3>

@@ -32,7 +32,7 @@ export default function FilePreviewModal({ isOpen, onClose, file }: FilePreviewM
             <div className="absolute inset-0 bg-black/80 backdrop-blur-md" onClick={onClose} />
 
             {/* Modal */}
-            <div className="relative w-full max-w-5xl max-h-[90vh] mx-4 bg-[#121214] border border-shark rounded-3xl shadow-2xl flex flex-col animate-zoom-in overflow-hidden">
+            <div className="relative w-full max-w-5xl max-h-[90vh] mx-4 bg-[#101011] border border-shark rounded-3xl shadow-2xl flex flex-col animate-zoom-in overflow-hidden">
                 {/* Header */}
                 <div className="flex items-center justify-between px-6 py-4 border-b border-shark bg-[#09090B]/60">
                     <div className="flex items-center gap-3 min-w-0">

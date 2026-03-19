@@ -96,7 +96,7 @@ input[type="reset"],
 .custom-scrollbar::-webkit-scrollbar-thumb {
   background: var(--color-storm-gray);
   border-radius: 10px;
-  border: 2px solid #121214;
+  border: 2px solid #101011;
   background-clip: padding-box;
 }
 

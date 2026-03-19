@@ -207,7 +207,7 @@ export default function CustomDateRangePicker({ from, to, onChange, placeholder 
 
             {isOpen && createPortal(
                 <div
-                    className="fixed z-[9999] p-6 bg-[#121214] border border-shark/50 rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.5)] flex flex-col gap-6 animate-in fade-in zoom-in duration-200"
+                    className="fixed z-[9999] p-6 bg-[#101011] border border-shark/50 rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.5)] flex flex-col gap-6 animate-in fade-in zoom-in duration-200"
                     style={{ top: popoverCoords.top, left: popoverCoords.left }}
                     onClick={(e) => e.stopPropagation()}
                 >
