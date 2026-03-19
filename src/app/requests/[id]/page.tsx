@@ -811,7 +811,6 @@ export default function RequestDetailsPage() {
                             <Header
 
                                 onMobileMenuToggle={() => setIsMobileOpen(true)}
-                                label=""
                                 labelIcon={<MessageSquare size={16} className="text-[#279da6]" />}
                                 tabs={[
                                     { label: 'request', icon: <MessageSquare size={12} /> },
