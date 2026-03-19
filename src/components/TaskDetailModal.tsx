@@ -62,7 +62,6 @@ export default function TaskDetailModal({
     const [formData, setFormData] = useState({
         title: '',
         description: '',
-        priority: '',
         status: '',
         assigned_to: '',
         due_date: '',
@@ -81,7 +80,6 @@ export default function TaskDetailModal({
             setFormData({
                 title: task.title || '',
                 description: task.description || '',
-                priority: task.priority || 'Medium',
                 status: task.status || 'Todo',
                 assigned_to: task.assigned_to || '',
                 due_date: task.due_date ? new Date(task.due_date).toISOString().split('T')[0] : '',
@@ -263,7 +261,7 @@ export default function TaskDetailModal({
     const getStatusIcon = (status: string) => {
         switch (status) {
             case 'Todo': return <Circle size={16} className="text-[#279da6]" />;
-            case 'In Progress': return <Loader2 size={16} className="text-amber-500 animate-spin" />;
+            case 'In Progress': return <Loader2 size={16} className="text-amber-500" />;
             case 'Review': return <Eye size={16} className="text-blue-400" />;
             case 'Done': return <Check size={16} className="text-emerald-500" />;
             default: return <Circle size={16} />;
@@ -340,8 +338,8 @@ export default function TaskDetailModal({
                             />
                         </div>
 
-                        {/* Status & Priority Grid */}
-                        <div className="grid grid-cols-2 gap-4">
+                        {/* Status Grid */}
+                        <div className="grid grid-cols-1 gap-4">
                             <div className="space-y-1.5">
                                 <label className="text-[10px] font-black text-storm-gray uppercase tracking-widest ml-1">Status</label>
                                 <CustomDropdown
@@ -350,27 +348,11 @@ export default function TaskDetailModal({
                                     onChange={val => handleUpdate('status', val)}
                                     options={[
                                         { label: 'Todo', value: 'Todo', icon: <Circle size={14} className="text-[#279da6]" />, color: 'text-[#279da6]' },
-                                        { label: 'In Progress', value: 'In Progress', icon: <Loader2 size={14} className="text-amber-500 animate-spin" />, color: 'text-amber-500' },
+                                        { label: 'In Progress', value: 'In Progress', icon: <Loader2 size={14} className="text-amber-500" />, color: 'text-amber-500' },
                                         { label: 'Review', value: 'Review', icon: <Eye size={14} className="text-blue-400" />, color: 'text-blue-400' },
                                         { label: 'Done', value: 'Done', icon: <Check size={14} className="text-emerald-500" />, color: 'text-emerald-500' },
                                     ]}
-                                    className="flex-1"
-                                />
-                            </div>
-
-                            <div className="space-y-1.5">
-                                <label className="text-[10px] font-black text-storm-gray uppercase tracking-widest ml-1">Priority</label>
-                                <CustomDropdown
-                                    value={formData.priority}
-                                    disabled={displayProfile?.role !== 'super_admin'}
-                                    onChange={val => handleUpdate('priority', val)}
-                                    options={[
-                                        { label: 'Low', value: 'Low', icon: <Flag size={14} className="text-storm-gray" />, color: 'text-storm-gray' },
-                                        { label: 'Medium', value: 'Medium', icon: <Flag size={14} className="text-blue-400" />, color: 'text-blue-400' },
-                                        { label: 'High', value: 'High', icon: <Flag size={14} className="text-amber-500" />, color: 'text-amber-500' },
-                                        { label: 'Critical', value: 'Critical', icon: <Flag size={14} className="text-rose-500" />, color: 'text-rose-500' },
-                                    ]}
-                                    className="flex-1"
+                                    className="w-full"
                                 />
                             </div>
                         </div>
@@ -506,7 +488,7 @@ export default function TaskDetailModal({
                             <h3 className="text-[11px] font-black uppercase tracking-widest text-iron">Discussion</h3>
                         </div>
                         <div className="flex items-center gap-1.5">
-                            <div className="w-1.5 h-1.5 rounded-full bg-[#279da6] animate-pulse" />
+                            <div className="w-1.5 h-1.5 rounded-full bg-[#279da6]" />
                             <span className="text-[9px] font-bold text-storm-gray uppercase tracking-tighter">Live</span>
                         </div>
                     </div>

@@ -3,6 +3,8 @@ import { supabase, createServiceClient } from '@/lib/supabase';
 import { getOrCreateFolder, getRootFolderId } from '@/lib/googleDrive';
 
 import { getClients } from '@/lib/data/clients';
+import { generateSlug } from '@/lib/utils';
+import { ensureFolderPath } from '@/lib/googleDrive';
 
 export async function GET() {
     try {
@@ -81,6 +83,32 @@ export async function POST(request: Request) {
             } catch (driveErr) {
                 console.warn('Could not create Drive folder for client:', driveErr);
             }
+        }
+
+        // 4. Create the default request: "00-Updates-Followups"
+        try {
+            const defaultRequestTitle = "00-Updates-Followups";
+            const defaultRequestDescription = "This space is dedicated to tracking internal updates, followups, and miscellaneous tasks that aren't specific client requests but still require team action and tracking.";
+            const slug = generateSlug(defaultRequestTitle);
+
+            await serviceClient
+                .from('requests')
+                .insert([
+                    {
+                        title: defaultRequestTitle,
+                        slug: slug,
+                        description: defaultRequestDescription,
+                        client_id: data[0].id,
+                        priority: 'Low',
+                        status: 'Todo'
+                    }
+                ]);
+
+            // Create Drive folder for the default request
+            const clientFolderName = organization || name;
+            await ensureFolderPath(clientFolderName, defaultRequestTitle, 'production', null);
+        } catch (requestErr) {
+            console.warn('Could not create default request for client:', requestErr);
         }
 
         return NextResponse.json({

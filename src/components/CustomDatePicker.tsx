@@ -7,7 +7,7 @@ import { formatDate as formatDateStandard } from '@/lib/dateUtils';
 
 interface CustomDatePickerProps {
     value?: string | null;
-    onChange: (date: string) => void;
+    onChange: (date: string | null) => void;
     placeholder?: string;
     className?: string;
     variant?: 'default' | 'minimal';
@@ -115,7 +115,7 @@ export default function CustomDatePicker({
     };
 
     const handleClear = () => {
-        onChange('');
+        onChange(null);
         setIsOpen(false);
     };
 
@@ -204,7 +204,7 @@ export default function CustomDatePicker({
                     <button
                         onClick={(e) => {
                             e.stopPropagation();
-                            onChange('');
+                            onChange(null);
                         }}
                         className="p-0.5 hover:bg-shark rounded text-storm-gray hover:text-white transition-colors"
                     >

@@ -19,7 +19,7 @@ interface CustomDropdownProps {
     placeholder?: string;
     className?: string;
     disabled?: boolean;
-    variant?: 'default' | 'status' | 'priority' | 'minimal';
+    variant?: 'default' | 'status' | 'priority' | 'minimal' | 'transparent';
     showClear?: boolean;
 }
 
@@ -145,7 +145,9 @@ export default function CustomDropdown({
                 onClick={() => setIsOpen(!isOpen)}
                 className={variant === 'minimal'
                     ? `flex items-center gap-2 group focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed ${className}`
-                    : `w-full flex items-center justify-between gap-2 px-3.5 py-2.5 bg-black/40 border border-shark/50 rounded-xl transition-all font-black text-[12px] uppercase tracking-wider group focus:outline-none focus:border-[#279da6]/50 disabled:opacity-50 disabled:cursor-not-allowed ${isOpen ? 'border-[#279da6]/50 shadow-lg shadow-[#279da6]/5' : 'hover:border-shark-light'} ${className}`
+                    : variant === 'transparent'
+                        ? `w-full flex items-center justify-between gap-2 px-3.5 py-2.5 bg-transparent border-none transition-all font-black text-[12px] uppercase tracking-wider group focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed ${className}`
+                        : `w-full flex items-center justify-between gap-2 px-3.5 py-2.5 bg-black/40 border border-shark/50 rounded-xl transition-all font-black text-[12px] uppercase tracking-wider group focus:outline-none focus:border-[#279da6]/50 disabled:opacity-50 disabled:cursor-not-allowed ${isOpen ? 'border-[#279da6]/50 shadow-lg shadow-[#279da6]/5' : 'hover:border-shark-light'} ${className}`
                 }
             >
                 <div className="flex items-center gap-2 truncate">

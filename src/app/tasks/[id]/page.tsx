@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
-import { useParams, useRouter } from 'next/navigation';
+import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import Image from 'next/image';
 import Sidebar from '@/components/Sidebar';
 import Header from '@/components/Header';
@@ -10,7 +10,6 @@ import {
     MoreHorizontal,
     Send,
     Paperclip,
-    Calendar,
     User,
     Trash2,
     AlertCircle,
@@ -29,12 +28,24 @@ import {
     CircleDashed,
     RefreshCcw,
     Flag,
-    Pencil
+    Pencil,
+    CheckSquare,
+    FolderOpen,
+    ExternalLink,
+    Image as ImageIcon,
+    Film,
+    FileText,
+    RefreshCw,
+    Circle,
+    Eye
 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/context/AuthContext';
 import ImpersonationWarning from '@/components/ImpersonationWarning';
-import { formatDate } from '@/lib/dateUtils';
+import FilePreviewModal from '@/components/FilePreviewModal';
+import CustomDropdown from '@/components/CustomDropdown';
+import CustomDatePicker from '@/components/CustomDatePicker';
+import { formatDate, formatTime } from '@/lib/dateUtils';
 
 interface Message {
     id: string;
@@ -44,6 +55,7 @@ interface Message {
     attachments: any[];
     is_read: boolean;
     created_at: string;
+    is_edited?: boolean;
     sender: {
         full_name: string;
         role: string;
@@ -72,10 +84,12 @@ interface TaskDetails {
     assignee: {
         id: string;
         full_name: string;
+        avatar_url?: string | null;
     } | null;
     creator: {
         id: string;
         full_name: string;
+        avatar_url?: string | null;
     } | null;
 }
 
@@ -85,6 +99,17 @@ interface TeamMember {
     email: string;
     profile_id: string | null;
     avatar_url: string | null;
+}
+
+interface DriveFile {
+    id: string;
+    name: string;
+    mimeType: string;
+    size: number | null;
+    createdTime: string;
+    folder: string;
+    previewUrl: string;
+    webViewLink: string;
 }
 
 export default function TaskDetailsPage() {
@@ -99,14 +124,27 @@ export default function TaskDetailsPage() {
     const [messages, setMessages] = useState<Message[]>([]);
     const [newMessage, setNewMessage] = useState('');
     const [isLoading, setIsLoading] = useState(true);
+    const searchParams = useSearchParams();
+    const initialTab = (searchParams.get('tab') as 'task' | 'files') || 'task';
+    const [activeTab, setActiveTabInternal] = useState<'task' | 'files'>(initialTab);
     const [isSending, setIsSending] = useState(false);
+    const [isUploading, setIsUploading] = useState(false);
+    const fileInputRef = useRef<HTMLInputElement>(null);
     const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
     const [requests, setRequests] = useState<any[]>([]);
-    const dateInputRef = useRef<HTMLInputElement>(null);
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const editorRef = useRef<HTMLDivElement>(null);
     const [isEditingDescription, setIsEditingDescription] = useState(false);
     const [editedDescription, setEditedDescription] = useState('');
+    const [editingMessageId, setEditingMessageId] = useState<string | null>(null);
+    const [editedMessageContent, setEditedMessageContent] = useState('');
+
+    // Files state
+    const [requestFiles, setRequestFiles] = useState<DriveFile[]>([]);
+    const [isLoadingFiles, setIsLoadingFiles] = useState(false);
+    const [isCreatingRequestedFolder, setIsCreatingRequestedFolder] = useState(false);
+    const [isPreviewOpen, setIsPreviewOpen] = useState(false);
+    const [previewFile, setPreviewFile] = useState<any | null>(null);
 
     // Delete state
     const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
@@ -138,6 +176,21 @@ export default function TaskDetailsPage() {
 
     const scrollToBottom = () => {
         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    };
+
+    // Tabs state
+    useEffect(() => {
+        const tab = searchParams.get('tab') as 'task' | 'files';
+        if (tab && tab !== activeTab) {
+            setActiveTabInternal(tab);
+        }
+    }, [searchParams]);
+
+    const setActiveTab = (tab: 'task' | 'files') => {
+        setActiveTabInternal(tab);
+        const params = new URLSearchParams(searchParams.toString());
+        params.set('tab', tab);
+        router.replace(`/tasks/${id}?${params.toString()}`);
     };
 
     useEffect(() => {
@@ -205,8 +258,6 @@ export default function TaskDetailsPage() {
             const response = await fetch(`/api/tasks?id=${id}`);
             const data = await response.json();
             if (response.ok) {
-                // The API now returns a single item if 'id' param is provided, 
-                // but let's handle both array and object for safety
                 const found = Array.isArray(data) ? (data.find((t: any) => t.id === id || t.slug === id)) : data;
                 setTask(found);
             }
@@ -251,12 +302,73 @@ export default function TaskDetailsPage() {
         }
     };
 
-    const handleSendMessage = async (e?: React.FormEvent) => {
+    const fetchRequestFiles = async () => {
+        const requestId = task?.request_links?.[0]?.request?.id;
+        if (!requestId) return;
+
+        setIsLoadingFiles(true);
+        try {
+            const response = await fetch(`/api/requests/${requestId}/files`);
+            if (response.ok) {
+                const data = await response.json();
+                setRequestFiles(data);
+            }
+        } catch (error) {
+            console.error('Error fetching request files:', error);
+        } finally {
+            setIsLoadingFiles(false);
+        }
+    };
+
+    const handleCreateFolder = async () => {
+        const requestId = task?.request_links?.[0]?.request?.id;
+        if (!requestId) return;
+
+        setIsCreatingRequestedFolder(true);
+        try {
+            const response = await fetch(`/api/requests/${requestId}/files`, {
+                method: 'POST'
+            });
+            if (response.ok) {
+                fetchRequestFiles();
+            } else {
+                const err = await response.json();
+                alert(`Error creating folder: ${err.error}`);
+            }
+        } catch (error) {
+            console.error('Failed to create folder:', error);
+            alert('Failed to create folder. Please try again.');
+        } finally {
+            setIsCreatingRequestedFolder(false);
+        }
+    };
+
+    const getFileIcon = (mimeType: string) => {
+        if (mimeType?.startsWith('image/')) return <ImageIcon size={18} className="text-purple-400" />;
+        if (mimeType?.startsWith('video/')) return <Film size={18} className="text-rose-400" />;
+        return <FileText size={18} className="text-[#279da6]" />;
+    };
+
+    const formatFileSize = (bytes: number | null) => {
+        if (!bytes) return '';
+        if (bytes < 1024) return `${bytes} B`;
+        if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+        return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+    };
+
+    useEffect(() => {
+        if (activeTab === 'files' && requestFiles.length === 0) {
+            fetchRequestFiles();
+        }
+    }, [activeTab, task?.request_links]);
+
+    const handleSendMessage = async (e?: React.FormEvent, attachments: any[] = []) => {
         if (e) e.preventDefault();
         const editorHtml = editorRef.current?.innerHTML || '';
         const textContent = editorRef.current?.textContent?.trim() || '';
 
-        if (!textContent || !displayProfile || isSending) return;
+        if (!textContent && attachments.length === 0) return;
+        if (!displayProfile || isSending) return;
 
         const messageContent = textContent ? editorHtml : '';
         setIsSending(true);
@@ -270,7 +382,7 @@ export default function TaskDetailsPage() {
             task_id: id as string,
             sender_id: displayProfile.id,
             message: messageContent,
-            attachments: [],
+            attachments: attachments,
             is_read: false,
             created_at: new Date().toISOString(),
             sender: {
@@ -288,7 +400,7 @@ export default function TaskDetailsPage() {
                 body: JSON.stringify({
                     message: messageContent,
                     sender_id: displayProfile.id,
-                    attachments: []
+                    attachments: attachments
                 })
             });
 
@@ -310,7 +422,88 @@ export default function TaskDetailsPage() {
         }
     };
 
+    const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file || !displayProfile) return;
 
+        setIsUploading(true);
+        const formData = new FormData();
+        formData.append('file', file);
+        formData.append('taskId', id as string);
+        formData.append('senderId', displayProfile.id);
+
+        try {
+            const response = await fetch('/api/upload', {
+                method: 'POST',
+                body: formData
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+                handleSendMessage(undefined, [{
+                    url: data.url,
+                    name: data.name,
+                    type: data.type,
+                    ...(data.drive_file_id ? { drive_file_id: data.drive_file_id } : {})
+                }]);
+            } else {
+                const err = await response.json();
+                alert(`Upload failed: ${err.error || 'Unknown error'}`);
+            }
+        } catch (error) {
+            console.error('Upload error:', error);
+            alert("Error uploading file");
+        } finally {
+            setIsUploading(false);
+            if (fileInputRef.current) fileInputRef.current.value = '';
+        }
+    };
+
+    const handleEditMessage = async (messageId: string, content: string) => {
+        if (!content.trim()) return;
+
+        try {
+            const response = await fetch(`/api/tasks/${id}/messages`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    id: messageId,
+                    message: content
+                })
+            });
+
+            if (response.ok) {
+                const updatedMsg = await response.json();
+                setMessages(prev => prev.map(m => m.id === messageId ? updatedMsg : m));
+                setEditingMessageId(null);
+                setEditedMessageContent('');
+            } else {
+                alert('Failed to update message');
+            }
+        } catch (error) {
+            console.error('Error updating message:', error);
+            alert('Error updating message');
+        }
+    };
+
+    const handleDeleteMessage = async (messageId: string) => {
+        if (!confirm('Are you sure you want to delete this message?')) return;
+
+        try {
+            const response = await fetch(`/api/tasks/${id}/messages?messageId=${messageId}`, {
+                method: 'DELETE'
+            });
+
+            if (response.ok) {
+                setMessages(prev => prev.filter(m => m.id !== messageId));
+            } else {
+                alert('Failed to delete message');
+            }
+        } catch (error) {
+            console.error('Error deleting message:', error);
+            alert('Error deleting message');
+        }
+    };
 
     const handleUpdateField = async (field: string, value: any) => {
         if (!task || !isAdmin) return;
@@ -404,437 +597,543 @@ export default function TaskDetailsPage() {
                 <Sidebar isCollapsed={isSidebarCollapsed} isMobileOpen={isMobileOpen} onMobileClose={() => setIsMobileOpen(false)} />
 
                 <div className="flex-1 flex flex-col min-w-0 bg-[#09090B] relative">
-                    <div className={`flex-1 flex flex-col min-w-0 bg-[#121214] rounded-t-2xl overflow-hidden border-t border-l border-r mt-6 mr-6 responsive-content-wrapper transition-all duration-500 ${isImpersonating ? 'border-[#22c55e]/60 shadow-[0_0_15px_rgba(34,197,94,0.15),0_0_40px_rgba(34,197,94,0.08),inset_0_0_20px_rgba(34,197,94,0.03)]' : 'border-shark'}`}>
+                    <div className={`flex-1 flex flex-col min-w-0 bg-[#101011] rounded-t-2xl overflow-hidden border-t border-l border-r mt-6 mr-6 responsive-content-wrapper transition-all duration-500 ${isImpersonating ? 'border-[#22c55e]/60 shadow-[0_0_15px_rgba(34,197,94,0.15),0_0_40px_rgba(34,197,94,0.08),inset_0_0_20px_rgba(34,197,94,0.03)]' : 'border-shark'}`}>
 
                         {/* Header */}
-                        <div className="h-14 lg:h-16 border-b border-shark flex items-center justify-between px-3 sm:px-6 bg-shark/5">
-                            <div className="flex items-center gap-2 lg:gap-4">
-                                {/* Mobile hamburger */}
-                                <button
-                                    onClick={() => setIsMobileOpen(true)}
-                                    className="p-2 hover:bg-shark rounded-lg text-santas-gray hover:text-white transition-all lg:hidden"
-                                >
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="4" x2="20" y1="12" y2="12" /><line x1="4" x2="20" y1="6" y2="6" /><line x1="4" x2="20" y1="18" y2="18" /></svg>
-                                </button>
-                                <button
-                                    onClick={() => router.back()}
-                                    className="p-2 hover:bg-shark rounded-lg text-santas-gray hover:text-white transition-all hidden lg:block"
-                                >
-                                    <ChevronLeft size={20} />
-                                </button>
-                                <div className="flex items-center gap-3">
-                                    <span className="text-[10px] font-black text-[#279da6] bg-shark/40 py-1 px-2.5 rounded-lg border border-[#279da6]/20 shadow-sm">
-                                        TSK-{task.id.slice(0, 4).toUpperCase()}
-                                    </span>
-                                    <div className="flex flex-col justify-center">
-                                        <h1 className="text-sm font-bold text-iron leading-tight">{task.title}</h1>
-                                        <div className="flex items-center gap-1.5 mt-0.5">
-                                            <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse shadow-[0_0_8px_rgba(16,185,129,0.4)]" />
-                                            <span className="text-[8px] text-storm-gray font-black uppercase tracking-[0.2em] opacity-70">
-                                                Active
-                                            </span>
-                                        </div>
+                        <div className="border-b border-shark">
+                            <Header
+                                onMobileMenuToggle={() => setIsMobileOpen(true)}
+                                labelIcon={<CheckSquare size={16} className="text-[#279da6]" />}
+                                tabs={[
+                                    { label: 'task', icon: <CheckSquare size={12} /> },
+                                    { label: 'files', icon: <FolderOpen size={12} /> }
+                                ]}
+                                activeTab={activeTab}
+                                setActiveTab={(tab) => setActiveTab(tab as any)}
+                                label={
+                                    <div className="flex items-center gap-1.5">
+                                        <div className="w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.4)]" />
+                                        <span className="text-[12px] text-storm-gray font-black uppercase tracking-[0.2em] opacity-70">
+                                            Active
+                                        </span>
                                     </div>
+                                }
+                            >
+                                <div className="hidden lg:flex items-center ml-4 flex-1 min-w-0">
+                                    <h2 className="text-[22px] font-bold text-white uppercase tracking-tight truncate">
+                                        TSK-{task.id.slice(0, 4).toUpperCase()} {task.title}
+                                    </h2>
                                 </div>
-                                <div className="ml-4">
-                                    <ImpersonationWarning />
-                                </div>
-                            </div>
-                            <div className="flex items-center gap-3">
-                                <button className="p-2 hover:bg-shark rounded-full text-santas-gray hover:text-white transition-all">
-                                    <MoreHorizontal size={20} />
-                                </button>
-                            </div>
+                            </Header>
                         </div>
 
                         <div className="flex-1 flex overflow-hidden">
                             {/* Main Content Area */}
-                            <div className="flex-1 flex flex-col overflow-y-auto custom-scrollbar bg-[#09090B]/30">
-
-                                {/* Task Body */}
-                                <div className="p-8 max-w-4xl mx-auto w-full">
-                                    <div className="mb-8">
-                                        <h2 className="text-3xl font-black text-white mb-6 uppercase tracking-tight">{task.title}</h2>
-
-                                        {/* Task Description Card */}
-                                        <div className="flex items-start gap-4 mb-8">
-                                            <div className="w-10 h-10 rounded-full bg-shark flex items-center justify-center text-[#279da6] shrink-0 border border-white/5 shadow-inner">
-                                                <MessageSquare size={18} />
-                                            </div>
-                                            <div className="flex-1">
-                                                <div className="bg-shark/20 border border-shark/50 rounded-2xl p-6 shadow-sm">
-                                                    <div className="flex items-center justify-between mb-4">
-                                                        <span className="text-[11px] font-black text-[#279da6] uppercase tracking-widest">Task Created</span>
-                                                        <span className="text-[10px] text-rose-500 font-black uppercase tracking-widest">
-                                                            {formatDate(task.created_at)}
-                                                        </span>
+                            <div className="flex-1 flex flex-col min-w-0 overflow-hidden relative">
+                                {activeTab === 'task' && (
+                                    <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
+                                        <div className="flex-1 flex flex-col overflow-y-auto custom-scrollbar">
+                                            <div className="pt-6 pb-8 px-8 max-w-4xl mx-auto w-full">
+                                                <div className="relative mb-6 pt-1">
+                                                    <div className="absolute -left-14 top-0 w-10 h-10 rounded-full bg-shark flex items-center justify-center text-[#279da6] border border-white/5 shadow-inner z-10">
+                                                        <MessageSquare size={18} />
                                                     </div>
-                                                    {isEditingDescription ? (
-                                                        <div className="space-y-3">
-                                                            <textarea
-                                                                value={editedDescription}
-                                                                onChange={(e) => setEditedDescription(e.target.value)}
-                                                                className="w-full bg-black/40 border border-[#279da6]/30 rounded-xl p-4 text-sm text-iron focus:outline-none focus:border-[#279da6] min-h-[120px] transition-all resize-none font-bold"
-                                                                placeholder="Enter task description..."
-                                                            />
-                                                            <div className="flex items-center gap-2 justify-end">
-                                                                <button
-                                                                    onClick={() => setIsEditingDescription(false)}
-                                                                    className="px-4 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest text-storm-gray hover:text-white transition-all"
-                                                                >
-                                                                    Cancel
-                                                                </button>
-                                                                <button
-                                                                    onClick={async () => {
-                                                                        await handleUpdateField('description', editedDescription);
-                                                                        setIsEditingDescription(false);
-                                                                    }}
-                                                                    className="px-4 py-1.5 rounded-lg bg-[#279da6] text-white text-[10px] font-black uppercase tracking-widest hover:bg-[#20838b] transition-all shadow-lg shadow-[#279da6]/20"
-                                                                >
-                                                                    Save Changes
-                                                                </button>
+                                                    <div className="w-full">
+                                                        <div className="bg-shark/20 border border-shark/50 rounded-2xl p-6 shadow-sm">
+                                                            <div className="flex items-center justify-between mb-4">
+                                                                <span className="text-[12px] font-bold text-[#279da6] uppercase tracking-widest">Last Updated</span>
+                                                                <span className="text-[12px] text-[#ff2056] font-bold uppercase tracking-widest">
+                                                                    {formatDate(task.updated_at)} • {formatTime(task.updated_at)}
+                                                                </span>
                                                             </div>
-                                                        </div>
-                                                    ) : (
-                                                        <div className="group relative">
-                                                            <p className="text-iron text-sm leading-relaxed whitespace-pre-wrap font-bold pr-10">
-                                                                {task.description || 'No description provided.'}
-                                                            </p>
-                                                            {isAdmin && (
-                                                                <button
-                                                                    onClick={() => {
-                                                                        setEditedDescription(task.description || '');
-                                                                        setIsEditingDescription(true);
-                                                                    }}
-                                                                    className="absolute top-0 right-0 p-2 text-storm-gray hover:text-[#279da6] opacity-0 group-hover:opacity-100 transition-all rounded-lg hover:bg-[#279da6]/10"
-                                                                    title="Edit Description"
-                                                                >
-                                                                    <Pencil size={14} />
-                                                                </button>
+                                                            {isEditingDescription ? (
+                                                                <div className="space-y-3">
+                                                                    <textarea
+                                                                        value={editedDescription}
+                                                                        onChange={(e) => setEditedDescription(e.target.value)}
+                                                                        className="w-full bg-black/40 border border-[#279da6]/30 rounded-xl p-4 text-[12px] text-iron focus:outline-none focus:border-[#279da6] min-h-[120px] transition-all resize-none font-bold"
+                                                                        placeholder="Enter task description..."
+                                                                    />
+                                                                    <div className="flex items-center gap-2 justify-end">
+                                                                        <button
+                                                                            onClick={() => setIsEditingDescription(false)}
+                                                                            className="px-4 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest text-storm-gray hover:text-white transition-all"
+                                                                        >
+                                                                            Cancel
+                                                                        </button>
+                                                                        <button
+                                                                            onClick={async () => {
+                                                                                await handleUpdateField('description', editedDescription);
+                                                                                setIsEditingDescription(false);
+                                                                            }}
+                                                                            className="px-4 py-1.5 rounded-lg bg-[#279da6] text-white text-[10px] font-black uppercase tracking-widest hover:bg-[#20838b] transition-all shadow-lg shadow-[#279da6]/20"
+                                                                        >
+                                                                            Save Changes
+                                                                        </button>
+                                                                    </div>
+                                                                </div>
+                                                            ) : (
+                                                                <div className="group relative">
+                                                                    <p className="text-iron text-[12px] leading-relaxed whitespace-pre-wrap font-bold pr-10">
+                                                                        {task.description || 'No description provided.'}
+                                                                    </p>
+                                                                    {isAdmin && (
+                                                                        <button
+                                                                            onClick={() => {
+                                                                                setEditedDescription(task.description || '');
+                                                                                setIsEditingDescription(true);
+                                                                            }}
+                                                                            className="absolute top-0 right-0 p-2 text-storm-gray hover:text-[#279da6] opacity-0 group-hover:opacity-100 transition-all rounded-lg hover:bg-[#279da6]/10"
+                                                                            title="Edit Description"
+                                                                        >
+                                                                            <Pencil size={14} />
+                                                                        </button>
+                                                                    )}
+                                                                </div>
                                                             )}
                                                         </div>
-                                                    )}
+                                                    </div>
+                                                </div>
+
+                                                {/* Timeline Splitter */}
+                                                <div className="relative flex items-center justify-center my-8">
+                                                    <div className="absolute inset-0 flex items-center">
+                                                        <div className="w-full border-t border-shark/40"></div>
+                                                    </div>
+                                                    <span className="relative px-4 py-1.5 bg-[#121214] border border-shark rounded-full text-[12px] font-bold text-storm-gray uppercase tracking-[0.2em] shadow-2xl">
+                                                        Discussion Started
+                                                    </span>
+                                                </div>
+
+                                                {/* Messages Timeline */}
+                                                <div className="space-y-8">
+                                                    {messages.map((msg) => {
+                                                        const isMe = msg.sender_id === profile?.id;
+                                                        return (
+                                                            <div key={msg.id} className={`flex gap-4 group ${isMe ? 'flex-row-reverse' : ''}`}>
+                                                                <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 border border-white/5 shadow-lg relative overflow-hidden ${isMe ? 'bg-shark text-[#279da6]' : 'bg-shark text-[#279da6]'
+                                                                    }`}>
+                                                                    {isMe ? (
+                                                                        profile?.avatar_url ? (
+                                                                            <Image
+                                                                                src={profile.avatar_url}
+                                                                                alt={profile.full_name || 'User'}
+                                                                                fill
+                                                                                unoptimized
+                                                                                className="object-cover"
+                                                                            />
+                                                                        ) : (
+                                                                            <span className="font-black text-xs">{profile?.full_name?.split(' ').map(n => n[0]).join('')}</span>
+                                                                        )
+                                                                    ) : (
+                                                                        msg.sender?.avatar_url ? (
+                                                                            <Image
+                                                                                src={msg.sender.avatar_url}
+                                                                                alt={msg.sender.full_name || 'User'}
+                                                                                fill
+                                                                                unoptimized
+                                                                                className="object-cover"
+                                                                            />
+                                                                        ) : (
+                                                                            <span className="font-black text-xs">{msg.sender?.full_name?.split(' ').map(n => n[0]).join('')}</span>
+                                                                        )
+                                                                    )}
+                                                                </div>
+                                                                <div className="max-w-[80%]">
+                                                                    <div className={`flex items-center gap-2 mb-1.5 px-1 ${isMe ? 'justify-end' : ''}`}>
+                                                                        {!isMe && (
+                                                                            <span className="text-[12px] font-bold text-iron uppercase tracking-widest">
+                                                                                {msg.sender?.full_name}
+                                                                            </span>
+                                                                        )}
+                                                                        <span className="text-[12px] text-storm-gray font-bold">
+                                                                            {new Date(msg.created_at).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', hour12: true })}
+                                                                            {msg.is_edited && <span className="ml-1 opacity-50 lowercase">(edited)</span>}
+                                                                        </span>
+                                                                        {isMe && !editingMessageId && (
+                                                                            <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                                                <button
+                                                                                    onClick={() => {
+                                                                                        setEditingMessageId(msg.id);
+                                                                                        setEditedMessageContent(msg.message.replace(/<[^>]*>?/gm, ''));
+                                                                                    }}
+                                                                                    className="text-storm-gray hover:text-[#279da6] transition-colors"
+                                                                                    title="Edit Message"
+                                                                                >
+                                                                                    <Pencil size={10} />
+                                                                                </button>
+                                                                                <button
+                                                                                    onClick={() => handleDeleteMessage(msg.id)}
+                                                                                    className="text-storm-gray hover:text-rose-500 transition-colors"
+                                                                                    title="Delete Message"
+                                                                                >
+                                                                                    <Trash2 size={10} />
+                                                                                </button>
+                                                                            </div>
+                                                                        )}
+                                                                    </div>
+                                                                    <div className={`px-5 py-3 rounded-2xl text-[12px] font-bold leading-relaxed shadow-lg ${isMe
+                                                                        ? 'bg-shark text-white rounded-tr-none border border-[#279da6]/30'
+                                                                        : 'bg-shark text-iron rounded-tl-none border border-white/5'
+                                                                        }`}>
+                                                                        {editingMessageId === msg.id ? (
+                                                                            <div className="space-y-3">
+                                                                                <textarea
+                                                                                    value={editedMessageContent}
+                                                                                    onChange={(e) => setEditedMessageContent(e.target.value)}
+                                                                                    className="w-full bg-black/40 border border-[#279da6]/30 rounded-xl p-3 text-[12px] font-bold text-iron focus:outline-none focus:border-[#279da6] min-h-[80px] transition-all resize-none font-bold"
+                                                                                    autoFocus
+                                                                                />
+                                                                                <div className="flex items-center gap-2 justify-end">
+                                                                                    <button
+                                                                                        onClick={() => {
+                                                                                            setEditingMessageId(null);
+                                                                                            setEditedMessageContent('');
+                                                                                        }}
+                                                                                        className="text-[10px] font-black uppercase tracking-widest text-storm-gray hover:text-white transition-all"
+                                                                                    >
+                                                                                        Cancel
+                                                                                    </button>
+                                                                                    <button
+                                                                                        onClick={() => handleEditMessage(msg.id, editedMessageContent)}
+                                                                                        className="px-3 py-1 rounded-lg bg-[#279da6] text-white text-[10px] font-black uppercase tracking-widest hover:bg-[#20838b] transition-all shadow-lg shadow-[#279da6]/20"
+                                                                                    >
+                                                                                        Save Changes
+                                                                                    </button>
+                                                                                </div>
+                                                                            </div>
+                                                                        ) : (
+                                                                            isHtmlContent(msg.message) ? (
+                                                                                <div
+                                                                                    className="prose prose-invert max-w-none text-[12px] font-bold [&_p]:text-[12px] [&_p]:font-bold [&_ul]:text-[12px] [&_ul]:font-bold [&_li]:text-[12px] [&_li]:font-bold [&_a]:text-[#279da6] [&_a]:underline [&_a]:font-bold"
+                                                                                    dangerouslySetInnerHTML={{ __html: msg.message }}
+                                                                                />
+                                                                            ) : (
+                                                                                <div className="text-[12px] font-bold leading-relaxed">
+                                                                                    {msg.message.split('\n').map((line, i) => (
+                                                                                        <div key={i}>
+                                                                                            {line.split(/(\*\*.*?\*\*|__.*?__|\*.*?\*|_.*?_|https?:\/\/[^\s]+)/).map((part, j) => {
+                                                                                                if (part.startsWith('**') && part.endsWith('**')) {
+                                                                                                    return <strong key={j}>{part.slice(2, -2)}</strong>;
+                                                                                                }
+                                                                                                if (part.startsWith('__') && part.endsWith('__')) {
+                                                                                                    return <u key={j}>{part.slice(2, -2)}</u>;
+                                                                                                }
+                                                                                                if (part.startsWith('*') && part.endsWith('*') && part.length > 2) {
+                                                                                                    return <em key={j}>{part.slice(1, -1)}</em>;
+                                                                                                }
+                                                                                                if (part.startsWith('_') && part.endsWith('_') && part.length > 2) {
+                                                                                                    return <em key={j}>{part.slice(1, -1)}</em>;
+                                                                                                }
+                                                                                                if (/^https?:\/\/[^\s]+$/.test(part)) {
+                                                                                                    return <a key={j} href={part} target="_blank" rel="noopener noreferrer" className="underline font-bold text-[#279da6]">{part}</a>;
+                                                                                                }
+                                                                                                return part;
+                                                                                            })}
+                                                                                        </div>
+                                                                                    ))}
+                                                                                </div>
+                                                                            )
+                                                                        )}
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                        );
+                                                    })}
+                                                    <div ref={messagesEndRef} />
                                                 </div>
                                             </div>
                                         </div>
 
-                                        {/* Timeline Splitter */}
-                                        <div className="relative flex items-center justify-center my-12">
-                                            <div className="absolute inset-0 flex items-center">
-                                                <div className="w-full border-t border-shark/40"></div>
-                                            </div>
-                                            <span className="relative px-4 py-1.5 bg-[#121214] border border-shark rounded-full text-[9px] font-black text-storm-gray uppercase tracking-[0.2em] shadow-2xl">
-                                                Discussion Started
-                                            </span>
-                                        </div>
-
-                                        {/* Messages Timeline */}
-                                        <div className="space-y-8">
-                                            {messages.map((msg) => {
-                                                const isMe = msg.sender_id === profile?.id;
-                                                return (
-                                                    <div key={msg.id} className={`flex gap-4 ${isMe ? 'flex-row-reverse' : ''}`}>
-                                                        <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 border border-white/5 shadow-lg relative overflow-hidden ${isMe ? 'bg-shark text-[#279da6]' : 'bg-shark text-[#279da6]'
-                                                            }`}>
-                                                            {isMe ? (
-                                                                profile?.avatar_url ? (
-                                                                    <Image
-                                                                        src={profile.avatar_url}
-                                                                        alt={profile.full_name || 'User'}
-                                                                        fill
-                                                                        unoptimized
-                                                                        className="object-cover"
-                                                                    />
-                                                                ) : (
-                                                                    <span className="font-black text-xs">{profile?.full_name?.split(' ').map(n => n[0]).join('')}</span>
-                                                                )
-                                                            ) : (
-                                                                msg.sender?.avatar_url ? (
-                                                                    <Image
-                                                                        src={msg.sender.avatar_url}
-                                                                        alt={msg.sender.full_name || 'User'}
-                                                                        fill
-                                                                        unoptimized
-                                                                        className="object-cover"
-                                                                    />
-                                                                ) : (
-                                                                    <span className="font-black text-xs">{msg.sender?.full_name?.split(' ').map(n => n[0]).join('')}</span>
-                                                                )
-                                                            )}
-                                                        </div>
-                                                        <div className={`max-w-[80%] ${isMe ? 'text-right' : ''}`}>
-                                                            <div className="flex items-center gap-2 mb-1.5 px-1">
-                                                                <span className="text-[11px] font-black text-iron uppercase tracking-widest">
-                                                                    {isMe ? 'You' : msg.sender?.full_name}
-                                                                </span>
-                                                                <span className="text-[9px] text-storm-gray font-bold">
-                                                                    {new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                                                                </span>
-                                                            </div>
-                                                            <div className={`px-5 py-3 rounded-2xl text-sm leading-relaxed shadow-lg ${isMe
-                                                                ? 'bg-shark text-white rounded-tr-none border border-[#279da6]/30'
-                                                                : 'bg-shark text-iron rounded-tl-none border border-white/5'
-                                                                }`}>
-                                                                {isHtmlContent(msg.message) ? (
-                                                                    <div
-                                                                        className="prose prose-sm prose-invert max-w-none [&_a]:text-[#279da6] [&_a]:underline [&_a]:font-bold"
-                                                                        dangerouslySetInnerHTML={{ __html: msg.message }}
-                                                                    />
-                                                                ) : (
-                                                                    msg.message.split('\n').map((line, i) => (
-                                                                        <div key={i}>
-                                                                            {line.split(/(\*\*.*?\*\*|__.*?__|\*.*?\*|_.*?_|https?:\/\/[^\s]+)/).map((part, j) => {
-                                                                                if (part.startsWith('**') && part.endsWith('**')) {
-                                                                                    return <strong key={j}>{part.slice(2, -2)}</strong>;
-                                                                                }
-                                                                                if (part.startsWith('__') && part.endsWith('__')) {
-                                                                                    return <u key={j}>{part.slice(2, -2)}</u>;
-                                                                                }
-                                                                                if (part.startsWith('*') && part.endsWith('*') && part.length > 2) {
-                                                                                    return <em key={j}>{part.slice(1, -1)}</em>;
-                                                                                }
-                                                                                if (part.startsWith('_') && part.endsWith('_') && part.length > 2) {
-                                                                                    return <em key={j}>{part.slice(1, -1)}</em>;
-                                                                                }
-                                                                                if (/^https?:\/\/[^\s]+$/.test(part)) {
-                                                                                    return <a key={j} href={part} target="_blank" rel="noopener noreferrer" className="underline font-bold text-[#279da6]">{part}</a>;
-                                                                                }
-                                                                                return part;
-                                                                            })}
-                                                                        </div>
-                                                                    ))
-                                                                )}
-                                                            </div>
-                                                        </div>
+                                        {/* Message Composer - Floating style */}
+                                        <div className="mt-auto px-6 pb-4 pt-2">
+                                            <div className="max-w-4xl mx-auto">
+                                                <div className="bg-shark/30 border border-shark/60 rounded-[2rem] overflow-hidden shadow-inner focus-within:border-[#279da6]/50 transition-all">
+                                                    {/* Formatting Bar */}
+                                                    <div className="flex items-center gap-1 p-3 bg-shark/10 border-b border-shark/40">
+                                                        <button type="button" onMouseDown={(e) => e.preventDefault()} onClick={() => execFormat('bold')} title="Bold" className="p-1.5 hover:bg-shark rounded text-storm-gray hover:text-white transition-all"><Bold size={14} /></button>
+                                                        <button type="button" onMouseDown={(e) => e.preventDefault()} onClick={() => execFormat('italic')} title="Italic" className="p-1.5 hover:bg-shark rounded text-storm-gray hover:text-white transition-all"><Italic size={14} /></button>
+                                                        <button type="button" onMouseDown={(e) => e.preventDefault()} onClick={() => execFormat('underline')} title="Underline" className="p-1.5 hover:bg-shark rounded text-storm-gray hover:text-white transition-all"><Underline size={14} /></button>
+                                                        <div className="w-px h-4 bg-shark/40 mx-2"></div>
+                                                        <button type="button" onMouseDown={(e) => e.preventDefault()} onClick={() => execFormat('insertUnorderedList')} title="List" className="p-1.5 hover:bg-shark rounded text-storm-gray hover:text-white transition-all"><List size={14} /></button>
+                                                        <button type="button" onMouseDown={(e) => e.preventDefault()} onClick={handleInsertLink} title="Insert Link" className="p-1.5 hover:bg-shark rounded text-storm-gray hover:text-white transition-all"><LinkIcon size={14} /></button>
                                                     </div>
-                                                );
-                                            })}
-                                            <div ref={messagesEndRef} />
+                                                    <div
+                                                        ref={editorRef}
+                                                        contentEditable
+                                                        suppressContentEditableWarning
+                                                        onInput={handleEditorInput}
+                                                        onKeyDown={(e) => {
+                                                            // Enter and Shift+Enter both perform default newline behavior
+                                                        }}
+                                                        data-placeholder="Message team members about this task..."
+                                                        className="w-full bg-transparent text-iron p-6 text-[12px] font-bold focus:outline-none min-h-[100px] empty:before:content-[attr(data-placeholder)] empty:before:text-storm-gray/50 empty:before:pointer-events-none [&_a]:text-[#279da6] [&_a]:underline border-b border-shark/40"
+                                                    />
+                                                    <div className="flex items-center justify-between p-4 bg-shark/10">
+                                                        <input
+                                                            type="file"
+                                                            ref={fileInputRef}
+                                                            className="hidden"
+                                                            onChange={handleFileUpload}
+                                                        />
+                                                        <button
+                                                            onClick={() => fileInputRef.current?.click()}
+                                                            disabled={isUploading}
+                                                            className="flex items-center gap-3 px-3 py-1.5 text-[12px] font-bold uppercase tracking-widest text-storm-gray hover:text-white transition-all group"
+                                                        >
+                                                            <div className="w-8 h-8 rounded-full bg-shark/40 border border-shark/60 flex items-center justify-center text-storm-gray group-hover:text-[#279da6] group-hover:bg-shark/60 transition-all">
+                                                                {isUploading ? <Loader2 size={12} className="animate-spin" /> : <Paperclip size={14} />}
+                                                            </div>
+                                                            <span>{isUploading ? 'Uploading...' : 'ATTACH FILE'}</span>
+                                                        </button>
+                                                        <button
+                                                            onClick={() => handleSendMessage()}
+                                                            disabled={isSending || (!newMessage.trim() && !isUploading)}
+                                                            className="bg-[#279da6] hover:bg-[#20838b] text-white px-8 py-3 rounded-2xl flex items-center justify-center gap-2 transition-all font-bold text-[12px] uppercase tracking-widest disabled:opacity-40 shadow-[0_10px_20px_rgba(39,157,166,0.15)] active:scale-95"
+                                                        >
+                                                            {isSending ? <Loader2 size={16} className="animate-spin" /> : (
+                                                                <>
+                                                                    <Send size={14} />
+                                                                    <span>SEND MESSAGE</span>
+                                                                </>
+                                                            )}
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            </div>
                                         </div>
                                     </div>
-                                </div>
+                                )}
 
-                                {/* Message Composer */}
-                                <div className="mt-auto p-6 bg-[#121214] border-t border-shark shadow-[0_-8px_24px_rgba(0,0,0,0.2)]">
-                                    <div className="max-w-4xl mx-auto">
-                                        <div className="bg-shark/30 border border-shark/60 rounded-2xl overflow-hidden shadow-inner focus-within:border-[#279da6]/50 transition-all">
-                                            {/* Formatting Bar */}
-                                            <div className="flex items-center gap-1 p-2 bg-shark/20 border-b border-shark/40">
-                                                <button type="button" onMouseDown={(e) => e.preventDefault()} onClick={() => execFormat('bold')} title="Bold" className="p-1.5 hover:bg-shark rounded text-storm-gray hover:text-white transition-all"><Bold size={14} /></button>
-                                                <button type="button" onMouseDown={(e) => e.preventDefault()} onClick={() => execFormat('italic')} title="Italic" className="p-1.5 hover:bg-shark rounded text-storm-gray hover:text-white transition-all"><Italic size={14} /></button>
-                                                <button type="button" onMouseDown={(e) => e.preventDefault()} onClick={() => execFormat('underline')} title="Underline" className="p-1.5 hover:bg-shark rounded text-storm-gray hover:text-white transition-all"><Underline size={14} /></button>
-                                                <div className="w-px h-4 bg-shark mx-1"></div>
-                                                <button type="button" onMouseDown={(e) => e.preventDefault()} onClick={() => execFormat('insertUnorderedList')} title="List" className="p-1.5 hover:bg-shark rounded text-storm-gray hover:text-white transition-all"><List size={14} /></button>
-                                                <button type="button" onMouseDown={(e) => e.preventDefault()} onClick={handleInsertLink} title="Insert Link" className="p-1.5 hover:bg-shark rounded text-storm-gray hover:text-white transition-all"><LinkIcon size={14} /></button>
-                                                <div className="flex-1"></div>
-                                                <button type="button" className="p-1.5 hover:bg-shark rounded text-storm-gray hover:text-white transition-all"><Smile size={14} /></button>
-                                            </div>
-                                            <div
-                                                ref={editorRef}
-                                                contentEditable
-                                                suppressContentEditableWarning
-                                                onInput={handleEditorInput}
-                                                onKeyDown={(e) => {
-                                                    if (e.key === 'Enter' && !e.shiftKey) {
-                                                        e.preventDefault();
-                                                        handleSendMessage();
-                                                    }
-                                                }}
-                                                data-placeholder="Write your message here..."
-                                                className="w-full bg-transparent text-iron p-4 text-sm focus:outline-none min-h-[120px] empty:before:content-[attr(data-placeholder)] empty:before:text-storm-gray empty:before:pointer-events-none [&_a]:text-[#279da6] [&_a]:underline"
-                                            />
-                                            <div className="flex items-center justify-end p-3 bg-shark/10">
+                                {activeTab === 'files' && (
+                                    <div className="flex-1 overflow-y-auto custom-scrollbar p-6">
+                                        <div className="max-w-4xl mx-auto">
+                                            {/* Refresh button */}
+                                            <div className="flex items-center justify-between mb-6">
+                                                <h3 className="text-sm font-black text-iron uppercase tracking-widest">Request Files</h3>
                                                 <button
-                                                    onClick={() => handleSendMessage()}
-                                                    disabled={isSending || !newMessage.trim()}
-                                                    className="bg-[#279da6] hover:bg-[#20838b] text-white px-6 py-2 rounded-xl flex items-center justify-center gap-2 transition-all font-black text-xs uppercase tracking-widest disabled:opacity-40 shadow-lg shadow-[#279da6]/20 active:scale-95"
+                                                    onClick={fetchRequestFiles}
+                                                    className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-shark/30 border border-shark text-storm-gray text-[10px] font-black uppercase tracking-widest hover:text-white hover:border-[#279da6]/30 transition-all"
                                                 >
-                                                    {isSending ? <Loader2 size={16} className="animate-spin" /> : <><Send size={14} /> Send Message</>}
+                                                    <RefreshCw size={12} className={isLoadingFiles ? 'animate-spin' : ''} />
+                                                    Refresh
                                                 </button>
                                             </div>
-                                        </div>
-                                        <div className="mt-3 flex items-center justify-center gap-6">
-                                            <span className="text-[10px] text-storm-gray font-black uppercase tracking-widest opacity-50">Press Enter to Send</span>
-                                            <span className="text-[10px] text-storm-gray font-black uppercase tracking-widest opacity-50">Shift + Enter for new line</span>
+
+                                            {isLoadingFiles ? (
+                                                <div className="flex items-center justify-center py-20">
+                                                    <Loader2 size={24} className="animate-spin text-[#279da6]" />
+                                                </div>
+                                            ) : requestFiles.length === 0 ? (
+                                                <div className="flex flex-col items-center justify-center py-20 text-center">
+                                                    <div className="w-20 h-20 rounded-3xl bg-shark/30 border border-shark flex items-center justify-center mb-6 shadow-inner ring-1 ring-white/5">
+                                                        <FolderOpen size={32} className="text-storm-gray/50" />
+                                                    </div>
+                                                    <h3 className="text-xl font-bold text-iron mb-2 uppercase tracking-tight">No Folder Linked</h3>
+                                                    <p className="text-sm text-storm-gray mb-10 max-w-xs mx-auto">
+                                                        Connect a Google Drive folder to manage this request&apos;s project files directly from this dashboard.
+                                                    </p>
+
+                                                    <div className="flex flex-col gap-3 w-full max-w-[280px]">
+                                                        <button
+                                                            onClick={handleCreateFolder}
+                                                            disabled={isCreatingRequestedFolder || isLoadingFiles}
+                                                            className="w-full flex items-center justify-center gap-2 px-6 py-3 rounded-xl bg-[#279da6] text-white text-xs font-black uppercase tracking-widest hover:bg-[#279da6]/90 transition-all shadow-[0_10px_20px_rgba(39,157,166,0.2)] disabled:opacity-50"
+                                                        >
+                                                            {isCreatingRequestedFolder ? <Loader2 size={14} className="animate-spin" /> : <Plus size={14} />}
+                                                            Create New Folder
+                                                        </button>
+                                                        <button
+                                                            onClick={() => alert('Folder linking coming soon - currently you can create the standard folder structure.')}
+                                                            className="w-full flex items-center justify-center gap-2 px-6 py-3 rounded-xl bg-shark/30 border border-shark text-storm-gray text-xs font-black uppercase tracking-widest hover:text-white hover:border-shark/80 transition-all"
+                                                        >
+                                                            <LinkIcon size={14} />
+                                                            Link Existing Folder
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            ) : (
+                                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                                    {requestFiles.map(file => (
+                                                        <div
+                                                            key={file.id}
+                                                            onClick={() => {
+                                                                setPreviewFile({
+                                                                    name: file.name,
+                                                                    url: file.webViewLink,
+                                                                    previewUrl: file.previewUrl,
+                                                                    type: file.mimeType
+                                                                });
+                                                                setIsPreviewOpen(true);
+                                                            }}
+                                                            className="flex items-center gap-3 p-4 rounded-xl bg-shark/15 border border-shark/40 hover:border-[#279da6]/30 hover:bg-shark/25 cursor-pointer transition-all group"
+                                                        >
+                                                            <div className="w-10 h-10 rounded-lg bg-shark/40 border border-shark flex items-center justify-center shrink-0">
+                                                                {getFileIcon(file.mimeType)}
+                                                            </div>
+                                                            <div className="flex-1 min-w-0">
+                                                                <p className="text-xs font-bold text-iron truncate group-hover:text-white transition-colors">{file.name}</p>
+                                                                <div className="flex items-center gap-2 mt-1">
+                                                                    <span className="text-[9px] font-black uppercase tracking-widest text-storm-gray/60">{file.folder}</span>
+                                                                    {file.size && (
+                                                                        <>
+                                                                            <span className="text-storm-gray/30">·</span>
+                                                                            <span className="text-[9px] text-storm-gray/60">{formatFileSize(file.size)}</span>
+                                                                        </>
+                                                                    )}
+                                                                    {file.createdTime && (
+                                                                        <>
+                                                                            <span className="text-storm-gray/30">·</span>
+                                                                            <span className="text-[9px] text-storm-gray/60">
+                                                                                {formatDate(file.createdTime)}
+                                                                            </span>
+                                                                        </>
+                                                                    )}
+                                                                </div>
+                                                            </div>
+                                                            <a
+                                                                href={file.webViewLink}
+                                                                target="_blank"
+                                                                rel="noopener noreferrer"
+                                                                onClick={(e) => e.stopPropagation()}
+                                                                className="p-2 rounded-lg hover:bg-shark text-storm-gray/40 hover:text-[#279da6] transition-all opacity-0 group-hover:opacity-100"
+                                                            >
+                                                                <ExternalLink size={14} />
+                                                            </a>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            )}
                                         </div>
                                     </div>
-                                </div>
+                                )}
                             </div>
 
                             {/* Right Sidebar - Summary */}
                             <div className="hidden lg:flex w-[340px] border-l border-shark bg-[#121214] flex-col p-6 overflow-y-auto custom-scrollbar">
-                                <h3 className="text-lg font-bold text-white mb-8">Summary</h3>
-
                                 <div className="space-y-8">
                                     {/* Base Info */}
                                     <div>
-                                        <h4 className="text-sm font-bold text-white mb-1 uppercase tracking-tight">{task.title}</h4>
-                                        <div className="text-[12px] text-storm-gray">
-                                            <span className="font-bold">Created:</span> {formatDate(task.created_at)}
+                                        <h4 className="text-[18px] font-bold text-white mb-1 uppercase tracking-tight leading-tight">{task.title}</h4>
+                                        <div className="text-[12px] text-[#ff2056] font-bold uppercase tracking-wider">
+                                            Created: {formatDate(task.created_at)}
                                         </div>
                                     </div>
 
                                     <div className="space-y-4 pt-4">
-                                        {/* Creator */}
-                                        <div className="flex items-center justify-between gap-4">
-                                            <span className="text-[12px] font-bold text-storm-gray">Created By:</span>
-                                            <div className="flex items-center gap-2.5 bg-shark/20 py-1.5 px-3 rounded-xl border border-white/5">
-                                                <div className="w-7 h-7 rounded-full bg-shark flex items-center justify-center text-[10px] text-[#279da6] font-black shrink-0 border border-white/5 shadow-inner">
-                                                    {task.creator?.full_name?.split(' ').map(n => n[0]).join('')}
+                                        {/* Linked Request - Read Only styling like Task Title */}
+                                        <div className="pb-4 border-b border-shark/40">
+                                            {task.request_links?.[0] ? (
+                                                <div
+                                                    onClick={() => router.push(`/requests/${task.request_links?.[0]?.request?.slug || task.request_links?.[0]?.request?.id}?tab=tasks`)}
+                                                    className="cursor-pointer group select-none"
+                                                >
+                                                    <div className="text-[12px] text-[#279da6] mb-1 uppercase tracking-wider font-bold">
+                                                        Linked Request
+                                                    </div>
+                                                    <h4 className="text-[18px] font-bold text-white uppercase tracking-tight leading-tight group-hover:text-[#279da6] transition-colors">
+                                                        {task.request_links?.[0]?.request?.title || 'Unknown Request'}
+                                                    </h4>
                                                 </div>
-                                                <p className="text-[11px] font-bold text-iron leading-tight truncate">{task.creator?.full_name || 'System'}</p>
+                                            ) : (
+                                                <div className="text-[11px] text-storm-gray/40 italic">
+                                                    No linked request
+                                                </div>
+                                            )}
+                                        </div>
+                                        {/* Creator - Styled like "Client" in Request Page */}
+                                        <div className="flex items-center justify-between gap-4">
+                                            <span className="w-20 text-[12px] font-bold text-storm-gray shrink-0 uppercase">Created By:</span>
+                                            <div className="flex-1 flex items-center gap-2.5 bg-transparent border-none px-3.5 py-2.5 transition-all">
+                                                <div className="w-[46px] h-[46px] rounded-full bg-shark flex items-center justify-center text-sm text-[#279da6] font-black shrink-0 border border-white/5 shadow-inner overflow-hidden">
+                                                    {task.creator?.avatar_url ? (
+                                                        <img src={task.creator.avatar_url} alt={task.creator.full_name} className="w-full h-full object-cover" />
+                                                    ) : (
+                                                        task.creator?.full_name?.split(' ').map(n => n[0]).join('')
+                                                    )}
+                                                </div>
+                                                <div className="min-w-0 pr-1 flex flex-col">
+                                                    <p className="text-[12px] font-black text-[#279da6] uppercase tracking-wider truncate mb-0.5">Contributor</p>
+                                                    <p className="text-[12px] font-bold text-iron leading-tight truncate uppercase tracking-wider">{task.creator?.full_name || 'System'}</p>
+                                                </div>
                                             </div>
                                         </div>
 
                                         {/* Status */}
                                         <div className="flex items-center gap-2">
-                                            <span className="text-[12px] font-bold text-storm-gray w-20">Status</span>
-                                            <select
+                                            <span className="text-[12px] font-bold text-storm-gray w-20 uppercase">Status</span>
+                                            <CustomDropdown
                                                 value={task.status}
-                                                disabled={!isSuperAdmin}
-                                                onChange={(e) => handleUpdateField('status', e.target.value)}
-                                                className="flex-1 bg-shark/30 text-iron border border-shark/60 px-3 py-1.5 rounded-lg text-xs font-bold hover:bg-shark/50 focus:outline-none transition-all appearance-none cursor-not-allowed disabled:opacity-70"
-                                            >
-                                                <option value="Todo">Todo</option>
-                                                <option value="In Progress">In Progress</option>
-                                                <option value="Review">Review</option>
-                                                <option value="Done">Done</option>
-                                            </select>
+                                                onChange={(val) => handleUpdateField('status', val)}
+                                                options={[
+                                                    { label: 'Todo', value: 'Todo', icon: <Circle size={14} className="text-[#279da6]" />, color: 'text-[#279da6]' },
+                                                    { label: 'In Progress', value: 'In Progress', icon: <Loader2 size={14} className="text-amber-500" />, color: 'text-amber-500' },
+                                                    { label: 'Review', value: 'Review', icon: <Eye size={14} className="text-blue-400" />, color: 'text-blue-400' },
+                                                    { label: 'Done', value: 'Done', icon: <CheckCircle2 size={14} className="text-emerald-500" />, color: 'text-emerald-500' },
+                                                ]}
+                                                className="flex-1"
+                                            />
                                         </div>
 
                                         {/* Priority */}
                                         <div className="flex items-center gap-2">
-                                            <span className="text-[12px] font-bold text-storm-gray w-20">Priority</span>
-                                            <div className="flex-1 relative">
-                                                <select
-                                                    value={task.priority}
-                                                    disabled={!isAdmin}
-                                                    onChange={(e) => handleUpdateField('priority', e.target.value)}
-                                                    className={`w-full bg-shark/20 border border-shark/40 pl-5 pr-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest focus:outline-none cursor-not-allowed disabled:opacity-70 transition-all appearance-none ${task.priority === 'Critical' ? 'text-rose-500' :
-                                                        task.priority === 'High' ? 'text-amber-500' :
-                                                            task.priority === 'Medium' ? 'text-blue-400' :
-                                                                'text-storm-gray'
-                                                        }`}
-                                                >
-                                                    <option value="Low">Low</option>
-                                                    <option value="Medium">Medium</option>
-                                                    <option value="High">High</option>
-                                                    <option value="Critical">Critical</option>
-                                                </select>
-                                                <div className={`absolute left-2.5 top-1/2 -translate-y-1/2 w-1 h-1 rounded-full ${task.priority === 'Critical' ? 'bg-rose-500' :
-                                                    task.priority === 'High' ? 'bg-amber-500' :
-                                                        task.priority === 'Medium' ? 'bg-blue-400' :
-                                                            'bg-storm-gray'
-                                                    }`} />
-                                            </div>
+                                            <span className="text-[12px] font-bold text-storm-gray w-20 uppercase">Priority</span>
+                                            <CustomDropdown
+                                                value={task.priority}
+                                                onChange={(val) => handleUpdateField('priority', val)}
+                                                options={[
+                                                    { label: 'Low', value: 'Low', icon: <Flag size={14} className="text-storm-gray" />, color: 'text-storm-gray' },
+                                                    { label: 'Medium', value: 'Medium', icon: <Flag size={14} className="text-blue-400" />, color: 'text-blue-400' },
+                                                    { label: 'High', value: 'High', icon: <Flag size={14} className="text-amber-500" />, color: 'text-amber-500' },
+                                                    { label: 'Critical', value: 'Critical', icon: <Flag size={14} className="text-rose-500" />, color: 'text-rose-500' },
+                                                ]}
+                                                className="flex-1"
+                                            />
                                         </div>
 
                                         {/* Assigned To */}
                                         <div className="flex items-center gap-2">
-                                            <span className="text-[12px] font-bold text-storm-gray w-20">Assigned To</span>
-                                            <div className="flex-1 flex items-center gap-2">
-                                                <select
-                                                    value={task.assigned_to || ''}
-                                                    disabled={!isAdmin}
-                                                    onChange={(e) => handleUpdateField('assigned_to', e.target.value)}
-                                                    className="flex-1 bg-transparent text-[11px] font-bold text-iron focus:outline-none cursor-not-allowed disabled:opacity-70 hover:text-white transition-all appearance-none"
-                                                >
-                                                    <option value="">Unassigned</option>
-                                                    {teamMembers.filter((tm: any) => tm.profile_id).map((tm: any) => (
-                                                        <option key={tm.id} value={tm.profile_id}>{tm.name}</option>
-                                                    ))}
-                                                </select>
-                                                <div className="w-6 h-6 rounded-full bg-shark/40 border border-shark flex items-center justify-center text-storm-gray overflow-hidden">
-                                                    {task.assignee ? (
-                                                        <div className="w-full h-full bg-[#279da6] text-white flex items-center justify-center text-[10px] font-black">
-                                                            {task.assignee.full_name?.split(' ').map(n => n[0]).join('')}
-                                                        </div>
-                                                    ) : (
-                                                        <Plus size={14} />
-                                                    )}
-                                                </div>
-                                            </div>
+                                            <span className="text-[12px] font-bold text-storm-gray w-20 uppercase">Assigned To</span>
+                                            <CustomDropdown
+                                                value={task.assigned_to || ''}
+                                                onChange={(val) => handleUpdateField('assigned_to', val)}
+                                                options={[
+                                                    { label: 'Unassigned', value: '' },
+                                                    ...teamMembers.filter((tm: any) => tm.profile_id).map((tm: any) => ({
+                                                        label: tm.name || 'Unknown',
+                                                        value: tm.profile_id,
+                                                        icon: tm.avatar_url ? (
+                                                            <div className="w-[46px] h-[46px] rounded-full overflow-hidden border border-white/10">
+                                                                <img src={tm.avatar_url} alt={tm.name} className="w-full h-full object-cover" />
+                                                            </div>
+                                                        ) : (
+                                                            <div className="w-[46px] h-[46px] rounded-full bg-shark flex items-center justify-center text-sm text-[#279da6] font-black shrink-0 border border-white/5 shadow-inner">
+                                                                {tm.name?.split(' ').map((n: string) => n[0]).join('')}
+                                                            </div>
+                                                        )
+                                                    }))
+                                                ]}
+                                                className="flex-1"
+                                            />
                                         </div>
 
-                                        {/* Linked Request(s) */}
-                                        <div className="flex flex-col gap-2">
-                                            <span className="text-[12px] font-bold text-storm-gray">Linked Request(s)</span>
-                                            <div className="flex-1 relative group">
-                                                <select
-                                                    value=""
-                                                    disabled={!isAdmin}
-                                                    onChange={(e) => {
-                                                        if (e.target.value && isAdmin) {
-                                                            const id = e.target.value;
-                                                            const currentIds = task.request_links?.map(l => l.request?.id).filter(Boolean) as string[] || [];
-                                                            if (!currentIds.includes(id)) {
-                                                                handleUpdateField('request_ids', [...currentIds, id]);
-                                                            }
-                                                        }
-                                                    }}
-                                                    className="w-full bg-shark/20 border border-shark/40 px-3 py-2 rounded-lg text-xs font-bold text-iron focus:outline-none cursor-not-allowed disabled:opacity-50 transition-all appearance-none"
-                                                >
-                                                    <option value="">Add Connection...</option>
-                                                    {requests.filter(r => !task.request_links?.some(l => l.request?.id === r.id)).map((r: any) => (
-                                                        <option key={r.id} value={r.id}>
-                                                            {r.title}
-                                                        </option>
-                                                    ))}
-                                                </select>
-                                                <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-storm-gray opacity-50">
-                                                    <Plus size={12} />
-                                                </div>
-                                            </div>
-
-                                            {/* Selected Requests Pills */}
-                                            <div className="flex flex-wrap gap-2 mt-1">
-                                                {task.request_links?.map((link, idx) => (
-                                                    <div key={idx} className="flex items-center gap-2 bg-[#279da6]/10 border border-[#279da6]/30 rounded-lg px-2 py-1 group/pill">
-                                                        <span
-                                                            onClick={() => router.push(`/requests/${link.request?.slug || link.request?.id}`)}
-                                                            className="text-[9px] font-bold text-[#279da6] truncate max-w-[200px] cursor-pointer hover:underline"
-                                                        >
-                                                            {link.request ? link.request.title : 'Unknown'}
-                                                        </span>
-                                                        {isAdmin && (
-                                                            <button
-                                                                type="button"
-                                                                onClick={() => {
-                                                                    const currentIds = task.request_links?.map(l => l.request?.id).filter(Boolean) as string[] || [];
-                                                                    handleUpdateField('request_ids', currentIds.filter(id => id !== link.request?.id));
-                                                                }}
-                                                                className="text-storm-gray hover:text-white transition-colors"
-                                                            >
-                                                                <X size={10} />
-                                                            </button>
-                                                        )}
-                                                    </div>
-                                                ))}
-                                            </div>
-                                        </div>
 
                                         {/* Due Date */}
-                                        <div className="flex items-center gap-2">
-                                            <span className="text-[12px] font-bold text-storm-gray w-20">Due Date</span>
-                                            <div className="flex-1 flex items-center justify-end gap-2 text-[11px] font-black text-iron">
-                                                <input
-                                                    ref={dateInputRef}
-                                                    type="date"
-                                                    value={task.due_date ? new Date(task.due_date).toISOString().split('T')[0] : ''}
-                                                    onChange={(e) => handleUpdateField('due_date', e.target.value)}
-                                                    className="bg-transparent text-iron border-none focus:outline-none text-right cursor-pointer hover:text-white transition-all uppercase [color-scheme:dark]"
-                                                />
-                                                <Calendar
-                                                    size={14}
-                                                    className="text-storm-gray cursor-pointer hover:text-white transition-all"
-                                                    onClick={() => dateInputRef.current?.showPicker()}
+                                        <div className="flex items-center justify-between gap-4 h-11">
+                                            <span className="w-20 text-[12px] font-bold text-storm-gray shrink-0 uppercase">Due Date:</span>
+                                            <div className="flex-1 flex justify-start">
+                                                <CustomDatePicker
+                                                    value={task.due_date}
+                                                    onChange={(dateString) => handleUpdateField('due_date', dateString || null)}
+                                                    placeholder="NOT SET"
+                                                    variant="minimal"
                                                 />
                                             </div>
                                         </div>
                                     </div>
 
                                     {/* Delete Button */}
-                                    {isAdmin && (
+                                    {isSuperAdmin && (
                                         <div className="pt-6 border-t border-shark mt-auto">
                                             <button
                                                 onClick={() => setIsDeleteModalOpen(true)}
@@ -853,58 +1152,66 @@ export default function TaskDetailsPage() {
             </div>
 
             {/* Delete Confirmation Modal */}
-            {isDeleteModalOpen && (
-                <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/90 backdrop-blur-md animate-fade-in">
-                    <div className="bg-[#18181B] border border-rose-500/20 rounded-[32px] p-8 max-w-md w-full shadow-[0_0_50px_rgba(244,63,94,0.15)] animate-slide-up relative overflow-hidden">
-                        <div className="absolute -top-24 -right-24 w-48 h-48 bg-rose-500/10 rounded-full blur-[80px]" />
+            {
+                isDeleteModalOpen && (
+                    <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/90 backdrop-blur-md animate-fade-in">
+                        <div className="bg-[#18181B] border border-rose-500/20 rounded-[32px] p-8 max-w-md w-full shadow-[0_0_50px_rgba(244,63,94,0.15)] animate-slide-up relative overflow-hidden">
+                            <div className="absolute -top-24 -right-24 w-48 h-48 bg-rose-500/10 rounded-full blur-[80px]" />
 
-                        <div className="relative">
-                            <div className="w-16 h-16 rounded-2xl bg-rose-500/10 border border-rose-500/20 flex items-center justify-center text-rose-500 mb-6 mx-auto">
-                                <Trash2 size={32} />
-                            </div>
-
-                            <h2 className="text-xl font-black text-white text-center uppercase tracking-tight mb-3">Delete Task?</h2>
-                            <p className="text-storm-gray text-center text-sm leading-relaxed mb-8">
-                                You are about to permanently delete <span className="text-white font-bold">"{task.title}"</span>. This action will remove all messages and attachments associated with this task. This cannot be undone.
-                            </p>
-
-                            {deleteError && (
-                                <div className="mb-6 p-4 rounded-2xl bg-rose-500/10 border border-rose-500/20 flex items-center gap-3 text-rose-400 text-xs font-bold animate-shake">
-                                    <AlertCircle size={16} />
-                                    {deleteError}
+                            <div className="relative">
+                                <div className="w-16 h-16 rounded-2xl bg-rose-500/10 border border-rose-500/20 flex items-center justify-center text-rose-500 mb-6 mx-auto">
+                                    <Trash2 size={32} />
                                 </div>
-                            )}
 
-                            <div className="grid grid-cols-2 gap-4">
-                                <button
-                                    onClick={() => {
-                                        setIsDeleteModalOpen(false);
-                                        setDeleteError(null);
-                                    }}
-                                    disabled={isDeleting}
-                                    className="py-4 rounded-2xl bg-shark/40 border border-shark hover:bg-shark/60 text-iron font-black text-[10px] uppercase tracking-widest transition-all disabled:opacity-50"
-                                >
-                                    Cancel
-                                </button>
-                                <button
-                                    onClick={handleDeleteTask}
-                                    disabled={isDeleting}
-                                    className="py-4 rounded-2xl bg-rose-500 hover:bg-rose-600 text-white font-black text-[10px] uppercase tracking-widest transition-all shadow-lg shadow-rose-500/25 flex items-center justify-center gap-2 disabled:opacity-50"
-                                >
-                                    {isDeleting ? (
-                                        <>
-                                            <Loader2 size={14} className="animate-spin" />
-                                            Deleting...
-                                        </>
-                                    ) : (
-                                        'Confirm Delete'
-                                    )}
-                                </button>
+                                <h2 className="text-xl font-black text-white text-center uppercase tracking-tight mb-3">Delete Task?</h2>
+                                <p className="text-storm-gray text-center text-sm leading-relaxed mb-8">
+                                    You are about to permanently delete <span className="text-white font-bold">"{task.title}"</span>. This action will remove all messages and attachments associated with this task. This cannot be undone.
+                                </p>
+
+                                {deleteError && (
+                                    <div className="mb-6 p-4 rounded-2xl bg-rose-500/10 border border-rose-500/20 flex items-center gap-3 text-rose-400 text-xs font-bold animate-shake">
+                                        <AlertCircle size={16} />
+                                        {deleteError}
+                                    </div>
+                                )}
+
+                                <div className="grid grid-cols-2 gap-4">
+                                    <button
+                                        onClick={() => {
+                                            setIsDeleteModalOpen(false);
+                                            setDeleteError(null);
+                                        }}
+                                        disabled={isDeleting}
+                                        className="py-4 rounded-2xl bg-shark/40 border border-shark hover:bg-shark/60 text-iron font-black text-[10px] uppercase tracking-widest transition-all disabled:opacity-50"
+                                    >
+                                        Cancel
+                                    </button>
+                                    <button
+                                        onClick={handleDeleteTask}
+                                        disabled={isDeleting}
+                                        className="py-4 rounded-2xl bg-rose-500 hover:bg-rose-600 text-white font-black text-[10px] uppercase tracking-widest transition-all shadow-lg shadow-rose-500/25 flex items-center justify-center gap-2 disabled:opacity-50"
+                                    >
+                                        {isDeleting ? (
+                                            <>
+                                                <Loader2 size={14} className="animate-spin" />
+                                                Deleting...
+                                            </>
+                                        ) : (
+                                            'Confirm Delete'
+                                        )}
+                                    </button>
+                                </div>
                             </div>
                         </div>
                     </div>
-                </div>
-            )}
+                )
+            }
+
+            <FilePreviewModal
+                isOpen={isPreviewOpen}
+                onClose={() => { setIsPreviewOpen(false); setPreviewFile(null); }}
+                file={previewFile}
+            />
         </>
     );
 }

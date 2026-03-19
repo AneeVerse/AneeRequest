@@ -342,16 +342,6 @@ export default function TeamClient({ initialMembers, initialCounts }: TeamClient
 
     const filtersElement = (
         <div className="flex items-center gap-2 sm:gap-3 w-full sm:w-auto">
-            <div className="relative w-full sm:w-64">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-santas-gray" size={14} />
-                <input
-                    type="text"
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    placeholder="Search team..."
-                    className="w-full bg-black/40 border border-shark/50 rounded-xl py-2 pl-9 pr-4 text-[12px] text-iron placeholder:text-storm-gray focus:outline-none focus:border-[#279da6]/40 transition-all font-bold uppercase tracking-tight"
-                />
-            </div>
             <div className="relative">
                 <button
                     onClick={() => setIsFilterOpen(!isFilterOpen)}
@@ -633,7 +623,7 @@ export default function TeamClient({ initialMembers, initialCounts }: TeamClient
                                 {/* Mobile View: Stacked Cards */}
                                 <div className="sm:hidden flex flex-col divide-y divide-shark/60">
                                     {sortedMembers.length === 0 ? (
-                                        <div className="px-6 py-20 text-center text-storm-gray uppercase text-[10px] font-black tracking-widest opacity-40">
+                                        <div className="px-6 py-20 text-center text-storm-gray uppercase text-[12px] font-black tracking-widest opacity-40">
                                             No team members found matching your criteria.
                                         </div>
                                     ) : (
@@ -642,7 +632,7 @@ export default function TeamClient({ initialMembers, initialCounts }: TeamClient
                                                 {/* Card Header: Avatar & Member Info */}
                                                 <div className="flex items-start gap-3">
                                                     <div
-                                                        className="w-12 h-12 rounded-full bg-shark flex items-center justify-center text-[12px] font-black text-white overflow-hidden border border-white/5 bg-gradient-to-br from-[#279da6]/20 to-transparent shrink-0 cursor-pointer"
+                                                        className="w-[46px] h-[46px] rounded-full bg-shark flex items-center justify-center text-[12px] font-black text-white overflow-hidden border border-white/5 bg-gradient-to-br from-[#279da6]/20 to-transparent shrink-0 cursor-pointer"
                                                         onClick={() => {
                                                             if (member.profile_id) {
                                                                 impersonate({
@@ -735,7 +725,7 @@ export default function TeamClient({ initialMembers, initialCounts }: TeamClient
                                                             <MessageSquare size={14} className="text-[#279da6]" />
                                                             <div className="flex flex-col">
                                                                 <span className="text-[12px] font-black text-white leading-none">{member.request_count || 0}</span>
-                                                                <span className="text-[8px] font-black text-storm-gray uppercase tracking-widest">Requests</span>
+                                                                <span className="text-[12px] font-black text-storm-gray uppercase tracking-widest">Requests</span>
                                                             </div>
                                                         </div>
 
@@ -760,7 +750,7 @@ export default function TeamClient({ initialMembers, initialCounts }: TeamClient
                                                             <CheckSquare size={14} className="text-amber-400" />
                                                             <div className="flex flex-col">
                                                                 <span className="text-[12px] font-black text-white leading-none">{member.task_count || 0}</span>
-                                                                <span className="text-[8px] font-black text-storm-gray uppercase tracking-widest">Tasks</span>
+                                                                <span className="text-[12px] font-black text-storm-gray uppercase tracking-widest">Tasks</span>
                                                             </div>
                                                         </div>
                                                     </div>
@@ -774,7 +764,7 @@ export default function TeamClient({ initialMembers, initialCounts }: TeamClient
                                 <div className="hidden sm:block overflow-x-auto custom-scrollbar">
                                     <table className="w-full text-left border-collapse">
                                         <thead>
-                                            <tr className="border-b border-shark text-storm-gray text-xs uppercase font-black tracking-widest bg-[#17171a]">
+                                            <tr className="border-b border-shark text-storm-gray text-[12px] uppercase font-black tracking-widest bg-[#17171a]">
                                                 <th className="px-5 py-3 w-10 sm:w-16 border-r border-shark/60 text-center text-storm-gray font-black">#</th>
                                                 {[
                                                     { label: 'Name', key: 'name', width: 'min-w-[200px]' },
@@ -833,25 +823,25 @@ export default function TeamClient({ initialMembers, initialCounts }: TeamClient
                                                                 onClick={(e) => e.stopPropagation()}
                                                             >
                                                                 <div className="mb-2 border-b border-shark/40 pb-2">
-                                                                    <div className="text-[9px] font-black text-storm-gray uppercase mb-1 px-1 tracking-widest">Sort</div>
+                                                                    <div className="text-[12px] font-black text-storm-gray uppercase mb-1 px-1 tracking-widest">Sort</div>
                                                                     <div className="flex flex-col gap-0.5">
                                                                         <button
                                                                             onClick={() => { handleSort(header.key); setActiveFilterHeader(null); }}
-                                                                            className={`w-full text-left px-2 py-1.5 rounded-lg text-[10px] uppercase font-black tracking-wider flex items-center justify-between group transition-all ${sortConfig.key === header.key && sortConfig.direction === 'asc' ? 'bg-[#279da6]/10 text-[#279da6]' : 'text-storm-gray hover:bg-shark/40 hover:text-white'}`}
+                                                                            className={`w-full text-left px-2 py-1.5 rounded-lg text-[12px] uppercase font-black tracking-wider flex items-center justify-between group transition-all ${sortConfig.key === header.key && sortConfig.direction === 'asc' ? 'bg-[#279da6]/10 text-[#279da6]' : 'text-storm-gray hover:bg-shark/40 hover:text-white'}`}
                                                                         >
                                                                             <div className="flex items-center gap-2">
                                                                                 <SortAsc size={12} className={sortConfig.key === header.key && sortConfig.direction === 'asc' ? 'text-[#279da6]' : 'text-storm-gray'} />
-                                                                                Ascending
+                                                                                <span className="text-[12px]">Ascending</span>
                                                                             </div>
                                                                             {sortConfig.key === header.key && sortConfig.direction === 'asc' && <Check size={10} />}
                                                                         </button>
                                                                         <button
                                                                             onClick={() => { handleSort(header.key); setActiveFilterHeader(null); }}
-                                                                            className={`w-full text-left px-2 py-1.5 rounded-lg text-[10px] uppercase font-black tracking-wider flex items-center justify-between group transition-all ${sortConfig.key === header.key && sortConfig.direction === 'desc' ? 'bg-[#279da6]/10 text-[#279da6]' : 'text-storm-gray hover:bg-shark/40 hover:text-white'}`}
+                                                                            className={`w-full text-left px-2 py-1.5 rounded-lg text-[12px] uppercase font-black tracking-wider flex items-center justify-between group transition-all ${sortConfig.key === header.key && sortConfig.direction === 'desc' ? 'bg-[#279da6]/10 text-[#279da6]' : 'text-storm-gray hover:bg-shark/40 hover:text-white'}`}
                                                                         >
                                                                             <div className="flex items-center gap-2">
                                                                                 <SortDesc size={12} className={sortConfig.key === header.key && sortConfig.direction === 'desc' ? 'text-[#279da6]' : 'text-storm-gray'} />
-                                                                                Descending
+                                                                                <span className="text-[12px]">Descending</span>
                                                                             </div>
                                                                             {sortConfig.key === header.key && sortConfig.direction === 'desc' && <Check size={10} />}
                                                                         </button>
@@ -865,7 +855,7 @@ export default function TeamClient({ initialMembers, initialCounts }: TeamClient
                                                                             type="text"
                                                                             value={(filters as any)[header.key] || ''}
                                                                             onChange={(e) => setFilters(f => ({ ...f, [header.key]: e.target.value }))}
-                                                                            className="w-full bg-[#09090B] border border-shark/50 rounded-lg px-8 py-1.5 text-[10px] font-bold text-iron focus:outline-none focus:border-[#279da6]/40 transition-all font-bold"
+                                                                            className="w-full bg-[#09090B] border border-shark/50 rounded-lg px-8 py-1.5 text-[12px] font-bold text-iron focus:outline-none focus:border-[#279da6]/40 transition-all font-bold"
                                                                             placeholder={`Filter...`}
                                                                             autoFocus
                                                                         />
@@ -890,13 +880,13 @@ export default function TeamClient({ initialMembers, initialCounts }: TeamClient
                                         <tbody className="divide-y divide-shark/60">
                                             {sortedMembers.length === 0 ? (
                                                 <tr>
-                                                    <td colSpan={8} className="px-6 py-20 text-center text-storm-gray uppercase text-[10px] font-black tracking-widest opacity-40">
+                                                    <td colSpan={8} className="px-6 py-20 text-center text-storm-gray uppercase text-[12px] font-black tracking-widest opacity-40">
                                                         No team members found matching your criteria.
                                                     </td>
                                                 </tr>
                                             ) : (
                                                 sortedMembers.map((member: TeamMember, index: number) => (
-                                                    <tr key={member.id} className="hover:bg-shark/10 transition-colors group text-sm">
+                                                    <tr key={member.id} className="hover:bg-shark/10 transition-colors group text-[12px]">
                                                         <td className="px-5 py-3 border-r border-shark/60 text-center font-black text-storm-gray">
                                                             {(index + 1).toString().padStart(2, '0')}
                                                         </td>
@@ -916,7 +906,7 @@ export default function TeamClient({ initialMembers, initialCounts }: TeamClient
                                                                     }
                                                                 }}
                                                             >
-                                                                <div className="w-12 h-12 rounded-full bg-shark flex items-center justify-center text-[12px] font-black text-white overflow-hidden border border-white/5 group-hover/name:ring-2 ring-[#279da6]/30 transition-all shrink-0 bg-gradient-to-br from-[#279da6]/10 to-transparent">
+                                                                <div className="w-[46px] h-[46px] rounded-full bg-shark flex items-center justify-center text-[12px] font-black text-white overflow-hidden border border-white/5 group-hover/name:ring-2 ring-[#279da6]/30 transition-all shrink-0 bg-gradient-to-br from-[#279da6]/10 to-transparent">
                                                                     {member.avatar_url ? (
                                                                         <img src={member.avatar_url} alt={member.name} className="w-full h-full object-cover" />
                                                                     ) : (
@@ -925,7 +915,7 @@ export default function TeamClient({ initialMembers, initialCounts }: TeamClient
                                                                 </div>
                                                                 <div className="flex flex-col min-w-0">
                                                                     <span className="font-black text-iron group-hover/name:text-[#279da6] transition-colors truncate text-[12px] leading-tight">{member.name}</span>
-                                                                    <span className="text-[9px] text-[#279da6] font-black tracking-widest opacity-0 group-hover/name:opacity-60 transition-opacity">CLICK TO IMPERSONATE</span>
+                                                                    <span className="text-[12px] text-[#279da6] font-black tracking-widest opacity-0 group-hover/name:opacity-60 transition-opacity">CLICK TO IMPERSONATE</span>
                                                                 </div>
                                                             </div>
                                                         </td>
@@ -948,7 +938,7 @@ export default function TeamClient({ initialMembers, initialCounts }: TeamClient
                                                                 }}
                                                             >
                                                                 <MessageSquare size={14} className="text-[#279da6] group-hover/stat:scale-110 transition-transform" />
-                                                                <span className="text-iron font-black text-xs">{member.request_count || 0}</span>
+                                                                <span className="text-iron font-black text-[12px]">{member.request_count || 0}</span>
                                                             </div>
                                                         </td>
                                                         <td className="px-4 py-3 border-r border-shark/60 hover:bg-white/5 transition-colors text-center">
@@ -969,21 +959,21 @@ export default function TeamClient({ initialMembers, initialCounts }: TeamClient
                                                                 }}
                                                             >
                                                                 <CheckSquare size={14} className="text-amber-400 group-hover/stat:scale-110 transition-transform" />
-                                                                <span className="text-iron font-black text-xs">{member.task_count || 0}</span>
+                                                                <span className="text-iron font-black text-[12px]">{member.task_count || 0}</span>
                                                             </div>
                                                         </td>
                                                         <td className="px-6 py-3 border-r border-shark/60 text-storm-gray font-black whitespace-nowrap text-[12px] hover:bg-white/5 transition-colors uppercase text-center">
                                                             {member.last_login ? (
                                                                 <div className="flex flex-col">
                                                                     <span className="text-iron font-black">{formatDate(member.last_login)}</span>
-                                                                    <span className="opacity-40 font-bold scale-90">{formatTime(member.last_login)}</span>
+                                                                    <span className="opacity-40 font-bold">{formatTime(member.last_login)}</span>
                                                                 </div>
                                                             ) : <span className="opacity-40 tracking-widest">NEVER</span>}
                                                         </td>
                                                         <td className="px-6 py-3 border-r border-shark/60 text-storm-gray font-black whitespace-nowrap text-[12px] hover:bg-white/5 transition-colors uppercase text-center">
                                                             <div className="flex flex-col">
                                                                 <span className="text-iron font-black">{formatDate(member.created_at)}</span>
-                                                                <span className="opacity-40 font-bold scale-90">{formatTime(member.created_at)}</span>
+                                                                <span className="opacity-40 font-bold">{formatTime(member.created_at)}</span>
                                                             </div>
                                                         </td>
                                                         <td className="px-3 py-3 text-center relative hover:bg-white/5 transition-colors">

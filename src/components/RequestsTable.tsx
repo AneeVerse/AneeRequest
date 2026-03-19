@@ -24,7 +24,7 @@ import {
 } from 'lucide-react';
 import { RequestItem, Profile } from '@/lib/data/requests';
 import { type TeamMember } from '@/lib/data/team';
-import { formatDate, formatTime } from '@/lib/dateUtils';
+import { formatDate, formatTime, getAutomaticPriority } from '@/lib/dateUtils';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import CustomDropdown from '@/components/CustomDropdown';
@@ -126,10 +126,31 @@ export default function RequestsTable({
     });
 
     const sortedRequests = [...filteredRequests].sort((a, b) => {
-        if (!sortConfig.key || !sortConfig.direction) return 0;
+        if (!sortConfig.key) {
+            // Default "Smart Sort": Automatic Priority Rank -> Due Date -> Created At
+            const pA = getAutomaticPriority(a.due_date).rank;
+            const pB = getAutomaticPriority(b.due_date).rank;
+            if (pA !== pB) return pB - pA;
 
-        let aValue: any = (a as any)[sortConfig.key];
-        let bValue: any = (b as any)[sortConfig.key];
+            const dA = a.due_date ? new Date(a.due_date).getTime() : Infinity;
+            const dB = b.due_date ? new Date(b.due_date).getTime() : Infinity;
+            if (dA !== dB) return dA - dB;
+
+            return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+        }
+
+        if (!sortConfig.direction) return 0;
+
+        let aValue: any;
+        let bValue: any;
+
+        if (sortConfig.key === 'priority') {
+            aValue = getAutomaticPriority(a.due_date).rank;
+            bValue = getAutomaticPriority(b.due_date).rank;
+        } else {
+            aValue = (a as any)[sortConfig.key];
+            bValue = (b as any)[sortConfig.key];
+        }
 
         if (typeof aValue === 'string') aValue = aValue.toLowerCase();
         if (typeof bValue === 'string') bValue = bValue.toLowerCase();
@@ -182,7 +203,7 @@ export default function RequestsTable({
                                     </div>
                                     <div
                                         className="flex-1 cursor-pointer group"
-                                        onClick={() => router.push(`/requests/${item.slug || item.id}`)}
+                                        onClick={() => router.push(`/requests/${item.slug || item.id}?tab=tasks`)}
                                     >
                                         <h3 className="text-[12px] font-black text-iron uppercase leading-tight group-hover:text-[#279da6] transition-colors line-clamp-2">
                                             {item.title}
@@ -217,18 +238,10 @@ export default function RequestsTable({
                                     </div>
                                     <div className="space-y-1">
                                         <label className="text-[12px] font-black text-storm-gray uppercase tracking-widest block opacity-50">Priority</label>
-                                        <CustomDropdown
-                                            value={item.priority}
-                                            onChange={(val) => handleUpdate(item.id, 'priority', val)}
-                                            options={[
-                                                { label: 'LOW', value: 'Low', icon: <Flag size={10} className="text-storm-gray" />, color: 'text-storm-gray' },
-                                                { label: 'MEDIUM', value: 'Medium', icon: <Flag size={10} className="text-blue-400" />, color: 'text-blue-400' },
-                                                { label: 'HIGH', value: 'High', icon: <Flag size={10} className="text-amber-500" />, color: 'text-amber-500' },
-                                                { label: 'CRITICAL', value: 'Critical', icon: <Flag size={10} className="text-rose-500" />, color: 'text-rose-500' },
-                                            ]}
-                                            variant="minimal"
-                                            className="w-full"
-                                        />
+                                        <div className={`flex items-center gap-1.5 h-9 px-3 rounded-lg bg-shark/20 border border-shark/40 font-black text-[10px] tracking-wider ${getAutomaticPriority(item.due_date).colorClass}`}>
+                                            <Flag size={10} className="shrink-0" />
+                                            <span>{getAutomaticPriority(item.due_date).label}</span>
+                                        </div>
                                     </div>
                                     <div className="space-y-1">
                                         <label className="text-[12px] font-black text-storm-gray uppercase tracking-widest block opacity-50">Assigned To</label>
@@ -241,7 +254,7 @@ export default function RequestsTable({
                                                     label: (m.full_name || (m as any).name)?.toUpperCase(),
                                                     value: m.profile_id || m.id,
                                                     icon: m.avatar_url ? (
-                                                        <div className="w-[38px] h-[38px] rounded-full overflow-hidden shrink-0 border border-shark/60">
+                                                        <div className="w-[46px] h-[46px] rounded-full overflow-hidden shrink-0 border border-shark/60">
                                                             <img src={m.avatar_url} alt={m.full_name} className="w-full h-full object-cover" />
                                                         </div>
                                                     ) : <User size={20} className="text-[#279da6]" />
@@ -447,7 +460,7 @@ export default function RequestsTable({
                                         </td>
                                         <td
                                             className="px-6 py-3 font-black text-iron border-r border-shark/60 group-hover:text-[#279da6] transition-colors cursor-pointer hover:bg-white/5"
-                                            onClick={() => router.push(`/requests/${item.slug || item.id}`)}
+                                            onClick={() => router.push(`/requests/${item.slug || item.id}?tab=tasks`)}
                                         >
                                             <div className="line-clamp-2 leading-tight uppercase tracking-tight font-black text-[12px]">
                                                 {item.title}
@@ -456,7 +469,7 @@ export default function RequestsTable({
                                         {showClientColumn && (
                                             <td className="px-6 py-3 border-r border-shark/60 hover:bg-white/5 transition-colors">
                                                 <div className="flex items-center gap-3">
-                                                    <div className="w-10 h-10 rounded-full flex items-center justify-center bg-shark/40 border border-shark/60 text-[12px] font-black text-[#279da6] shrink-0 overflow-hidden">
+                                                    <div className="w-[46px] h-[46px] rounded-full flex items-center justify-center bg-shark/40 border border-shark/60 text-[12px] font-black text-[#279da6] shrink-0 overflow-hidden">
                                                         {(item.client as any)?.avatar_url ? (
                                                             <img
                                                                 src={(item.client as any).avatar_url}
@@ -510,7 +523,7 @@ export default function RequestsTable({
                                                         label: (tm.name || tm.full_name)?.toUpperCase(),
                                                         value: tm.profile_id,
                                                         icon: tm.avatar_url ? (
-                                                            <div className="w-[38px] h-[38px] rounded-full overflow-hidden shrink-0 border border-shark/60">
+                                                            <div className="w-[46px] h-[46px] rounded-full overflow-hidden shrink-0 border border-shark/60">
                                                                 <img src={tm.avatar_url} alt={tm.name} className="w-full h-full object-cover" />
                                                             </div>
                                                         ) : <User size={20} className="text-[#279da6]" />
@@ -521,18 +534,10 @@ export default function RequestsTable({
                                             />
                                         </td>
                                         <td className="px-3 py-3 border-r border-shark/60 text-storm-gray font-black whitespace-nowrap text-[12px] uppercase text-center hover:bg-white/5 transition-colors leading-tight">
-                                            <CustomDropdown
-                                                value={item.priority}
-                                                onChange={(val) => handleUpdate(item.id, 'priority', val)}
-                                                options={[
-                                                    { label: 'LOW', value: 'Low', icon: <Flag size={10} className="text-storm-gray" />, color: 'text-storm-gray' },
-                                                    { label: 'MEDIUM', value: 'Medium', icon: <Flag size={10} className="text-blue-400" />, color: 'text-blue-400' },
-                                                    { label: 'HIGH', value: 'High', icon: <Flag size={10} className="text-amber-500" />, color: 'text-amber-500' },
-                                                    { label: 'CRITICAL', value: 'Critical', icon: <Flag size={10} className="text-rose-500" />, color: 'text-rose-500' },
-                                                ]}
-                                                variant="minimal"
-                                                className="w-full"
-                                            />
+                                            <div className={`flex items-center justify-center gap-1.5 font-black tracking-widest ${getAutomaticPriority(item.due_date).colorClass}`}>
+                                                <Flag size={10} className="shrink-0" />
+                                                <span>{getAutomaticPriority(item.due_date).label}</span>
+                                            </div>
                                         </td>
                                         <td className="px-5 py-3 text-storm-gray border-r border-shark/60 whitespace-nowrap hover:bg-white/5 transition-colors">
                                             <CustomDatePicker

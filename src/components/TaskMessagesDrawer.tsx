@@ -187,7 +187,7 @@ export default function TaskMessagesDrawer({ isOpen, onClose, taskId, taskTitle 
                             {taskTitle}
                         </h2>
                         <div className="flex items-center gap-1.5 mt-1">
-                            <div className="w-1.5 h-1.5 rounded-full bg-[#279da6] animate-pulse" />
+                            <div className="w-1.5 h-1.5 rounded-full bg-[#279da6]" />
                             <span className="text-[10px] font-bold text-storm-gray uppercase tracking-tighter">Live Connection</span>
                         </div>
                     </div>

@@ -74,7 +74,7 @@ const Header: React.FC<HeaderProps> = ({
                         className="p-1.5 text-santas-gray hover:text-white transition-all cursor-pointer lg:hidden shrink-0 active:scale-95 bg-shark/20 rounded-lg border border-white/5"
                         title="Open menu"
                     >
-                        <Menu size={18} />
+                        <Menu size={16} />
                     </button>
 
                     {/* Desktop back button */}
@@ -83,24 +83,24 @@ const Header: React.FC<HeaderProps> = ({
                         className="p-1 text-santas-gray hover:text-white transition-colors cursor-pointer hidden lg:block"
                         title="Go back"
                     >
-                        <ChevronLeft size={20} />
+                        <ChevronLeft size={16} />
                     </button>
 
-                    {/* Section Label */}
-                    <div className="flex items-center gap-2 shrink-0 overflow-hidden ml-1 sm:ml-0">
-                        {labelIcon ? (
-                            <div className="hidden sm:flex items-center">
-                                {labelIcon}
-                            </div>
-                        ) : (
-                            <ListFilter size={16} className="text-[#279da6] hidden sm:block" />
-                        )}
-                        <span className={`text-[12px] sm:text-xs font-black text-white truncate uppercase tracking-tight ${isCreating ? 'max-w-[80px]' : 'max-w-[120px]'} sm:max-w-[200px]`}>{label}</span>
-                    </div>
 
-                    <div className="hidden lg:block">
-                        {children}
-                    </div>
+                    {/* DESKTOP Label Icon (Always first if exists) */}
+                    {labelIcon && (
+                        <div className="hidden lg:flex items-center ml-2 shrink-0">
+                            {labelIcon}
+                        </div>
+                    )}
+
+                    {/* Section Label (Text only) - Positioned between icon and tabs */}
+                    {label && (
+                        <div className="flex items-center gap-2 shrink-0 overflow-hidden ml-1 sm:ml-0 lg:ml-2">
+                            {!labelIcon && <ListFilter size={16} className="text-[#279da6] hidden sm:block" />}
+                            <span className={`text-[12px] sm:text-[12px] font-black text-white truncate uppercase tracking-tight ${isCreating ? 'max-w-[80px]' : 'max-w-[120px]'} sm:max-w-[200px]`}>{label}</span>
+                        </div>
+                    )}
 
                     {/* DESKTOP Page Switcher (Hidden on Mobile Row 1) */}
                     {pageSwitcher && (
@@ -115,7 +115,7 @@ const Header: React.FC<HeaderProps> = ({
                                 <Link
                                     key={page.path}
                                     href={page.path}
-                                    className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all whitespace-nowrap cursor-pointer ${activePath === page.path
+                                    className={`px-4 py-1.5 rounded-lg text-[12px] font-bold transition-all whitespace-nowrap cursor-pointer ${activePath === page.path
                                         ? 'bg-shark/80 text-[#279da6] shadow-lg'
                                         : 'text-santas-gray hover:text-iron hover:bg-white/5'
                                         }`}
@@ -137,12 +137,12 @@ const Header: React.FC<HeaderProps> = ({
                                     <button
                                         key={tabLabel}
                                         onClick={() => setActiveTab?.(tabLabel)}
-                                        className={`relative px-4 py-1.5 rounded-lg text-[12px] font-bold transition-all whitespace-nowrap cursor-pointer tracking-tight flex items-center gap-1.5 shrink-0 ${activeTab === tabLabel
+                                        className={`relative px-4 py-1.5 rounded-lg text-[12px] font-bold transition-all whitespace-nowrap cursor-pointer tracking-tight flex items-center gap-1.5 shrink-0 uppercase ${activeTab === tabLabel
                                             ? 'bg-shark/80 text-[#279da6] shadow-lg'
                                             : 'text-storm-gray hover:text-iron hover:bg-white/5'
                                             }`}
                                     >
-                                        {icon}
+                                        {icon && React.isValidElement(icon) ? React.cloneElement(icon as React.ReactElement<any>, { size: 16 }) : icon}
                                         {tabLabel}
                                         {count !== undefined && count > 0 && (
                                             <span className="absolute -top-3 -right-0.5 min-w-[17px] h-[17px] flex items-center justify-center rounded-full text-[12px] font-black px-1 border border-[#09090B] shadow-md bg-[#279da6] text-black z-[20]">
@@ -154,6 +154,11 @@ const Header: React.FC<HeaderProps> = ({
                             })}
                         </div>
                     )}
+
+
+                    <div className="hidden lg:block">
+                        {children}
+                    </div>
 
                     <div className="hidden sm:block">
                         <ImpersonationWarning />
@@ -167,23 +172,23 @@ const Header: React.FC<HeaderProps> = ({
                             <button
                                 onClick={onConfirm}
                                 disabled={isSubmitting}
-                                className="flex items-center gap-1.5 px-2.5 py-1.5 bg-[#279da6] text-white rounded-lg hover:bg-[#279da6]/90 transition-all font-bold text-xs shadow-lg shadow-[#279da6]/20 active:scale-95 disabled:opacity-30"
+                                className="flex items-center gap-1.5 px-2.5 py-1.5 bg-[#279da6] text-white rounded-lg hover:bg-[#279da6]/90 transition-all font-bold text-[12px] shadow-lg shadow-[#279da6]/20 active:scale-95 disabled:opacity-30 uppercase"
                             >
-                                {isSubmitting ? <Loader2 size={14} className="animate-spin" /> : <Check size={14} />}
+                                {isSubmitting ? <Loader2 size={16} className="animate-spin" /> : <Check size={16} />}
                                 <span className="hidden sm:inline">{confirmLabel}</span>
                             </button>
                             <button
                                 onClick={onCancel}
                                 className="p-1.5 bg-white/5 text-storm-gray rounded-lg hover:text-white hover:bg-white/10 transition-all active:scale-95"
                             >
-                                <X size={14} />
+                                <X size={16} />
                             </button>
                         </div>
                     ) : (
                         onCreate && (
                             <button
                                 onClick={onCreate}
-                                className="flex items-center justify-center w-8 h-8 sm:w-auto sm:px-2.5 sm:py-1.5 text-xs font-bold text-santas-gray hover:text-[#279da6] bg-shark/20 border border-shark/50 rounded-lg transition-all active:scale-95 group/new"
+                                className="flex items-center justify-center w-8 h-8 sm:w-auto sm:px-2.5 sm:py-1.5 text-[12px] font-bold text-santas-gray hover:text-[#279da6] bg-shark/20 border border-shark/50 rounded-lg transition-all active:scale-95 group/new"
                             >
                                 <Plus size={16} className="group-hover/new:rotate-90 transition-transform" />
                                 <span className="hidden sm:inline ml-1.5 uppercase">new</span>
@@ -194,7 +199,7 @@ const Header: React.FC<HeaderProps> = ({
                     {!isCreating && onEdit && (
                         <button
                             onClick={onEdit}
-                            className="flex items-center justify-center w-8 h-8 sm:w-auto sm:px-2.5 sm:py-1.5 text-xs font-bold text-santas-gray hover:text-white transition-colors group cursor-pointer bg-shark/20 border border-shark/50 rounded-lg lg:bg-transparent lg:border-none"
+                            className="flex items-center justify-center w-8 h-8 sm:w-auto sm:px-2.5 sm:py-1.5 text-[12px] font-bold text-santas-gray hover:text-white transition-colors group cursor-pointer bg-shark/20 border border-shark/50 rounded-lg lg:bg-transparent lg:border-none"
                         >
                             <Settings size={16} className="group-hover:text-white" />
                             <span className="hidden sm:inline ml-1.5 uppercase">edit</span>
@@ -230,7 +235,7 @@ const Header: React.FC<HeaderProps> = ({
                             <Link
                                 key={`mob-sw-${page.path}`}
                                 href={page.path}
-                                className={`flex-1 text-center py-1.5 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all whitespace-nowrap cursor-pointer ${activePath === page.path
+                                className={`flex-1 text-center py-1.5 rounded-lg text-[12px] font-black uppercase tracking-wider transition-all whitespace-nowrap cursor-pointer ${activePath === page.path
                                     ? 'bg-[#279da6] text-black shadow-lg'
                                     : 'text-storm-gray hover:text-iron'
                                     }`}
@@ -253,12 +258,12 @@ const Header: React.FC<HeaderProps> = ({
                             <button
                                 key={`mob-tab-${tabLabel}`}
                                 onClick={() => setActiveTab?.(tabLabel)}
-                                className={`relative px-2.5 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-wider transition-all whitespace-nowrap cursor-pointer flex items-center gap-1.5 shrink-0 ${activeTab === tabLabel
+                                className={`relative px-2.5 py-1.5 rounded-lg text-[12px] font-black uppercase tracking-wider transition-all whitespace-nowrap cursor-pointer flex items-center gap-1.5 shrink-0 ${activeTab === tabLabel
                                     ? 'bg-[#279da6] text-black shadow-[0_0_15px_rgba(39,157,166,0.2)]'
                                     : 'bg-shark/20 text-storm-gray border border-white/5 active:bg-shark/40'
                                     }`}
                             >
-                                {React.isValidElement(icon) && React.cloneElement(icon as React.ReactElement<any>, { size: 9 })}
+                                {React.isValidElement(icon) && React.cloneElement(icon as React.ReactElement<any>, { size: 16 })}
                                 {tabLabel}
                                 {count !== undefined && count > 0 && (
                                     <span className={`min-w-[14px] h-[14px] flex items-center justify-center rounded-full text-[8px] font-black px-1 ${activeTab === tabLabel ? 'bg-black text-[#279da6]' : 'bg-[#279da6] text-black'}`}>

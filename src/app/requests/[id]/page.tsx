@@ -51,6 +51,7 @@ import ImpersonationWarning from '@/components/ImpersonationWarning';
 import CustomDropdown from '@/components/CustomDropdown';
 import FilePreviewModal from '@/components/FilePreviewModal';
 import TasksTable from '@/components/TasksTable';
+import CustomDatePicker from '@/components/CustomDatePicker';
 import { TaskItem } from '@/lib/data/tasks';
 import { formatDate } from '@/lib/dateUtils';
 
@@ -67,6 +68,7 @@ interface Message {
         role: string;
         avatar_url?: string | null;
     };
+    is_edited?: boolean;
 }
 
 interface RequestDetails {
@@ -82,10 +84,12 @@ interface RequestDetails {
         full_name: string;
         email: string;
         organization?: string;
+        avatar_url?: string | null;
     } | null;
     assignee: {
         id: string;
         full_name: string;
+        avatar_url?: string | null;
     } | null;
     service: string | null;
     start_date: string | null;
@@ -113,14 +117,6 @@ interface TeamMember {
     avatar_url: string | null;
 }
 
-interface Assignment {
-    id: string;
-    request_id: string;
-    team_member_id: string;
-    role: 'admin' | 'editor' | 'viewer';
-    assigned_at: string;
-    team_member: TeamMember;
-}
 
 interface DriveFile {
     id: string;
@@ -154,8 +150,8 @@ export default function RequestDetailsPage() {
     const [isMobileOpen, setIsMobileOpen] = useState(false);
     const [isMobileSummaryOpen, setIsMobileSummaryOpen] = useState(false);
     const [request, setRequest] = useState<RequestDetails | null>(null);
-    const initialTab = (searchParams.get('tab') as 'chat' | 'tasks' | 'files') || 'chat';
-    const [activeTab, setActiveTabInternal] = useState<'chat' | 'tasks' | 'files'>(initialTab);
+    const initialTab = (searchParams.get('tab') as 'request' | 'tasks' | 'files') || 'tasks';
+    const [activeTab, setActiveTabInternal] = useState<'request' | 'tasks' | 'files'>(initialTab);
     const [messages, setMessages] = useState<Message[]>([]);
     const [newMessage, setNewMessage] = useState('');
     const [profiles, setProfiles] = useState<Profile[]>([]);
@@ -165,15 +161,13 @@ export default function RequestDetailsPage() {
     const [isUploading, setIsUploading] = useState(false);
     const [newTag, setNewTag] = useState('');
     const [isAddingTag, setIsAddingTag] = useState(false);
-    const [assignments, setAssignments] = useState<Assignment[]>([]);
     const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
-    const [isAssignmentModalOpen, setIsAssignmentModalOpen] = useState(false);
-    const [selectedRole, setSelectedRole] = useState<'admin' | 'editor' | 'viewer'>('viewer');
-    const [isAssigning, setIsAssigning] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
     const dateInputRef = useRef<HTMLInputElement>(null);
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const editorRef = useRef<HTMLDivElement>(null);
+    const [editingMessageId, setEditingMessageId] = useState<string | null>(null);
+    const [editedMessageContent, setEditedMessageContent] = useState('');
 
 
 
@@ -189,15 +183,14 @@ export default function RequestDetailsPage() {
     const [isDeleting, setIsDeleting] = useState(false);
     const [deleteError, setDeleteError] = useState<string | null>(null);
 
-    // Tabs state
     useEffect(() => {
-        const tab = searchParams.get('tab') as 'chat' | 'tasks' | 'files';
+        const tab = searchParams.get('tab') as 'request' | 'tasks' | 'files';
         if (tab && tab !== activeTab) {
             setActiveTabInternal(tab);
         }
     }, [searchParams]);
 
-    const setActiveTab = (tab: 'chat' | 'tasks' | 'files') => {
+    const setActiveTab = (tab: 'request' | 'tasks' | 'files') => {
         setActiveTabInternal(tab);
         const params = new URLSearchParams(searchParams.toString());
         params.set('tab', tab);
@@ -261,7 +254,7 @@ export default function RequestDetailsPage() {
                     await Promise.all([
                         fetchRequestDetails(),
                         fetchMessages(),
-                        fetchAssignments(),
+                        fetchLinkedTasks(),
                         fetchTeamMembers(),
                         fetchProfiles()
                     ]);
@@ -360,17 +353,6 @@ export default function RequestDetailsPage() {
         }
     };
 
-    const fetchAssignments = async () => {
-        try {
-            const response = await fetch(`/api/requests/${id}/assignments`);
-            if (response.ok) {
-                const data = await response.json();
-                setAssignments(data);
-            }
-        } catch (error) {
-            console.error('Error fetching assignments:', error);
-        }
-    };
 
     const fetchTeamMembers = async () => {
         try {
@@ -457,6 +439,55 @@ export default function RequestDetailsPage() {
         }
     };
 
+
+    const handleEditMessage = async (messageId: string, content: string) => {
+        if (!content.trim()) return;
+
+        try {
+            const response = await fetch(`/api/requests/${id}/messages`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    id: messageId,
+                    message: content
+                })
+            });
+
+            if (response.ok) {
+                const updatedMsg = await response.json();
+                setMessages(prev => prev.map(m => m.id === messageId ? updatedMsg : m));
+                setEditingMessageId(null);
+                setEditedMessageContent('');
+            } else {
+                const err = await response.json();
+                alert(`Update failed: ${err.error || 'Unknown error'}`);
+            }
+        } catch (error) {
+            console.error('Update error:', error);
+            alert("Error updating message");
+        }
+    };
+
+    const handleDeleteMessage = async (messageId: string) => {
+        if (!confirm('Are you sure you want to delete this message?')) return;
+
+        try {
+            const response = await fetch(`/api/requests/${id}/messages?messageId=${messageId}`, {
+                method: 'DELETE'
+            });
+
+            if (response.ok) {
+                setMessages(prev => prev.filter(m => m.id !== messageId));
+            } else {
+                const err = await response.json();
+                alert(`Delete failed: ${err.error || 'Unknown error'}`);
+            }
+        } catch (error) {
+            console.error('Delete error:', error);
+            alert("Error deleting message");
+        }
+    };
+
     const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (!file || !displayProfile) return;
@@ -527,6 +558,10 @@ export default function RequestDetailsPage() {
         }
     };
 
+    const handleUpdateDueDate = (date: string | null) => {
+        handleUpdateField('due_date', date);
+    };
+
     const handleAddTag = async () => {
         if (!request || !newTag.trim()) return;
         const updatedTags = [...(request.tags || []), newTag.trim()];
@@ -541,60 +576,6 @@ export default function RequestDetailsPage() {
         handleUpdateField('tags', updatedTags);
     };
 
-    const handleAssignTeamMember = async (teamMemberId: string) => {
-        setIsAssigning(true);
-        try {
-            const response = await fetch(`/api/requests/${id}/assignments`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    team_member_id: teamMemberId,
-                    role: selectedRole,
-                    assigned_by: profile?.id
-                })
-            });
-            if (response.ok) {
-                setIsAssignmentModalOpen(false);
-                setSelectedRole('viewer');
-                fetchAssignments();
-            } else {
-                const err = await response.json();
-                alert(`Error: ${err.error}`);
-            }
-        } catch (error) {
-            console.error('Assignment failed:', error);
-        } finally {
-            setIsAssigning(false);
-        }
-    };
-
-    const handleRemoveAssignment = async (assignmentId: string) => {
-        try {
-            const response = await fetch(`/api/requests/${id}/assignments?assignment_id=${assignmentId}`, {
-                method: 'DELETE'
-            });
-            if (response.ok) {
-                fetchAssignments();
-            }
-        } catch (error) {
-            console.error('Remove assignment failed:', error);
-        }
-    };
-
-    const handleUpdateAssignmentRole = async (assignmentId: string, newRole: string) => {
-        try {
-            const response = await fetch(`/api/requests/${id}/assignments`, {
-                method: 'PATCH',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ assignment_id: assignmentId, role: newRole })
-            });
-            if (response.ok) {
-                fetchAssignments();
-            }
-        } catch (error) {
-            console.error('Update role failed:', error);
-        }
-    };
 
     const handleDeleteRequest = async () => {
         if (!request) return;
@@ -620,8 +601,8 @@ export default function RequestDetailsPage() {
         }
     };
 
-    const unassignedTeamMembers = teamMembers.filter(
-        tm => !assignments.some(a => a.team_member_id === tm.id)
+    const involvedMembers = teamMembers.filter(tm =>
+        tm.profile_id && linkedTasks.some(task => task.assigned_to === tm.profile_id)
     );
 
     // Fetch linked tasks for this request
@@ -637,6 +618,30 @@ export default function RequestDetailsPage() {
             console.error('Error fetching linked tasks:', error);
         } finally {
             setIsLoadingTasks(false);
+        }
+    };
+
+    const handleTaskUpdate = async (taskId: string, field: string, value: any) => {
+        try {
+            const response = await fetch(`/api/tasks`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    id: taskId,
+                    [field]: value
+                })
+            });
+
+            if (response.ok) {
+                // Refresh linked tasks to update sidebar in real-time
+                await fetchLinkedTasks();
+                // Also trigger a router refresh for other layout components that might use this data
+                router.refresh();
+            } else {
+                alert(`Failed to update ${field}`);
+            }
+        } catch (error) {
+            console.error(`Error updating task field ${field}:`, error);
         }
     };
 
@@ -799,24 +804,17 @@ export default function RequestDetailsPage() {
                 <Sidebar isCollapsed={isSidebarCollapsed} isMobileOpen={isMobileOpen} onMobileClose={() => setIsMobileOpen(false)} />
 
                 <div className="flex-1 flex flex-col min-w-0 bg-[#09090B] relative">
-                    <div className={`flex-1 flex flex-col min-w-0 bg-[#121214] rounded-t-2xl overflow-hidden border-t border-l border-r mt-6 mr-6 responsive-content-wrapper transition-all duration-500 ${isImpersonating ? 'border-[#22c55e]/60 shadow-[0_0_15px_rgba(34,197,94,0.15),0_0_40px_rgba(34,197,94,0.08),inset_0_0_20px_rgba(34,197,94,0.03)]' : 'border-shark'}`}>
+                    <div className={`flex-1 flex flex-col min-w-0 bg-[#101011] rounded-t-2xl overflow-hidden border-t border-l border-r mt-6 mr-6 responsive-content-wrapper transition-all duration-500 ${isImpersonating ? 'border-[#22c55e]/60 shadow-[0_0_15px_rgba(34,197,94,0.15),0_0_40px_rgba(34,197,94,0.08),inset_0_0_20px_rgba(34,197,94,0.03)]' : 'border-shark'}`}>
 
                         {/* Header */}
                         <div className="border-b border-shark">
                             <Header
 
                                 onMobileMenuToggle={() => setIsMobileOpen(true)}
-                                label={request.title || 'Request Details'}
-                                labelIcon={
-                                    <div className="flex items-center gap-2">
-                                        <MessageSquare size={16} className="text-[#279da6]" />
-                                        <span className="text-[10px] font-black text-[#279da6] bg-shark/40 py-0.5 px-1.5 rounded border border-[#279da6]/20">
-                                            #{request.request_number || 1}
-                                        </span>
-                                    </div>
-                                }
+                                label=""
+                                labelIcon={<MessageSquare size={16} className="text-[#279da6]" />}
                                 tabs={[
-                                    { label: 'chat', icon: <MessageSquare size={12} /> },
+                                    { label: 'request', icon: <MessageSquare size={12} /> },
                                     { label: 'tasks', icon: <CheckSquare size={12} /> },
                                     ...(isSuperAdmin || isTeamAdmin ? [{ label: 'files', icon: <FolderOpen size={12} /> }] : [])
                                 ]}
@@ -833,13 +831,19 @@ export default function RequestDetailsPage() {
                                     setIsCreatingTask(false);
                                     setTaskFormData({ title: '', priority: 'Medium', description: '', assigned_to: request?.assigned_to || '', due_date: '', request_ids: [id as string] });
                                 }}
-                                isSubmitting={isSubmittingTask}
+                                label={
+                                    <div className="flex items-center gap-1.5">
+                                        <div className={`w-2 h-2 rounded-full ${isOnline ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.4)]' : 'bg-rose-500'}`} />
+                                        <span className="text-[12px] text-storm-gray font-black uppercase tracking-[0.2em] opacity-70">
+                                            {isOnline ? 'Active' : 'Inactive'}
+                                        </span>
+                                    </div>
+                                }
                             >
-                                <div className="flex items-center gap-1.5 ml-2">
-                                    <div className={`w-1.5 h-1.5 rounded-full ${isOnline ? 'bg-emerald-500 animate-pulse shadow-[0_0_8px_rgba(16,185,129,0.4)]' : 'bg-rose-500'}`} />
-                                    <span className="text-[8px] text-storm-gray font-black uppercase tracking-[0.2em] opacity-70">
-                                        {isOnline ? 'Active' : 'Inactive'}
-                                    </span>
+                                <div className="hidden lg:flex items-center ml-4 flex-1 min-w-0">
+                                    <h2 className="text-[22px] font-bold text-white uppercase tracking-tight truncate">
+                                        #{request.request_number} {request.title}
+                                    </h2>
                                 </div>
                             </Header>
                         </div>
@@ -851,233 +855,284 @@ export default function RequestDetailsPage() {
 
 
                                 {/* Tab Content */}
-                                {activeTab === 'chat' && (
-                                    <div className="flex-1 overflow-y-auto custom-scrollbar">
-                                        {/* Request Body */}
-                                        <div className="p-8 max-w-4xl mx-auto w-full">
-                                            <div className="mb-8">
-                                                <h2 className="text-3xl font-black text-white mb-6 uppercase tracking-tight">{request.title}</h2>
+                                {activeTab === 'request' && (
+                                    <div className="flex-1 flex flex-col overflow-hidden">
+                                        <div className="flex-1 overflow-y-auto custom-scrollbar">
+                                            {/* Request Body */}
+                                            <div className="pt-6 pb-8 px-8 max-w-4xl mx-auto w-full">
+                                                <div className="mb-4">
+                                                    {/* Title moved to header */}
 
-                                                <div className="flex items-start gap-4 mb-8">
-                                                    <div className="w-10 h-10 rounded-full bg-shark flex items-center justify-center text-[#279da6] shrink-0 border border-white/5 shadow-inner">
-                                                        <MessageSquare size={18} />
-                                                    </div>
-                                                    <div className="flex-1">
-                                                        <div className="bg-shark/20 border border-shark/50 rounded-2xl p-6 shadow-sm">
-                                                            <div className="flex items-center justify-between mb-4">
-                                                                <span className="text-[11px] font-black text-[#279da6] uppercase tracking-widest">Request Submitted</span>
-                                                                <span className="text-[10px] text-rose-500 font-black uppercase tracking-widest">
-                                                                    {new Date(request.created_at).toLocaleString('en-US', {
-                                                                        month: 'short',
-                                                                        day: 'numeric',
-                                                                        hour: '2-digit',
-                                                                        minute: '2-digit'
-                                                                    })}
-                                                                </span>
-                                                            </div>
-                                                            {isEditingDescription ? (
-                                                                <div className="space-y-3">
-                                                                    <textarea
-                                                                        value={editedDescription}
-                                                                        onChange={(e) => setEditedDescription(e.target.value)}
-                                                                        className="w-full bg-black/40 border border-[#279da6]/30 rounded-xl p-4 text-sm text-iron focus:outline-none focus:border-[#279da6] min-h-[120px] transition-all resize-none font-bold"
-                                                                        placeholder="Enter request description..."
-                                                                    />
-                                                                    <div className="flex items-center gap-2 justify-end">
-                                                                        <button
-                                                                            onClick={() => setIsEditingDescription(false)}
-                                                                            className="px-4 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest text-storm-gray hover:text-white transition-all"
-                                                                        >
-                                                                            Cancel
-                                                                        </button>
-                                                                        <button
-                                                                            onClick={async () => {
-                                                                                await handleUpdateField('description', editedDescription);
-                                                                                setIsEditingDescription(false);
-                                                                            }}
-                                                                            className="px-4 py-1.5 rounded-lg bg-[#279da6] text-white text-[10px] font-black uppercase tracking-widest hover:bg-[#20838b] transition-all shadow-lg shadow-[#279da6]/20"
-                                                                        >
-                                                                            Save Changes
-                                                                        </button>
+                                                    <div className="relative mb-6 pt-1">
+                                                        <div className="absolute -left-14 top-0 w-10 h-10 rounded-full bg-shark flex items-center justify-center text-[#279da6] border border-white/5 shadow-inner z-10">
+                                                            <MessageSquare size={18} />
+                                                        </div>
+                                                        <div className="w-full">
+                                                            <div className="bg-shark/20 border border-shark/50 rounded-2xl p-6 shadow-sm">
+                                                                <div className="flex items-center justify-between mb-4">
+                                                                    <span className="text-[12px] font-bold text-[#279da6] uppercase tracking-widest">Request Submitted</span>
+                                                                    <span className="text-[12px] text-rose-500 font-bold uppercase tracking-widest">
+                                                                        {new Date(request.created_at).toLocaleString('en-US', {
+                                                                            month: 'short',
+                                                                            day: 'numeric',
+                                                                            hour: '2-digit',
+                                                                            minute: '2-digit'
+                                                                        })}
+                                                                    </span>
+                                                                </div>
+                                                                {isEditingDescription ? (
+                                                                    <div className="space-y-3">
+                                                                        <textarea
+                                                                            value={editedDescription}
+                                                                            onChange={(e) => setEditedDescription(e.target.value)}
+                                                                            className="w-full bg-black/40 border border-[#279da6]/30 rounded-xl p-4 text-[12px] text-iron focus:outline-none focus:border-[#279da6] min-h-[120px] transition-all resize-none font-bold"
+                                                                            placeholder="Enter request description..."
+                                                                        />
+                                                                        <div className="flex items-center gap-2 justify-end">
+                                                                            <button
+                                                                                onClick={() => setIsEditingDescription(false)}
+                                                                                className="px-4 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest text-storm-gray hover:text-white transition-all"
+                                                                            >
+                                                                                Cancel
+                                                                            </button>
+                                                                            <button
+                                                                                onClick={async () => {
+                                                                                    await handleUpdateField('description', editedDescription);
+                                                                                    setIsEditingDescription(false);
+                                                                                }}
+                                                                                className="px-4 py-1.5 rounded-lg bg-[#279da6] text-white text-[10px] font-black uppercase tracking-widest hover:bg-[#20838b] transition-all shadow-lg shadow-[#279da6]/20"
+                                                                            >
+                                                                                Save Changes
+                                                                            </button>
+                                                                        </div>
                                                                     </div>
-                                                                </div>
-                                                            ) : (
-                                                                <div className="group relative">
-                                                                    <p className="text-iron text-sm leading-relaxed whitespace-pre-wrap font-bold pr-10">
-                                                                        {request.description}
-                                                                    </p>
-                                                                    {isAdmin && (
-                                                                        <button
-                                                                            onClick={() => {
-                                                                                setEditedDescription(request.description || '');
-                                                                                setIsEditingDescription(true);
-                                                                            }}
-                                                                            className="absolute top-0 right-0 p-2 text-storm-gray hover:text-[#279da6] opacity-0 group-hover:opacity-100 transition-all rounded-lg hover:bg-[#279da6]/10"
-                                                                            title="Edit Description"
-                                                                        >
-                                                                            <Pencil size={14} />
-                                                                        </button>
-                                                                    )}
-                                                                </div>
-                                                            )}
+                                                                ) : (
+                                                                    <div className="group relative">
+                                                                        <p className="text-iron text-[12px] leading-relaxed whitespace-pre-wrap font-bold pr-10">
+                                                                            {request.description}
+                                                                        </p>
+                                                                        {isAdmin && (
+                                                                            <button
+                                                                                onClick={() => {
+                                                                                    setEditedDescription(request.description || '');
+                                                                                    setIsEditingDescription(true);
+                                                                                }}
+                                                                                className="absolute top-0 right-0 p-2 text-storm-gray hover:text-[#279da6] opacity-0 group-hover:opacity-100 transition-all rounded-lg hover:bg-[#279da6]/10"
+                                                                                title="Edit Description"
+                                                                            >
+                                                                                <Pencil size={14} />
+                                                                            </button>
+                                                                        )}
+                                                                    </div>
+                                                                )}
+                                                            </div>
                                                         </div>
                                                     </div>
-                                                </div>
 
-                                                {/* Timeline Splitter */}
-                                                <div className="relative flex items-center justify-center my-12">
-                                                    <div className="absolute inset-0 flex items-center">
-                                                        <div className="w-full border-t border-shark/40"></div>
+                                                    {/* Timeline Splitter */}
+                                                    <div className="relative flex items-center justify-center my-8">
+                                                        <div className="absolute inset-0 flex items-center">
+                                                            <div className="w-full border-t border-shark/40"></div>
+                                                        </div>
+                                                        <span className="relative px-4 py-1.5 bg-[#121214] border border-shark rounded-full text-[12px] font-bold text-storm-gray uppercase tracking-[0.2em] shadow-2xl">
+                                                            Discussion Started
+                                                        </span>
                                                     </div>
-                                                    <span className="relative px-4 py-1.5 bg-[#121214] border border-shark rounded-full text-[9px] font-black text-storm-gray uppercase tracking-[0.2em] shadow-2xl">
-                                                        Discussion Started
-                                                    </span>
-                                                </div>
 
-                                                {/* Messages Timeline */}
-                                                <div className="space-y-8">
-                                                    {messages.map((msg) => {
-                                                        const isMe = msg.sender_id === profile?.id;
-                                                        return (
-                                                            <div key={msg.id} className={`flex gap-4 ${isMe ? 'flex-row-reverse' : ''}`}>
-                                                                <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 border border-white/5 shadow-lg relative overflow-hidden ${isMe ? 'bg-shark text-[#279da6]' : 'bg-shark text-[#279da6]'
-                                                                    }`}>
-                                                                    {isMe ? (
-                                                                        profile?.avatar_url ? (
-                                                                            <Image
-                                                                                src={profile.avatar_url}
-                                                                                alt={profile.full_name || 'User'}
-                                                                                fill
-                                                                                unoptimized
-                                                                                className="object-cover"
-                                                                            />
-                                                                        ) : (
-                                                                            <span className="font-black text-xs">{profile?.full_name?.split(' ').map(n => n[0]).join('')}</span>
-                                                                        )
-                                                                    ) : (
-                                                                        msg.sender?.avatar_url ? (
-                                                                            <Image
-                                                                                src={msg.sender.avatar_url}
-                                                                                alt={msg.sender.full_name || 'User'}
-                                                                                fill
-                                                                                unoptimized
-                                                                                className="object-cover"
-                                                                            />
-                                                                        ) : (
-                                                                            <span className="font-black text-xs">{msg.sender?.full_name?.split(' ').map(n => n[0]).join('')}</span>
-                                                                        )
-                                                                    )}
-                                                                </div>
-                                                                <div className={`max-w-[80%] ${isMe ? 'text-right' : ''}`}>
-                                                                    <div className="flex items-center gap-2 mb-1.5 px-1">
-                                                                        <span className="text-[11px] font-black text-iron uppercase tracking-widest">
-                                                                            {isMe ? 'You' : msg.sender?.full_name}
-                                                                        </span>
-                                                                        <span className="text-[9px] text-storm-gray font-bold">
-                                                                            {new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                                                                        </span>
-                                                                    </div>
-                                                                    <div className={`px-5 py-3 rounded-2xl text-sm leading-relaxed shadow-lg ${isMe
-                                                                        ? 'bg-shark text-white rounded-tr-none border border-[#279da6]/30'
-                                                                        : 'bg-shark text-iron rounded-tl-none border border-white/5'
+                                                    {/* Messages Timeline */}
+                                                    <div className="space-y-8">
+                                                        {messages.map((msg) => {
+                                                            const isMe = msg.sender_id === displayProfile?.id;
+                                                            return (
+                                                                <div key={msg.id} className={`flex gap-4 group ${isMe ? 'flex-row-reverse' : ''}`}>
+                                                                    <div className={`w-[46px] h-[46px] rounded-full flex items-center justify-center shrink-0 border border-white/5 shadow-lg relative overflow-hidden ${isMe ? 'bg-shark text-[#279da6]' : 'bg-shark text-[#279da6]'
                                                                         }`}>
-                                                                        {/* Rich text message renderer — supports HTML (new) and plain text with markdown (old) */}
-                                                                        {isHtmlContent(msg.message) ? (
-                                                                            <div
-                                                                                className="prose prose-sm prose-invert max-w-none [&_a]:text-[#279da6] [&_a]:underline [&_a]:font-bold"
-                                                                                dangerouslySetInnerHTML={{ __html: msg.message }}
-                                                                            />
+                                                                        {isMe ? (
+                                                                            profile?.avatar_url ? (
+                                                                                <Image
+                                                                                    src={profile.avatar_url}
+                                                                                    alt={profile.full_name || 'User'}
+                                                                                    fill
+                                                                                    unoptimized
+                                                                                    className="object-cover"
+                                                                                />
+                                                                            ) : (
+                                                                                <span className="font-black text-sm">{profile?.full_name?.split(' ').map(n => n[0]).join('')}</span>
+                                                                            )
                                                                         ) : (
-                                                                            msg.message.split('\n').map((line, i) => (
-                                                                                <div key={i}>
-                                                                                    {line.split(/(\*\*.*?\*\*|__.*?__|\*.*?\*|_.*?_|https?:\/\/[^\s]+)/).map((part, j) => {
-                                                                                        if (part.startsWith('**') && part.endsWith('**')) {
-                                                                                            return <strong key={j}>{part.slice(2, -2)}</strong>;
-                                                                                        }
-                                                                                        if (part.startsWith('__') && part.endsWith('__')) {
-                                                                                            return <u key={j}>{part.slice(2, -2)}</u>;
-                                                                                        }
-                                                                                        if (part.startsWith('*') && part.endsWith('*') && part.length > 2) {
-                                                                                            return <em key={j}>{part.slice(1, -1)}</em>;
-                                                                                        }
-                                                                                        if (part.startsWith('_') && part.endsWith('_') && part.length > 2) {
-                                                                                            return <em key={j}>{part.slice(1, -1)}</em>;
-                                                                                        }
-                                                                                        if (/^https?:\/\/[^\s]+$/.test(part)) {
-                                                                                            return <a key={j} href={part} target="_blank" rel="noopener noreferrer" className="underline font-bold text-[#279da6]">{part}</a>;
-                                                                                        }
-                                                                                        return part;
+                                                                            msg.sender?.avatar_url ? (
+                                                                                <Image
+                                                                                    src={msg.sender.avatar_url}
+                                                                                    alt={msg.sender.full_name || 'User'}
+                                                                                    fill
+                                                                                    unoptimized
+                                                                                    className="object-cover"
+                                                                                />
+                                                                            ) : (
+                                                                                <span className="font-black text-sm">{msg.sender?.full_name?.split(' ').map(n => n[0]).join('')}</span>
+                                                                            )
+                                                                        )}
+                                                                    </div>
+                                                                    <div className="max-w-[80%]">
+                                                                        <div className={`flex items-center gap-2 mb-1.5 px-1 ${isMe ? 'justify-end' : ''}`}>
+                                                                            {!isMe && (
+                                                                                <span className="text-[12px] font-bold text-iron uppercase tracking-widest">
+                                                                                    {msg.sender?.full_name}
+                                                                                </span>
+                                                                            )}
+                                                                            <span className="text-[12px] text-storm-gray font-bold">
+                                                                                {new Date(msg.created_at).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', hour12: true })}
+                                                                                {msg.is_edited && <span className="ml-1 opacity-60">(edited)</span>}
+                                                                            </span>
+                                                                            {isMe && (
+                                                                                <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                                                    <button
+                                                                                        onClick={() => {
+                                                                                            setEditingMessageId(msg.id);
+                                                                                            setEditedMessageContent(msg.message);
+                                                                                        }}
+                                                                                        className="p-1 hover:bg-white/10 rounded transition-colors text-storm-gray hover:text-[#279da6]"
+                                                                                    >
+                                                                                        <Pencil size={10} />
+                                                                                    </button>
+                                                                                    <button
+                                                                                        onClick={() => handleDeleteMessage(msg.id)}
+                                                                                        className="p-1 hover:bg-white/10 rounded transition-colors text-storm-gray hover:text-rose-400"
+                                                                                    >
+                                                                                        <Trash2 size={10} />
+                                                                                    </button>
+                                                                                </div>
+                                                                            )}
+                                                                        </div>
+                                                                        <div className={`px-5 py-3 rounded-2xl text-[12px] font-bold leading-relaxed shadow-lg ${isMe
+                                                                            ? 'bg-shark text-white rounded-tr-none border border-[#279da6]/30'
+                                                                            : 'bg-shark text-iron rounded-tl-none border border-white/5'
+                                                                            }`}>
+                                                                            {/* Rich text message renderer — supports HTML (new) and plain text with markdown (old) */}
+                                                                            {editingMessageId === msg.id ? (
+                                                                                <div className="space-y-3">
+                                                                                    <textarea
+                                                                                        value={editedMessageContent}
+                                                                                        onChange={(e) => setEditedMessageContent(e.target.value)}
+                                                                                        className="w-full bg-black/40 border border-[#279da6]/30 rounded-xl p-3 text-[12px] font-bold text-iron focus:outline-none focus:border-[#279da6]/60 min-h-[100px] resize-none"
+                                                                                        autoFocus
+                                                                                    />
+                                                                                    <div className="flex justify-end gap-2">
+                                                                                        <button
+                                                                                            onClick={() => setEditingMessageId(null)}
+                                                                                            className="px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest text-storm-gray hover:text-white transition-all"
+                                                                                        >
+                                                                                            Cancel
+                                                                                        </button>
+                                                                                        <button
+                                                                                            onClick={() => handleEditMessage(msg.id, editedMessageContent)}
+                                                                                            className="px-4 py-1.5 rounded-lg bg-[#279da6] text-[10px] font-black uppercase tracking-widest text-white hover:bg-[#20838b] transition-all"
+                                                                                        >
+                                                                                            Save Changes
+                                                                                        </button>
+                                                                                    </div>
+                                                                                </div>
+                                                                            ) : (
+                                                                                <>
+                                                                                    {isHtmlContent(msg.message) ? (
+                                                                                        <div
+                                                                                            className="prose prose-invert max-w-none text-[12px] font-bold [&_p]:text-[12px] [&_p]:font-bold [&_ul]:text-[12px] [&_ul]:font-bold [&_li]:text-[12px] [&_li]:font-bold [&_a]:text-[#279da6] [&_a]:underline [&_a]:font-bold"
+                                                                                            dangerouslySetInnerHTML={{ __html: msg.message }}
+                                                                                        />
+                                                                                    ) : (
+                                                                                        <div className="text-[12px] font-bold leading-relaxed">
+                                                                                            {msg.message.split('\n').map((line, i) => (
+                                                                                                <div key={i}>
+                                                                                                    {line.split(/(\*\*.*?\*\*|__.*?__|\*.*?\*|_.*?_|https?:\/\/[^\s]+)/).map((part, j) => {
+                                                                                                        if (part.startsWith('**') && part.endsWith('**')) {
+                                                                                                            return <strong key={j}>{part.slice(2, -2)}</strong>;
+                                                                                                        }
+                                                                                                        if (part.startsWith('__') && part.endsWith('__')) {
+                                                                                                            return <u key={j}>{part.slice(2, -2)}</u>;
+                                                                                                        }
+                                                                                                        if (part.startsWith('*') && part.endsWith('*') && part.length > 2) {
+                                                                                                            return <em key={j}>{part.slice(1, -1)}</em>;
+                                                                                                        }
+                                                                                                        if (part.startsWith('_') && part.endsWith('_') && part.length > 2) {
+                                                                                                            return <em key={j}>{part.slice(1, -1)}</em>;
+                                                                                                        }
+                                                                                                        if (/^https?:\/\/[^\s]+$/.test(part)) {
+                                                                                                            return <a key={j} href={part} target="_blank" rel="noopener noreferrer" className="underline font-bold text-[#279da6]">{part}</a>;
+                                                                                                        }
+                                                                                                        return part;
+                                                                                                    })}
+                                                                                                </div>
+                                                                                            ))}
+                                                                                        </div>
+                                                                                    )}
+                                                                                </>
+                                                                            )}
+                                                                            {msg.attachments && msg.attachments.length > 0 && (
+                                                                                <div className="mt-3 space-y-2">
+                                                                                    {msg.attachments.map((at, idx) => {
+                                                                                        const driveProxyUrl = at.drive_file_id ? `/api/drive/view?fileId=${at.drive_file_id}` : null;
+                                                                                        const displayUrl = driveProxyUrl || at.url;
+
+                                                                                        return (
+                                                                                            <div
+                                                                                                key={idx}
+                                                                                                onClick={(e) => {
+                                                                                                    e.preventDefault();
+                                                                                                    e.stopPropagation();
+                                                                                                    setPreviewFile({
+                                                                                                        name: at.name,
+                                                                                                        url: at.url,
+                                                                                                        previewUrl: driveProxyUrl,
+                                                                                                        type: at.type
+                                                                                                    });
+                                                                                                    setIsPreviewOpen(true);
+                                                                                                }}
+                                                                                                className="block group/at cursor-pointer"
+                                                                                            >
+                                                                                                {at.type?.startsWith('image/') ? (
+                                                                                                    <div className="relative rounded-lg overflow-hidden border border-white/10 shadow-lg max-w-[240px]">
+                                                                                                        <img src={displayUrl} alt={at.name} className="w-full h-auto" />
+                                                                                                        <div className="absolute inset-0 bg-black/40 opacity-0 group-hover/at:opacity-100 transition-opacity flex items-center justify-center">
+                                                                                                            <span className="text-[10px] font-black uppercase text-white">View Full Image</span>
+                                                                                                        </div>
+                                                                                                    </div>
+                                                                                                ) : (
+                                                                                                    <div className="flex items-center gap-3 bg-white/5 hover:bg-white/10 p-3 rounded-xl border border-white/10 transition-all max-w-[280px]">
+                                                                                                        <Paperclip size={18} className="text-[#279da6]" />
+                                                                                                        <div className="min-w-0">
+                                                                                                            <p className="text-xs font-bold truncate text-white">{at.name}</p>
+                                                                                                            <p className="text-[10px] text-storm-gray font-bold uppercase tracking-widest">View File</p>
+                                                                                                        </div>
+                                                                                                    </div>
+                                                                                                )}
+                                                                                            </div>
+                                                                                        );
                                                                                     })}
                                                                                 </div>
-                                                                            ))
-                                                                        )}
-                                                                        {msg.attachments && msg.attachments.length > 0 && (
-                                                                            <div className="mt-3 space-y-2">
-                                                                                {msg.attachments.map((at, idx) => {
-                                                                                    const driveProxyUrl = at.drive_file_id ? `/api/drive/view?fileId=${at.drive_file_id}` : null;
-                                                                                    const displayUrl = driveProxyUrl || at.url;
-
-                                                                                    return (
-                                                                                        <div
-                                                                                            key={idx}
-                                                                                            onClick={(e) => {
-                                                                                                e.preventDefault();
-                                                                                                e.stopPropagation();
-                                                                                                setPreviewFile({
-                                                                                                    name: at.name,
-                                                                                                    url: at.url,
-                                                                                                    previewUrl: driveProxyUrl,
-                                                                                                    type: at.type
-                                                                                                });
-                                                                                                setIsPreviewOpen(true);
-                                                                                            }}
-                                                                                            className="block group/at cursor-pointer"
-                                                                                        >
-                                                                                            {at.type?.startsWith('image/') ? (
-                                                                                                <div className="relative rounded-lg overflow-hidden border border-white/10 shadow-lg max-w-[240px]">
-                                                                                                    <img src={displayUrl} alt={at.name} className="w-full h-auto" />
-                                                                                                    <div className="absolute inset-0 bg-black/40 opacity-0 group-hover/at:opacity-100 transition-opacity flex items-center justify-center">
-                                                                                                        <span className="text-[10px] font-black uppercase text-white">View Full Image</span>
-                                                                                                    </div>
-                                                                                                </div>
-                                                                                            ) : (
-                                                                                                <div className="flex items-center gap-3 bg-white/5 hover:bg-white/10 p-3 rounded-xl border border-white/10 transition-all max-w-[280px]">
-                                                                                                    <Paperclip size={18} className="text-[#279da6]" />
-                                                                                                    <div className="min-w-0">
-                                                                                                        <p className="text-xs font-bold truncate text-white">{at.name}</p>
-                                                                                                        <p className="text-[10px] text-storm-gray font-bold uppercase tracking-widest">View File</p>
-                                                                                                    </div>
-                                                                                                </div>
-                                                                                            )}
-                                                                                        </div>
-                                                                                    );
-                                                                                })}
-                                                                            </div>
-                                                                        )}
+                                                                            )}
+                                                                        </div>
                                                                     </div>
                                                                 </div>
-                                                            </div>
-                                                        );
-                                                    })}
-                                                    <div ref={messagesEndRef} />
+                                                            );
+                                                        })}
+                                                        <div ref={messagesEndRef} />
+                                                    </div>
                                                 </div>
                                             </div>
                                         </div>
 
-                                        {/* Message Composer - Fixed to bottom of main area */}
-                                        <div className="mt-auto p-6 bg-[#121214] border-t border-shark shadow-[0_-8px_24px_rgba(0,0,0,0.2)]">
+                                        {/* Message Composer - Floating style */}
+                                        <div className="mt-auto px-6 pb-4 pt-2">
                                             <div className="max-w-4xl mx-auto">
-                                                <div className="bg-shark/30 border border-shark/60 rounded-2xl overflow-hidden shadow-inner focus-within:border-[#279da6]/50 transition-all">
+                                                <div className="bg-shark/30 border border-shark/60 rounded-[2rem] overflow-hidden shadow-inner focus-within:border-[#279da6]/50 transition-all">
                                                     {/* Formatting Bar */}
-                                                    <div className="flex items-center gap-1 p-2 bg-shark/20 border-b border-shark/40">
+                                                    <div className="flex items-center gap-1 p-3 bg-shark/10 border-b border-shark/40">
                                                         <button type="button" onMouseDown={(e) => e.preventDefault()} onClick={() => execFormat('bold')} title="Bold" className="p-1.5 hover:bg-shark rounded text-storm-gray hover:text-white transition-all"><Bold size={14} /></button>
                                                         <button type="button" onMouseDown={(e) => e.preventDefault()} onClick={() => execFormat('italic')} title="Italic" className="p-1.5 hover:bg-shark rounded text-storm-gray hover:text-white transition-all"><Italic size={14} /></button>
                                                         <button type="button" onMouseDown={(e) => e.preventDefault()} onClick={() => execFormat('underline')} title="Underline" className="p-1.5 hover:bg-shark rounded text-storm-gray hover:text-white transition-all"><Underline size={14} /></button>
-                                                        <div className="w-px h-4 bg-shark mx-1"></div>
+                                                        <div className="w-px h-4 bg-shark/40 mx-2"></div>
                                                         <button type="button" onMouseDown={(e) => e.preventDefault()} onClick={() => execFormat('insertUnorderedList')} title="List" className="p-1.5 hover:bg-shark rounded text-storm-gray hover:text-white transition-all"><List size={14} /></button>
                                                         <button type="button" onMouseDown={(e) => e.preventDefault()} onClick={handleInsertLink} title="Insert Link" className="p-1.5 hover:bg-shark rounded text-storm-gray hover:text-white transition-all"><LinkIcon size={14} /></button>
-                                                        <div className="flex-1"></div>
-                                                        <button type="button" className="p-1.5 hover:bg-shark rounded text-storm-gray hover:text-white transition-all"><Smile size={14} /></button>
                                                     </div>
                                                     <div
                                                         ref={editorRef}
@@ -1085,15 +1140,12 @@ export default function RequestDetailsPage() {
                                                         suppressContentEditableWarning
                                                         onInput={handleEditorInput}
                                                         onKeyDown={(e) => {
-                                                            if (e.key === 'Enter' && !e.shiftKey) {
-                                                                e.preventDefault();
-                                                                handleSendMessage();
-                                                            }
+                                                            // Enter and Shift+Enter both perform default newline behavior
                                                         }}
-                                                        data-placeholder="Write your message here..."
-                                                        className="w-full bg-transparent text-iron p-4 text-sm focus:outline-none min-h-[120px] empty:before:content-[attr(data-placeholder)] empty:before:text-storm-gray empty:before:pointer-events-none [&_a]:text-[#279da6] [&_a]:underline"
+                                                        data-placeholder="Message team members about this task..."
+                                                        className="w-full bg-transparent text-iron p-6 text-[12px] font-bold focus:outline-none min-h-[100px] empty:before:content-[attr(data-placeholder)] empty:before:text-storm-gray/50 empty:before:pointer-events-none [&_a]:text-[#279da6] [&_a]:underline border-b border-shark/40"
                                                     />
-                                                    <div className="flex items-center justify-between p-3 bg-shark/10">
+                                                    <div className="flex items-center justify-between p-4 bg-shark/10">
                                                         <input
                                                             type="file"
                                                             ref={fileInputRef}
@@ -1103,23 +1155,26 @@ export default function RequestDetailsPage() {
                                                         <button
                                                             onClick={() => fileInputRef.current?.click()}
                                                             disabled={isUploading}
-                                                            className="flex items-center gap-2 px-3 py-1.5 text-xs font-bold text-santas-gray hover:text-white transition-all group"
+                                                            className="flex items-center gap-3 px-3 py-1.5 text-[12px] font-bold uppercase tracking-widest text-storm-gray hover:text-white transition-all group"
                                                         >
-                                                            {isUploading ? <Loader2 size={14} className="animate-spin" /> : <Paperclip size={14} className="group-hover:text-[#279da6]" />}
-                                                            <span>{isUploading ? 'Uploading...' : 'Attach Files'}</span>
+                                                            <div className="w-8 h-8 rounded-full bg-shark/40 border border-shark/60 flex items-center justify-center text-storm-gray group-hover:text-[#279da6] group-hover:bg-shark/60 transition-all">
+                                                                {isUploading ? <Loader2 size={12} className="animate-spin" /> : <Paperclip size={14} />}
+                                                            </div>
+                                                            <span>{isUploading ? 'Uploading...' : 'ATTACH FILE'}</span>
                                                         </button>
                                                         <button
                                                             onClick={() => handleSendMessage()}
                                                             disabled={isSending || !newMessage.trim()}
-                                                            className="bg-[#279da6] hover:bg-[#20838b] text-white px-6 py-2 rounded-xl flex items-center justify-center gap-2 transition-all font-black text-xs uppercase tracking-widest disabled:opacity-40 shadow-lg shadow-[#279da6]/20 active:scale-95"
+                                                            className="bg-[#279da6] hover:bg-[#20838b] text-white px-8 py-3 rounded-2xl flex items-center justify-center gap-2 transition-all font-bold text-[12px] uppercase tracking-widest disabled:opacity-40 shadow-[0_10px_20px_rgba(39,157,166,0.15)] active:scale-95"
                                                         >
-                                                            {isSending ? <Loader2 size={16} className="animate-spin" /> : <><Send size={14} /> Send Message</>}
+                                                            {isSending ? <Loader2 size={16} className="animate-spin" /> : (
+                                                                <>
+                                                                    <Send size={14} />
+                                                                    <span>SEND MESSAGE</span>
+                                                                </>
+                                                            )}
                                                         </button>
                                                     </div>
-                                                </div>
-                                                <div className="mt-3 flex items-center justify-center gap-6">
-                                                    <span className="text-[10px] text-storm-gray font-black uppercase tracking-widest opacity-50">Press Enter to Send</span>
-                                                    <span className="text-[10px] text-storm-gray font-black uppercase tracking-widest opacity-50">Shift + Enter for new line</span>
                                                 </div>
                                             </div>
                                         </div>
@@ -1271,6 +1326,7 @@ export default function RequestDetailsPage() {
                                                     tasks={linkedTasks}
                                                     profiles={profiles}
                                                     teamMembers={teamMembers}
+                                                    onUpdateField={handleTaskUpdate}
                                                     showRequestColumn={false}
                                                 />
                                             )}
@@ -1386,42 +1442,44 @@ export default function RequestDetailsPage() {
 
                             {/* Right Sidebar - Summary */}
                             {activeTab !== 'tasks' && (
-                                <div className="hidden lg:flex w-[340px] border-l border-shark bg-[#121214] flex-col p-6 overflow-y-auto custom-scrollbar">
-                                    <h3 className="text-lg font-bold text-white mb-8">Summary</h3>
-
-                                    <div className="space-y-8">
+                                <div className="hidden lg:flex w-[340px] border-l border-shark bg-[#101011] flex-col p-6 overflow-y-auto custom-scrollbar">
+                                    <div className="space-y-8 mt-2">
                                         {/* Base Info */}
                                         <div>
-                                            <h4 className="text-sm font-bold text-white mb-1 uppercase tracking-tight">{request.title}</h4>
-                                            <div className="text-[12px] text-storm-gray">
-                                                <span className="font-bold">Created:</span> {formatDate(request.created_at)}
+                                            <h4 className="text-[18px] font-bold text-white mb-1 uppercase tracking-tight leading-tight">{request.title}</h4>
+                                            <div className="text-[12px] text-[#ff2056] font-bold uppercase tracking-wider">
+                                                <span>Created: {formatDate(request.created_at)}</span>
                                             </div>
                                         </div>
 
-                                        <div className="space-y-4 pt-4">
+                                        <div className="space-y-4 pt-4 border-t border-shark">
                                             <div className="flex items-center justify-between gap-4">
-                                                <span className="text-[12px] font-bold text-storm-gray">Client:</span>
-                                                <div className="flex items-center gap-2.5 bg-shark/20 py-1.5 px-3 rounded-xl border border-white/5 hover:bg-shark/30 cursor-pointer transition-all">
-                                                    <div className="w-7 h-7 rounded-full bg-shark flex items-center justify-center text-[10px] text-[#279da6] font-black shrink-0 border border-white/5 shadow-inner">
-                                                        {request.client?.full_name?.split(' ').map(n => n[0]).join('')}
-                                                    </div>
-                                                    <div className="min-w-0 pr-1">
-                                                        <p className="text-[11px] font-bold text-iron leading-tight truncate">{request.client?.full_name}</p>
-                                                        {request.client?.organization && (
-                                                            <p className="text-[9px] text-storm-gray font-bold truncate opacity-80">{request.client.organization}</p>
+                                                <span className="w-20 text-[12px] font-bold text-storm-gray shrink-0 uppercase tracking-wider">Client:</span>
+                                                <div className="flex-1 flex items-center gap-2.5 bg-transparent border-none px-3.5 py-2.5 cursor-pointer transition-all">
+                                                    <div className="w-[46px] h-[46px] rounded-full bg-shark flex items-center justify-center text-sm text-[#279da6] font-black shrink-0 border border-white/5 shadow-inner overflow-hidden">
+                                                        {request.client?.avatar_url ? (
+                                                            <img src={request.client.avatar_url} alt={request.client.full_name} className="w-full h-full object-cover" />
+                                                        ) : (
+                                                            request.client?.full_name?.split(' ').map(n => n[0]).join('')
                                                         )}
+                                                    </div>
+                                                    <div className="min-w-0 pr-1 flex flex-col">
+                                                        {request.client?.organization && (
+                                                            <p className="text-[12px] font-black text-[#279da6] uppercase tracking-wider truncate mb-0.5">{request.client.organization}</p>
+                                                        )}
+                                                        <p className="text-[12px] font-bold text-iron leading-tight truncate uppercase tracking-wider">{request.client?.full_name}</p>
                                                     </div>
                                                 </div>
                                             </div>
 
                                             <div className="flex items-center gap-2">
-                                                <span className="text-[12px] font-bold text-storm-gray w-20">Status</span>
+                                                <span className="text-[12px] font-bold text-storm-gray w-20 uppercase tracking-wider">Status</span>
                                                 <CustomDropdown
                                                     value={request.status}
                                                     onChange={(val) => handleUpdateField('status', val)}
                                                     options={[
                                                         { label: 'Todo', value: 'Todo', icon: <Circle size={14} className="text-[#279da6]" />, color: 'text-[#279da6]' },
-                                                        { label: 'In Progress', value: 'In Progress', icon: <Loader2 size={14} className="text-amber-500 animate-spin" />, color: 'text-amber-500' },
+                                                        { label: 'In Progress', value: 'In Progress', icon: <Loader2 size={14} className="text-amber-500" />, color: 'text-amber-500' },
                                                         { label: 'Review', value: 'Review', icon: <Eye size={14} className="text-blue-400" />, color: 'text-blue-400' },
                                                         { label: 'Done', value: 'Done', icon: <Check size={14} className="text-emerald-500" />, color: 'text-emerald-500' },
                                                     ]}
@@ -1430,7 +1488,7 @@ export default function RequestDetailsPage() {
                                             </div>
 
                                             <div className="flex items-center gap-2">
-                                                <span className="text-[12px] font-bold text-storm-gray w-20">Priority</span>
+                                                <span className="text-[12px] font-bold text-storm-gray w-20 uppercase tracking-wider">Priority</span>
                                                 <CustomDropdown
                                                     value={request.priority}
                                                     onChange={(val) => handleUpdateField('priority', val)}
@@ -1445,7 +1503,7 @@ export default function RequestDetailsPage() {
                                             </div>
 
                                             <div className="flex items-center gap-2">
-                                                <span className="text-[12px] font-bold text-storm-gray w-20">Assigned To</span>
+                                                <span className="text-[12px] font-bold text-storm-gray w-20 uppercase tracking-wider">Assigned To</span>
                                                 <CustomDropdown
                                                     value={request.assigned_to || ''}
                                                     onChange={(val) => handleUpdateField('assigned_to', val)}
@@ -1454,74 +1512,56 @@ export default function RequestDetailsPage() {
                                                         ...teamMembers.filter((tm: any) => tm.profile_id).map((tm: any) => ({
                                                             label: tm.name || tm.profile?.full_name || tm.profile?.email || 'Unknown',
                                                             value: tm.profile_id,
-                                                            icon: <UserIcon size={14} className="text-[#279da6]" />
+                                                            icon: tm.avatar_url ? (
+                                                                <div className="w-[46px] h-[46px] rounded-full overflow-hidden border border-white/10">
+                                                                    <img src={tm.avatar_url} alt={tm.name} className="w-full h-full object-cover" />
+                                                                </div>
+                                                            ) : (
+                                                                <div className="w-[46px] h-[46px] rounded-full bg-shark flex items-center justify-center text-sm text-[#279da6] font-black shrink-0 border border-white/5 shadow-inner">
+                                                                    {tm.name?.split(' ').map((n: string) => n[0]).join('')}
+                                                                </div>
+                                                            )
                                                         }))
                                                     ]}
                                                     className="flex-1"
                                                 />
                                             </div>
 
-                                            <div className="flex items-center gap-2">
-                                                <span className="text-[12px] font-bold text-storm-gray w-20">Due Date</span>
-                                                <div className="flex-1 flex items-center justify-end gap-2 text-[11px] font-black text-iron">
-                                                    <input
-                                                        ref={dateInputRef}
-                                                        type="date"
-                                                        value={request.due_date ? new Date(request.due_date).toISOString().split('T')[0] : ''}
-                                                        onChange={(e) => handleUpdateField('due_date', e.target.value)}
-                                                        className="bg-transparent text-iron border-none focus:outline-none text-right cursor-pointer hover:text-white transition-all uppercase"
-                                                    />
-                                                    <Calendar
-                                                        size={14}
-                                                        className="text-storm-gray cursor-pointer hover:text-white transition-all"
-                                                        onClick={() => dateInputRef.current?.showPicker()}
+                                            <div className="flex items-center justify-between gap-4 h-11">
+                                                <span className="w-20 text-[12px] font-bold text-storm-gray shrink-0 uppercase tracking-wider">Due Date:</span>
+                                                <div className="flex-1 flex justify-start">
+                                                    <CustomDatePicker
+                                                        value={request.due_date}
+                                                        onChange={(dateString) => handleUpdateDueDate(dateString || null)}
+                                                        placeholder="NOT SET"
+                                                        variant="minimal"
                                                     />
                                                 </div>
                                             </div>
                                         </div>
 
-                                        {/* Team Assignments */}
+                                        {/* Team Members - Derived from Tasks */}
                                         <div className="pt-6 border-t border-shark">
                                             <div className="flex items-center justify-between mb-4">
-                                                <h4 className="text-[11px] font-black uppercase tracking-widest text-storm-gray">Team Members</h4>
-                                                <button
-                                                    onClick={() => setIsAssignmentModalOpen(true)}
-                                                    className="p-1 hover:bg-shark rounded-md text-storm-gray hover:text-[#279da6] transition-colors"
-                                                >
-                                                    <Plus size={14} />
-                                                </button>
+                                                <h4 className="text-[12px] font-black uppercase tracking-widest text-storm-gray">Team Members</h4>
                                             </div>
-                                            {assignments.length === 0 ? (
-                                                <p className="text-[11px] text-storm-gray/50 italic">No team members assigned.</p>
+                                            {involvedMembers.length === 0 ? (
+                                                <p className="text-[11px] text-storm-gray/50 italic">No team members assigned to tasks.</p>
                                             ) : (
                                                 <div className="space-y-2">
-                                                    {assignments.map(a => (
-                                                        <div key={a.id} className="flex items-center gap-2 p-2 rounded-lg bg-shark/20 border border-shark/40 group hover:border-shark transition-all">
-                                                            <div className="w-7 h-7 rounded-full bg-shark flex items-center justify-center text-[9px] font-black text-[#279da6] shrink-0 overflow-hidden">
-                                                                {a.team_member.avatar_url ? (
-                                                                    <img src={a.team_member.avatar_url} alt={a.team_member.name} className="w-full h-full object-cover" />
+                                                    {involvedMembers.map(tm => (
+                                                        <div key={tm.id} className="flex items-center gap-3 p-2 rounded-lg bg-shark/20 border border-shark/40 transition-all">
+                                                            <div className="w-[46px] h-[46px] rounded-full bg-shark flex items-center justify-center text-sm font-black text-[#279da6] shrink-0 overflow-hidden border border-white/5 shadow-inner">
+                                                                {tm.avatar_url ? (
+                                                                    <img src={tm.avatar_url} alt={tm.name} className="w-full h-full object-cover" />
                                                                 ) : (
-                                                                    a.team_member.name.split(' ').map(n => n[0]).join('')
+                                                                    tm.name.split(' ').map(n => n[0]).join('')
                                                                 )}
                                                             </div>
                                                             <div className="flex-1 min-w-0">
-                                                                <p className="text-[11px] font-bold text-iron truncate">{a.team_member.name}</p>
-                                                                <select
-                                                                    value={a.role}
-                                                                    onChange={(e) => handleUpdateAssignmentRole(a.id, e.target.value)}
-                                                                    className="bg-transparent text-[9px] font-black uppercase tracking-widest text-[#279da6] cursor-pointer focus:outline-none appearance-none"
-                                                                >
-                                                                    <option value="viewer">Viewer</option>
-                                                                    <option value="editor">Editor</option>
-                                                                    <option value="admin">Admin</option>
-                                                                </select>
+                                                                <p className="text-[12px] font-bold text-iron truncate uppercase tracking-wider">{tm.name}</p>
+                                                                <p className="text-[12px] font-black uppercase tracking-widest text-[#279da6]">Assignee</p>
                                                             </div>
-                                                            <button
-                                                                onClick={() => handleRemoveAssignment(a.id)}
-                                                                className="p-1 opacity-0 group-hover:opacity-100 hover:bg-rose-500/10 rounded text-rose-400 transition-all"
-                                                            >
-                                                                <X size={12} />
-                                                            </button>
                                                         </div>
                                                     ))}
                                                 </div>
@@ -1532,7 +1572,7 @@ export default function RequestDetailsPage() {
                                             <div className="pt-6 border-t border-shark mt-auto">
                                                 <button
                                                     onClick={() => setIsDeleteModalOpen(true)}
-                                                    className="w-full flex items-center justify-center gap-3 py-3 rounded-xl bg-rose-500/5 hover:bg-rose-500/10 text-rose-500 border border-rose-500/10 transition-all font-black text-[10px] uppercase tracking-widest group"
+                                                    className="w-full flex items-center justify-center gap-3 py-3 rounded-xl bg-rose-500/5 hover:bg-rose-500/10 text-rose-500 border border-rose-500/10 transition-all font-black text-[12px] uppercase tracking-widest group"
                                                 >
                                                     <Trash2 size={14} className="group-hover:scale-110 transition-transform" />
                                                     Delete Request
@@ -1545,117 +1585,60 @@ export default function RequestDetailsPage() {
                         </div>
                     </div>
                 </div>
-            </div>
+            </div >
 
-            {/* Assignment Modal */}
+
+            {/* Delete Modal */}
             {
-                isAssignmentModalOpen && (
-                    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-fade-in">
-                        <div className="bg-[#18181B] border border-shark rounded-3xl p-6 max-w-md w-full shadow-2xl animate-slide-up max-h-[80vh] overflow-y-auto custom-scrollbar">
-                            <div className="flex justify-between items-center mb-4">
-                                <h2 className="text-lg font-black text-white uppercase tracking-tight">Assign Team Member</h2>
-                                <button onClick={() => setIsAssignmentModalOpen(false)} className="text-storm-gray hover:text-white transition-colors">
-                                    <X size={18} />
-                                </button>
-                            </div>
-
-                            <div className="mb-4">
-                                <label className="block text-[10px] font-black uppercase tracking-widest text-storm-gray mb-2">Role</label>
-                                <select
-                                    value={selectedRole}
-                                    onChange={(e) => setSelectedRole(e.target.value as 'admin' | 'editor' | 'viewer')}
-                                    className="w-full bg-[#09090B] border border-shark rounded-lg px-4 py-2.5 text-sm text-iron focus:outline-none focus:border-[#279da6]/40 transition-all"
-                                >
-                                    <option value="viewer">Viewer - Can view request</option>
-                                    <option value="editor">Editor - Can view & chat</option>
-                                    <option value="admin">Admin - Full access</option>
-                                </select>
-                            </div>
-
-                            <div className="space-y-2">
-                                {unassignedTeamMembers.length === 0 ? (
-                                    <p className="text-sm text-storm-gray text-center py-4">All team members are already assigned.</p>
-                                ) : (
-                                    unassignedTeamMembers.map(tm => (
-                                        <button
-                                            key={tm.id}
-                                            onClick={() => handleAssignTeamMember(tm.id)}
-                                            disabled={isAssigning}
-                                            className="w-full flex items-center gap-3 p-3 rounded-xl bg-shark/20 border border-shark/40 hover:border-[#279da6]/40 hover:bg-shark/30 transition-all text-left"
-                                        >
-                                            <div className="w-9 h-9 rounded-full bg-shark flex items-center justify-center text-[10px] font-black text-[#279da6] shrink-0 overflow-hidden">
-                                                {tm.avatar_url ? (
-                                                    <img src={tm.avatar_url} alt={tm.name} className="w-full h-full object-cover" />
-                                                ) : (
-                                                    tm.name.split(' ').map(n => n[0]).join('')
-                                                )}
-                                            </div>
-                                            <div className="flex-1 min-w-0">
-                                                <p className="text-xs font-bold text-iron">{tm.name}</p>
-                                                <p className="text-[10px] text-storm-gray truncate">{tm.email}</p>
-                                            </div>
-                                            <UserPlus size={14} className="text-[#279da6] shrink-0" />
-                                        </button>
-                                    ))
-                                )}
-                            </div>
-                        </div>
-                    </div>
-                )}
-
-            {isDeleteModalOpen && (
-                <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/90 backdrop-blur-md animate-fade-in">
-                    <div className="bg-[#18181B] border border-rose-500/20 rounded-[32px] p-8 max-w-md w-full shadow-[0_0_50px_rgba(244,63,94,0.15)] animate-slide-up relative overflow-hidden">
-                        {/* Decorative background element */}
-                        <div className="absolute -top-24 -right-24 w-48 h-48 bg-rose-500/10 rounded-full blur-[80px]" />
-
-                        <div className="relative">
-                            <div className="w-16 h-16 rounded-2xl bg-rose-500/10 border border-rose-500/20 flex items-center justify-center text-rose-500 mb-6 mx-auto">
-                                <Trash2 size={32} />
-                            </div>
-
-                            <h2 className="text-xl font-black text-white text-center uppercase tracking-tight mb-3">Delete Request?</h2>
-                            <p className="text-storm-gray text-center text-sm leading-relaxed mb-8">
-                                You are about to permanently delete <span className="text-white font-bold">"{request.title}"</span>. This action will remove all messages and attachments associated with this request. This cannot be undone.
-                            </p>
-
-                            {deleteError && (
-                                <div className="mb-6 p-4 rounded-2xl bg-rose-500/10 border border-rose-500/20 flex items-center gap-3 text-rose-400 text-xs font-bold animate-shake">
-                                    <AlertCircle size={16} />
-                                    {deleteError}
+                isDeleteModalOpen && (
+                    <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/90 backdrop-blur-md animate-fade-in">
+                        <div className="bg-[#18181B] border border-rose-500/20 rounded-[32px] p-8 max-w-md w-full shadow-[0_0_50px_rgba(244,63,94,0.15)] animate-slide-up relative overflow-hidden">
+                            <div className="absolute -top-24 -right-24 w-48 h-48 bg-rose-500/10 rounded-full blur-[80px]" />
+                            <div className="relative">
+                                <div className="w-16 h-16 rounded-2xl bg-rose-500/10 border border-rose-500/20 flex items-center justify-center text-rose-500 mb-6 mx-auto">
+                                    <Trash2 size={32} />
                                 </div>
-                            )}
-
-                            <div className="grid grid-cols-2 gap-4">
-                                <button
-                                    onClick={() => {
-                                        setIsDeleteModalOpen(false);
-                                        setDeleteError(null);
-                                    }}
-                                    disabled={isDeleting}
-                                    className="py-4 rounded-2xl bg-shark/40 border border-shark hover:bg-shark/60 text-iron font-black text-[10px] uppercase tracking-widest transition-all disabled:opacity-50"
-                                >
-                                    Cancel
-                                </button>
-                                <button
-                                    onClick={handleDeleteRequest}
-                                    disabled={isDeleting}
-                                    className="py-4 rounded-2xl bg-rose-500 hover:bg-rose-600 text-white font-black text-[10px] uppercase tracking-widest transition-all shadow-lg shadow-rose-500/25 flex items-center justify-center gap-2 disabled:opacity-50"
-                                >
-                                    {isDeleting ? (
-                                        <>
-                                            <Loader2 size={14} className="animate-spin" />
-                                            Deleting...
-                                        </>
-                                    ) : (
-                                        'Confirm Delete'
-                                    )}
-                                </button>
+                                <h2 className="text-xl font-black text-white text-center uppercase tracking-tight mb-3">Delete Request?</h2>
+                                <p className="text-storm-gray text-center text-sm leading-relaxed mb-8">
+                                    You are about to permanently delete <span className="text-white font-bold">"{request?.title}"</span>. This action will remove all messages and attachments associated with this request. This cannot be undone.
+                                </p>
+                                {deleteError && (
+                                    <div className="mb-6 p-4 rounded-2xl bg-rose-500/10 border border-rose-500/20 flex items-center gap-3 text-rose-400 text-xs font-bold animate-shake">
+                                        <AlertCircle size={16} />
+                                        {deleteError}
+                                    </div>
+                                )}
+                                <div className="grid grid-cols-2 gap-4">
+                                    <button
+                                        onClick={() => {
+                                            setIsDeleteModalOpen(false);
+                                            setDeleteError(null);
+                                        }}
+                                        disabled={isDeleting}
+                                        className="py-4 rounded-2xl bg-shark/40 border border-shark hover:bg-shark/60 text-iron font-black text-[10px] uppercase tracking-widest transition-all disabled:opacity-50"
+                                    >
+                                        Cancel
+                                    </button>
+                                    <button
+                                        onClick={handleDeleteRequest}
+                                        disabled={isDeleting}
+                                        className="py-4 rounded-2xl bg-rose-500 hover:bg-rose-600 text-white font-black text-[10px] uppercase tracking-widest transition-all shadow-lg shadow-rose-500/25 flex items-center justify-center gap-2 disabled:opacity-50"
+                                    >
+                                        {isDeleting ? (
+                                            <>
+                                                <Loader2 size={14} className="animate-spin" />
+                                                Deleting...
+                                            </>
+                                        ) : (
+                                            'Confirm Delete'
+                                        )}
+                                    </button>
+                                </div>
                             </div>
                         </div>
                     </div>
-                </div>
-            )}
+                )
+            }
 
             <FilePreviewModal
                 isOpen={isPreviewOpen}

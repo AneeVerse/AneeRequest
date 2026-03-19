@@ -452,19 +452,6 @@ export default function FilesClient({ initialRootId, initialDriveItems, initialD
         return matchesSearch && matchesType;
     });
 
-    const searchTool = (
-        <div className="relative flex-1 sm:flex-initial sm:w-64 min-w-[120px] max-w-[180px] sm:max-w-none">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-santas-gray" size={14} />
-            <input
-                type="text"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search..."
-                className="w-full bg-black/40 border border-shark/50 rounded-xl py-2 pl-9 pr-4 text-[11px] text-iron placeholder:text-storm-gray focus:outline-none focus:border-[#279da6]/40 transition-all font-bold uppercase tracking-tight"
-            />
-        </div>
-    );
-
     const filterActions = (
         <div className="flex items-center gap-2 shrink-0">
             {/* Filters Dropdown */}
@@ -474,7 +461,7 @@ export default function FilesClient({ initialRootId, initialDriveItems, initialD
                     className={`flex items-center gap-2 px-2.5 py-1.5 rounded-xl border border-shark/60 hover:border-[#279da6]/40 hover:bg-white/5 transition-all group ${filterType !== 'all' ? 'bg-[#279da6]/10 border-[#279da6]/40 text-[#279da6]' : 'text-santas-gray'}`}
                 >
                     <Filter size={14} className={filterType !== 'all' ? 'text-[#279da6]' : 'group-hover:text-white'} />
-                    <span className="text-[11px] font-bold uppercase tracking-tight hidden md:inline">
+                    <span className="text-[12px] font-bold uppercase tracking-tight hidden md:inline">
                         {filterType === 'all' ? 'Filters' : filterType}
                     </span>
                     <ChevronDown size={12} className={`hidden md:block transition-transform duration-300 ${isFilterMenuOpen ? 'rotate-180' : ''}`} />
@@ -497,7 +484,7 @@ export default function FilesClient({ initialRootId, initialDriveItems, initialD
                                 className={`w-full flex items-center gap-3 px-4 py-2 hover:bg-white/5 text-xs transition-colors ${filterType === opt.id ? 'text-[#279da6] bg-[#279da6]/5 font-bold' : 'text-iron'}`}
                             >
                                 <span className="opacity-80 group-hover:opacity-100">{opt.icon}</span>
-                                <span className="uppercase tracking-widest text-[10px]">{opt.label}</span>
+                                <span className="uppercase tracking-widest text-[12px]">{opt.label}</span>
                                 {filterType === opt.id && <Check size={12} className="ml-auto" />}
                             </button>
                         ))}
@@ -539,7 +526,6 @@ export default function FilesClient({ initialRootId, initialDriveItems, initialD
                 <div className={`flex-1 flex flex-col min-w-0 bg-[#121214] rounded-t-2xl overflow-hidden border-t border-l border-r mt-2 sm:mt-6 mr-2 sm:mr-6 responsive-content-wrapper transition-all duration-500 ${isImpersonating ? 'border-[#22c55e]/60 shadow-[0_0_15px_rgba(34,197,94,0.15)]' : 'border-shark'}`}>
                     <div className="border-b border-shark">
                         <Header
-
                             onMobileMenuToggle={() => setIsMobileOpen(true)}
                             label={<span className="hidden sm:inline">Files</span>}
                             labelIcon={<HardDrive size={16} className="text-[#279da6] hidden sm:block" />}
@@ -551,7 +537,6 @@ export default function FilesClient({ initialRootId, initialDriveItems, initialD
                                 setNewFolderName('');
                             }}
                             isSubmitting={isDriveLoading}
-                            rightToolbar={searchTool}
                         >
                             {/* Breadcrumbs Row (Breadcrumbs on left, Actions on right) */}
                             <div className="flex items-center gap-2 text-sm overflow-hidden min-w-0">
@@ -570,7 +555,7 @@ export default function FilesClient({ initialRootId, initialDriveItems, initialD
                                             {i > 0 && <ChevronRight size={12} className="text-storm-gray shrink-0" />}
                                             <button
                                                 onClick={() => navigateToBreadcrumb(i)}
-                                                className={`font-black uppercase tracking-widest text-[9px] transition-all truncate ${i === driveBreadcrumbs.length - 1 ? 'text-[#279da6]' : 'text-storm-gray hover:text-iron'} ${i < driveBreadcrumbs.length - 2 ? 'hidden md:block' : ''}`}
+                                                className={`font-black uppercase tracking-widest text-[12px] transition-all truncate ${i === driveBreadcrumbs.length - 1 ? 'text-[#279da6]' : 'text-storm-gray hover:text-iron'} ${i < driveBreadcrumbs.length - 2 ? 'hidden md:block' : ''}`}
                                             >
                                                 {i < driveBreadcrumbs.length - 2 && i !== 0 ? '...' : crumb.name}
                                             </button>
@@ -594,14 +579,14 @@ export default function FilesClient({ initialRootId, initialDriveItems, initialD
                                 {isUploading && uploadStatus && (
                                     <div className="flex items-center gap-2 px-3 py-1.5 bg-[#279da6]/10 border border-[#279da6]/20 rounded-lg animate-pulse lg:flex hidden">
                                         <Loader2 size={14} className="text-[#279da6] animate-spin" />
-                                        <span className="text-[10px] font-bold text-[#279da6] uppercase tracking-wider truncate max-w-[200px]">
+                                        <span className="text-[12px] font-bold text-[#279da6] uppercase tracking-wider truncate max-w-[200px]">
                                             {uploadStatus}
                                         </span>
                                     </div>
                                 )}
                             </div>
                         </Header>
-                    </div>
+                    </div >
 
 
                     <input type="file" ref={fileInputRef} className="hidden" onChange={handleUpload} />
@@ -619,7 +604,7 @@ export default function FilesClient({ initialRootId, initialDriveItems, initialD
                                         <FolderPlus size={16} className="text-storm-gray group-hover:text-[#279da6] transition-colors" />
                                         <span className="text-xs font-medium">New folder</span>
                                     </div>
-                                    <span className="text-[10px] text-storm-gray opacity-40 group-hover:opacity-100 transition-opacity uppercase tracking-widest px-1.5 border border-shark/40 rounded bg-shark/20">ÔîÿF</span>
+                                    <span className="text-[12px] text-storm-gray opacity-40 group-hover:opacity-100 transition-opacity uppercase tracking-widest px-1.5 border border-shark/40 rounded bg-shark/20">ÔîÿF</span>
                                 </button>
                                 <div className="h-[1px] bg-shark/40 my-1" />
                                 <button
@@ -630,7 +615,7 @@ export default function FilesClient({ initialRootId, initialDriveItems, initialD
                                         <FileUp size={16} className="text-storm-gray group-hover:text-[#279da6] transition-colors" />
                                         <span className="text-xs font-medium">File upload</span>
                                     </div>
-                                    <span className="text-[10px] text-storm-gray opacity-40 group-hover:opacity-100 transition-opacity uppercase tracking-widest px-1.5 border border-shark/40 rounded bg-shark/20">ÔîÿU</span>
+                                    <span className="text-[12px] text-storm-gray opacity-40 group-hover:opacity-100 transition-opacity uppercase tracking-widest px-1.5 border border-shark/40 rounded bg-shark/20">ÔîÿU</span>
                                 </button>
                                 <button
                                     onClick={() => { folderInputRef.current?.click(); setIsNewMenuOpen(false); }}
@@ -640,7 +625,7 @@ export default function FilesClient({ initialRootId, initialDriveItems, initialD
                                         <FolderUp size={16} className="text-storm-gray group-hover:text-[#279da6] transition-colors" />
                                         <span className="text-xs font-medium">Folder upload</span>
                                     </div>
-                                    <span className="text-[10px] text-storm-gray opacity-40 group-hover:opacity-100 transition-opacity uppercase tracking-widest px-1.5 border border-shark/40 rounded bg-shark/20">ÔîÿI</span>
+                                    <span className="text-[12px] text-storm-gray opacity-40 group-hover:opacity-100 transition-opacity uppercase tracking-widest px-1.5 border border-shark/40 rounded bg-shark/20">ÔîÿI</span>
                                 </button>
                                 <div className="h-[1px] bg-shark/40 my-1" />
                                 <button
@@ -648,7 +633,7 @@ export default function FilesClient({ initialRootId, initialDriveItems, initialD
                                     className="w-full flex items-center justify-between px-4 py-2 hover:bg-white/5 text-iron transition-colors group"
                                 >
                                     <div className="flex items-center gap-3">
-                                        <div className="w-5 h-5 rounded bg-blue-500/10 border border-blue-500/20 flex items-center justify-center text-[10px] font-black text-blue-500 shadow-sm">
+                                        <div className="w-5 h-5 rounded bg-blue-500/10 border border-blue-500/20 flex items-center justify-center text-[12px] font-black text-blue-500 shadow-sm">
                                             <FileText size={12} />
                                         </div>
                                         <span className="text-xs font-medium">Google Docs</span>
@@ -660,7 +645,7 @@ export default function FilesClient({ initialRootId, initialDriveItems, initialD
                                     className="w-full flex items-center justify-between px-4 py-2 hover:bg-white/5 text-iron transition-colors group"
                                 >
                                     <div className="flex items-center gap-3">
-                                        <div className="w-5 h-5 rounded bg-green-500/10 border border-green-500/20 flex items-center justify-center text-[10px] font-black text-green-500 shadow-sm">
+                                        <div className="w-5 h-5 rounded bg-green-500/10 border border-green-500/20 flex items-center justify-center text-[12px] font-black text-green-500 shadow-sm">
                                             <Table className="size-3" />
                                         </div>
                                         <span className="text-xs font-medium">Google Sheets</span>
@@ -704,13 +689,13 @@ export default function FilesClient({ initialRootId, initialDriveItems, initialD
                             {isDriveLoading && driveItems.length === 0 ? (
                                 <div className="flex flex-col items-center justify-center py-32 gap-4">
                                     <Loader2 size={32} className="animate-spin text-[#279da6]" />
-                                    <p className="text-[10px] font-black text-storm-gray uppercase tracking-[0.3em]">Synching with Drive...</p>
+                                    <p className="text-[12px] font-black text-storm-gray uppercase tracking-[0.3em]">Synching with Drive...</p>
                                 </div>
                             ) : filteredItems.length === 0 ? (
                                 <div className="flex flex-col items-center justify-center py-32 text-center opacity-40">
                                     <FolderOpen size={48} className="text-storm-gray mb-4" />
                                     <p className="text-xs font-black text-iron uppercase mb-1 tracking-widest">THIS FOLDER IS EMPTY</p>
-                                    <p className="text-[10px] text-storm-gray uppercase tracking-widest">Upload your first file or create a subfolder.</p>
+                                    <p className="text-[12px] text-storm-gray uppercase tracking-widest">Upload your first file or create a subfolder.</p>
                                 </div>
                             ) : (
                                 <div className="animate-fade-in">
@@ -719,7 +704,7 @@ export default function FilesClient({ initialRootId, initialDriveItems, initialD
                                             {/* Folders Section */}
                                             {filteredItems.some(item => item.isFolder) && (
                                                 <div className="space-y-4">
-                                                    <h3 className="text-[10px] font-black text-storm-gray uppercase tracking-[0.2em] ml-1 opacity-60">Folders</h3>
+                                                    <h3 className="text-[12px] font-black text-storm-gray uppercase tracking-[0.2em] ml-1 opacity-60">Folders</h3>
                                                     <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-4">
                                                         {filteredItems.filter(item => item.isFolder).map((item) => (
                                                             <div
@@ -731,7 +716,7 @@ export default function FilesClient({ initialRootId, initialDriveItems, initialD
                                                                     {getFileIcon(item.mimeType, item.name, 20)}
                                                                 </div>
                                                                 <div className="flex-1 min-w-0">
-                                                                    <p className="text-[11px] font-bold text-iron truncate uppercase tracking-tight group-hover:text-[#279da6] transition-colors">{item.name}</p>
+                                                                    <p className="text-[12px] font-bold text-iron truncate uppercase tracking-tight group-hover:text-[#279da6] transition-colors">{item.name}</p>
                                                                 </div>
 
                                                                 {/* Mini Actions */}
@@ -777,7 +762,7 @@ export default function FilesClient({ initialRootId, initialDriveItems, initialD
                                             {/* Files Section */}
                                             {filteredItems.some(item => !item.isFolder) && (
                                                 <div className="space-y-4">
-                                                    <h3 className="text-[10px] font-black text-storm-gray uppercase tracking-[0.2em] ml-1 opacity-60">Files</h3>
+                                                    <h3 className="text-[12px] font-black text-storm-gray uppercase tracking-[0.2em] ml-1 opacity-60">Files</h3>
                                                     <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-8 gap-6">
                                                         {filteredItems.filter(item => !item.isFolder).map((item) => (
                                                             <div
@@ -795,17 +780,17 @@ export default function FilesClient({ initialRootId, initialDriveItems, initialD
                                                                         <div className="scale-75 origin-left">
                                                                             {getFileIcon(item.mimeType, item.name, 12)}
                                                                         </div>
-                                                                        <span className="text-[8px] font-black text-storm-gray uppercase tracking-[0.1em]">{getFileTypeLabel(item.mimeType)}</span>
+                                                                        <span className="text-[12px] font-black text-storm-gray uppercase tracking-[0.1em]">{getFileTypeLabel(item.mimeType)}</span>
                                                                     </div>
                                                                 </div>
 
                                                                 {/* Footer Info */}
                                                                 <div className="p-4 bg-[#111114]/80 backdrop-blur-sm border-t border-shark/40">
-                                                                    <p className="text-[10px] font-bold text-iron truncate uppercase tracking-tight group-hover:text-[#279da6] transition-colors mb-1">{item.name}</p>
+                                                                    <p className="text-[12px] font-bold text-iron truncate uppercase tracking-tight group-hover:text-[#279da6] transition-colors mb-1">{item.name}</p>
                                                                     <div className="flex items-center justify-between">
-                                                                        <span className="text-[8px] font-black text-storm-gray uppercase tracking-widest">{item.size ? formatFileSize(item.size) : '--'}</span>
+                                                                        <span className="text-[12px] font-black text-storm-gray uppercase tracking-widest">{item.size ? formatFileSize(item.size) : '--'}</span>
                                                                         {dbEnrichment.clients.some(c => (c.org || c.name) === item.name) && (
-                                                                            <span className="text-[8px] font-black text-cyan-400 uppercase tracking-widest">CLIENT</span>
+                                                                            <span className="text-[12px] font-black text-cyan-400 uppercase tracking-widest">CLIENT</span>
                                                                         )}
                                                                     </div>
                                                                 </div>
@@ -838,7 +823,7 @@ export default function FilesClient({ initialRootId, initialDriveItems, initialD
                                         /* List View */
                                         <div className="space-y-2 sm:space-y-1">
                                             {/* Desktop Header - Hidden on Mobile */}
-                                            <div className="hidden sm:flex items-center px-4 py-2.5 bg-white/5 border border-shark/40 rounded-xl text-[10px] font-black text-storm-gray uppercase tracking-widest mb-1">
+                                            <div className="hidden sm:flex items-center px-4 py-2.5 bg-white/5 border border-shark/40 rounded-xl text-[12px] font-black text-storm-gray uppercase tracking-widest mb-1">
                                                 <div className="flex-1">NAME</div>
                                                 <div className="w-32 hidden md:block">TYPE</div>
                                                 <div className="w-24 hidden sm:block">SIZE</div>
@@ -861,14 +846,14 @@ export default function FilesClient({ initialRootId, initialDriveItems, initialD
                                                                 <div className="min-w-0">
                                                                     <p className="text-xs font-black text-iron truncate uppercase tracking-tight">{item.name}</p>
                                                                     <div className="flex items-center gap-2 mt-0.5">
-                                                                        <span className="text-[9px] font-black text-storm-gray uppercase tracking-widest">{getFileTypeLabel(item.mimeType)}</span>
+                                                                        <span className="text-[12px] font-black text-storm-gray uppercase tracking-widest">{getFileTypeLabel(item.mimeType)}</span>
                                                                         <span className="w-1 h-1 rounded-full bg-shark" />
-                                                                        <span className="text-[9px] font-black text-storm-gray uppercase tracking-widest">{!item.isFolder && item.size ? formatFileSize(item.size) : '--'}</span>
+                                                                        <span className="text-[12px] font-black text-storm-gray uppercase tracking-widest">{!item.isFolder && item.size ? formatFileSize(item.size) : '--'}</span>
                                                                     </div>
                                                                 </div>
                                                             </div>
                                                             {dbEnrichment.clients.some(c => (c.org || c.name) === item.name) && (
-                                                                <span className="shrink-0 text-[8px] font-black bg-cyan-500/10 text-cyan-400 px-1.5 py-0.5 rounded border border-cyan-500/20 uppercase">CLIENT</span>
+                                                                <span className="shrink-0 text-[12px] font-black bg-cyan-500/10 text-cyan-400 px-1.5 py-0.5 rounded border border-cyan-500/20 uppercase">CLIENT</span>
                                                             )}
                                                         </div>
 
@@ -916,7 +901,7 @@ export default function FilesClient({ initialRootId, initialDriveItems, initialD
                                                                     target="_blank"
                                                                     rel="noopener noreferrer"
                                                                     onClick={(e) => e.stopPropagation()}
-                                                                    className="flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-xl bg-shark/40 border border-shark/60 text-[10px] font-black text-iron uppercase tracking-widest"
+                                                                    className="flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-xl bg-shark/40 border border-shark/60 text-[12px] font-black text-iron uppercase tracking-widest"
                                                                 >
                                                                     <Download size={12} />
                                                                     Get
@@ -942,14 +927,14 @@ export default function FilesClient({ initialRootId, initialDriveItems, initialD
                                                             </div>
                                                             <p className="text-xs font-black text-iron truncate uppercase tracking-tight group-hover:text-[#279da6] transition-colors">{item.name}</p>
                                                             {dbEnrichment.clients.some(c => (c.org || c.name) === item.name) && (
-                                                                <span className="text-[8px] font-black bg-cyan-500/10 text-cyan-400 px-1.5 py-0.5 rounded border border-cyan-500/20 uppercase">CLIENT</span>
+                                                                <span className="text-[12px] font-black bg-cyan-500/10 text-cyan-400 px-1.5 py-0.5 rounded border border-cyan-500/20 uppercase">CLIENT</span>
                                                             )}
                                                         </div>
                                                         <div className="w-32 hidden md:block">
-                                                            <span className="text-[9px] font-black text-storm-gray uppercase tracking-widest">{getFileTypeLabel(item.mimeType)}</span>
+                                                            <span className="text-[12px] font-black text-storm-gray uppercase tracking-widest">{getFileTypeLabel(item.mimeType)}</span>
                                                         </div>
                                                         <div className="w-24 hidden sm:block">
-                                                            <span className="text-[9px] font-black text-storm-gray uppercase tracking-widest">{!item.isFolder && item.size ? formatFileSize(item.size) : '--'}</span>
+                                                            <span className="text-[12px] font-black text-storm-gray uppercase tracking-widest">{!item.isFolder && item.size ? formatFileSize(item.size) : '--'}</span>
                                                         </div>
                                                         <div className="w-32 flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                                                             <button
@@ -1027,7 +1012,7 @@ export default function FilesClient({ initialRootId, initialDriveItems, initialD
                                 <Trash2 size={32} />
                             </div>
                             <h3 className="text-xl font-black text-white text-center mb-2 uppercase tracking-tight">Confirm Deletion</h3>
-                            <p className="text-sm font-bold text-storm-gray text-center mb-8 uppercase tracking-widest text-[10px]">
+                            <p className="text-sm font-bold text-storm-gray text-center mb-8 uppercase tracking-widest text-[12px]">
                                 Are you sure you want to delete <span className="text-iron">"{deleteTarget?.name}"</span>? This action cannot be undone.
                             </p>
                             <div className="flex gap-3">
@@ -1078,7 +1063,7 @@ export default function FilesClient({ initialRootId, initialDriveItems, initialD
                             </div>
 
                             <div className="p-6">
-                                <label className="block text-[10px] font-black text-storm-gray uppercase tracking-widest mb-2 ml-1">
+                                <label className="block text-[12px] font-black text-storm-gray uppercase tracking-widest mb-2 ml-1">
                                     Enter Name
                                 </label>
                                 <input

@@ -420,16 +420,6 @@ export default function ClientsClient({ initialClients }: ClientsClientProps) {
 
     const filtersElement = (
         <div className="flex items-center gap-2 sm:gap-3 w-full sm:w-auto">
-            <div className="relative w-full sm:w-64">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-santas-gray" size={14} />
-                <input
-                    type="text"
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    placeholder="Search users..."
-                    className="w-full bg-black/40 border border-shark/50 rounded-xl py-2 pl-9 pr-4 text-[12px] text-iron placeholder:text-storm-gray focus:outline-none focus:border-[#279da6]/40 transition-all font-bold uppercase tracking-tight"
-                />
-            </div>
             <div className="relative">
                 <button
                     onClick={() => setIsFilterOpen(!isFilterOpen)}
@@ -807,7 +797,7 @@ export default function ClientsClient({ initialClients }: ClientsClientProps) {
                                             <div key={client.id} className="p-4 bg-shark/5 flex flex-col gap-4 animate-zoom-in">
                                                 {/* Card Header: Avatar & Organization */}
                                                 <div className="flex items-start gap-3">
-                                                    <div className="w-12 h-12 rounded-2xl bg-shark/80 border border-white/5 overflow-hidden flex items-center justify-center text-[12px] text-white font-black bg-gradient-to-br from-[#279da6]/20 to-transparent shrink-0">
+                                                    <div className="w-[46px] h-[46px] rounded-2xl bg-shark/80 border border-white/5 overflow-hidden flex items-center justify-center text-[12px] text-white font-black bg-gradient-to-br from-[#279da6]/20 to-transparent shrink-0">
                                                         {client.avatar_url ? (
                                                             <img src={client.avatar_url} alt={client.organization} className="w-full h-full object-cover" />
                                                         ) : (
@@ -817,7 +807,7 @@ export default function ClientsClient({ initialClients }: ClientsClientProps) {
                                                     <div className="flex flex-col flex-1 min-w-0">
                                                         <div className="flex items-center justify-between">
                                                             <h3
-                                                                className="text-[13px] font-black text-white hover:text-[#279da6] cursor-pointer transition-colors uppercase leading-tight truncate"
+                                                                className="text-[12px] font-black text-white hover:text-[#279da6] cursor-pointer transition-colors uppercase leading-tight truncate"
                                                                 onClick={() => router.push(`/clients/${client.slug}`)}
                                                             >
                                                                 {client.organization}
@@ -845,10 +835,10 @@ export default function ClientsClient({ initialClients }: ClientsClientProps) {
                                                             </div>
                                                         </div>
                                                         <div className="mt-1 flex flex-col gap-0.5">
-                                                            <p className="text-[10px] font-bold text-storm-gray uppercase tracking-tight truncate opacity-60">
+                                                            <p className="text-[12px] font-bold text-storm-gray uppercase tracking-tight truncate opacity-60">
                                                                 {client.name}
                                                             </p>
-                                                            <p className="text-[9px] font-black text-[#279da6] tracking-widest break-all">
+                                                            <p className="text-[12px] font-black text-[#279da6] tracking-widest break-all">
                                                                 {client.email}
                                                             </p>
                                                         </div>
@@ -863,7 +853,7 @@ export default function ClientsClient({ initialClients }: ClientsClientProps) {
                                                             onClick={() => router.push(`/clients/${client.slug}`)}
                                                         >
                                                             <MessageSquare size={12} className="text-[#279da6]" />
-                                                            <span className="text-[11px] font-black text-white">{client.request_count || 0}</span>
+                                                            <span className="text-[12px] font-black text-white">{client.request_count || 0}</span>
                                                         </div>
                                                         <div className="w-px h-3 bg-shark/60" />
                                                         <div
@@ -871,7 +861,7 @@ export default function ClientsClient({ initialClients }: ClientsClientProps) {
                                                             onClick={() => router.push(`/clients/${client.slug}?tab=Tasks`)}
                                                         >
                                                             <CheckSquare size={12} className="text-amber-400" />
-                                                            <span className="text-[11px] font-black text-white">{client.task_count || 0}</span>
+                                                            <span className="text-[12px] font-black text-white">{client.task_count || 0}</span>
                                                         </div>
                                                     </div>
                                                     <div className="space-y-1">
@@ -879,7 +869,7 @@ export default function ClientsClient({ initialClients }: ClientsClientProps) {
                                                             value={client.status || 'Ongoing'}
                                                             onChange={(val) => handleStatusUpdate(client.id, val)}
                                                             options={[
-                                                                { label: 'ONGOING', value: 'Ongoing', icon: <CheckCircle2 size={10} className="text-emerald-400" />, color: 'text-emerald-400' },
+                                                                { label: 'ACTIVE', value: 'Ongoing', icon: <CheckCircle2 size={10} className="text-emerald-400" />, color: 'text-emerald-400' },
                                                                 { label: 'LEADS', value: 'Leads', icon: <UsersIcon size={10} className="text-[#279da6]" />, color: 'text-[#279da6]' },
                                                                 { label: 'CLOSED', value: 'Closed', icon: <XCircle size={10} className="text-rose-400" />, color: 'text-rose-400' },
                                                                 { label: 'ARCHIVE', value: 'Archive', icon: <Archive size={10} className="text-[#F28C28]" />, color: 'text-[#F28C28]' },
@@ -957,7 +947,7 @@ export default function ClientsClient({ initialClients }: ClientsClientProps) {
                                                                 onClick={(e) => e.stopPropagation()}
                                                             >
                                                                 <div className="mb-2 border-b border-shark/40 pb-2">
-                                                                    <div className="text-[9px] font-black text-storm-gray uppercase mb-1 px-1 tracking-widest">Sort</div>
+                                                                    <div className="text-[12px] font-black text-storm-gray uppercase mb-1 px-1 tracking-widest">Sort</div>
                                                                     <button
                                                                         onClick={() => { setSortConfig({ key: header.key, direction: 'asc' }); setActiveFilterHeader(null); }}
                                                                         className={`flex items-center gap-2 w-full px-2 py-1.5 rounded-lg text-[12px] uppercase font-black tracking-wider hover:bg-[#279da6]/10 hover:text-white transition-all ${sortConfig.key === header.key && sortConfig.direction === 'asc' ? 'text-[#279da6] bg-[#279da6]/5' : 'text-storm-gray'}`}
@@ -974,7 +964,7 @@ export default function ClientsClient({ initialClients }: ClientsClientProps) {
                                                                     </button>
                                                                 </div>
                                                                 <div>
-                                                                    <div className="text-[9px] font-black text-storm-gray uppercase mb-1 px-1 tracking-widest">Filter</div>
+                                                                    <div className="text-[12px] font-black text-storm-gray uppercase mb-1 px-1 tracking-widest">Filter</div>
                                                                     {!['createdAt', 'lastLoginDate', 'organization'].includes(header.filter) && (
                                                                         <div className="px-1 pb-1">
                                                                             <input
@@ -1024,7 +1014,7 @@ export default function ClientsClient({ initialClients }: ClientsClientProps) {
                                                             onClick={() => router.push(`/clients/${client.slug}`)}
                                                         >
                                                             <div className="flex items-center gap-4">
-                                                                <div className="w-10 h-10 rounded-full bg-shark/80 border border-white/5 overflow-hidden flex items-center justify-center text-[12px] text-white font-black bg-gradient-to-br from-[#279da6]/20 to-transparent group-hover/cell:scale-105 transition-transform shrink-0">
+                                                                <div className="w-[46px] h-[46px] rounded-full bg-shark/80 border border-white/5 overflow-hidden flex items-center justify-center text-[12px] text-white font-black bg-gradient-to-br from-[#279da6]/20 to-transparent group-hover/cell:scale-105 transition-transform shrink-0">
                                                                     {client.avatar_url ? (
                                                                         <img src={client.avatar_url} alt={client.organization} className="w-full h-full object-cover" />
                                                                     ) : (
@@ -1069,20 +1059,20 @@ export default function ClientsClient({ initialClients }: ClientsClientProps) {
                                                                 value={client.status || 'Ongoing'}
                                                                 onChange={(val) => handleStatusUpdate(client.id, val)}
                                                                 options={[
-                                                                    { label: 'ONGOING', value: 'Ongoing', icon: <CheckCircle2 size={11} className="text-emerald-400" />, color: 'text-emerald-400' },
+                                                                    { label: 'ACTIVE', value: 'Ongoing', icon: <CheckCircle2 size={11} className="text-emerald-400" />, color: 'text-emerald-400' },
                                                                     { label: 'LEADS', value: 'Leads', icon: <UsersIcon size={11} className="text-[#279da6]" />, color: 'text-[#279da6]' },
                                                                     { label: 'CLOSED', value: 'Closed', icon: <XCircle size={11} className="text-rose-400" />, color: 'text-rose-400' },
                                                                     { label: 'ARCHIVE', value: 'Archive', icon: <Archive size={11} className="text-[#F28C28]" />, color: 'text-[#F28C28]' },
                                                                 ]}
                                                                 variant="minimal"
-                                                                className="w-full scale-90"
+                                                                className="w-full"
                                                             />
                                                         </td>
                                                         <td className="px-4 py-3 border-r border-shark/60 text-storm-gray font-black whitespace-nowrap text-[12px] uppercase text-center">
                                                             {client.lastLoginRaw ? (
                                                                 <div className="flex flex-col">
                                                                     <span className="text-iron font-black">{formatDate(client.lastLoginRaw)}</span>
-                                                                    <span className="opacity-40 font-bold scale-90">{formatTime(client.lastLoginRaw)}</span>
+                                                                    <span className="opacity-40 font-bold">{formatTime(client.lastLoginRaw)}</span>
                                                                 </div>
                                                             ) : 'NEVER'}
                                                         </td>
@@ -1090,7 +1080,7 @@ export default function ClientsClient({ initialClients }: ClientsClientProps) {
                                                             {client.createdAtRaw ? (
                                                                 <div className="flex flex-col">
                                                                     <span className="text-iron font-black">{formatDate(client.createdAtRaw)}</span>
-                                                                    <span className="opacity-40 font-bold scale-90">{formatTime(client.createdAtRaw)}</span>
+                                                                    <span className="opacity-40 font-bold">{formatTime(client.createdAtRaw)}</span>
                                                                 </div>
                                                             ) : (
                                                                 <span className="uppercase">{client.createdAt}</span>

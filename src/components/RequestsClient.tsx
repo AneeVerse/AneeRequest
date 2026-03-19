@@ -23,7 +23,7 @@ import {
     Flag,
     User as UserIcon
 } from 'lucide-react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams, usePathname } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import ChatDrawer from '@/components/ChatDrawer';
 import RequestsTable from '@/components/RequestsTable';
@@ -52,7 +52,18 @@ export default function RequestsClient({
 
     const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
     const [isMobileOpen, setIsMobileOpen] = useState(false);
-    const [activeTab, setActiveTab] = useState('ONGOING');
+    const searchParams = useSearchParams();
+    const pathname = usePathname();
+    const initialTabFromUrl = searchParams.get('status')?.toUpperCase();
+    const activeTab = (initialTabFromUrl && ['ACTIVE', 'COMPLETED', 'ALL', '00'].includes(initialTabFromUrl))
+        ? initialTabFromUrl
+        : 'ACTIVE';
+
+    const setActiveTab = (tab: string) => {
+        const params = new URLSearchParams(searchParams.toString());
+        params.set('status', tab.toLowerCase());
+        router.replace(`${pathname}?${params.toString()}`, { scroll: false });
+    };
     const [selectedRequest, setSelectedRequest] = useState<RequestItem | null>(null);
     const [isChatOpen, setIsChatOpen] = useState(false);
     const [isCreating, setIsCreating] = useState(false);
@@ -72,7 +83,6 @@ export default function RequestsClient({
 
     const [requestFormData, setRequestFormData] = useState({
         title: '',
-        priority: 'Medium',
         description: '',
         due_date: '',
         client_id: '',
@@ -81,7 +91,7 @@ export default function RequestsClient({
 
     const inlineRequestInputRef = React.useRef<HTMLInputElement>(null);
 
-    const subTabs = ['ONGOING', 'COMPLETED', 'ALL'];
+    const subTabs = ['ACTIVE', 'COMPLETED', 'ALL', '00'];
 
     const [requests, setRequests] = useState<RequestItem[]>(initialRequests);
     const [profiles, setProfiles] = useState<Profile[]>(initialProfiles);
@@ -123,7 +133,7 @@ export default function RequestsClient({
 
             if (res.ok) {
                 setIsCreating(false);
-                setRequestFormData({ title: '', priority: 'Medium', description: '', due_date: '', client_id: '', create_folder: false });
+                setRequestFormData({ title: '', description: '', due_date: '', client_id: '', create_folder: false });
                 router.refresh();
             } else {
                 const err = await res.json();
@@ -200,8 +210,17 @@ export default function RequestsClient({
     const tabFilteredRequests = visibleRequests.filter((req: RequestItem) => {
         // Tab filters
         let matchesTab = true;
-        if (activeTab === 'ONGOING') matchesTab = req.status !== 'Done';
-        else if (activeTab === 'COMPLETED') matchesTab = req.status === 'Done';
+        const isDefaultRequest = req.title === '00-Updates-Followups' || req.title === '00-UPDATES-FOLLOWUPS';
+
+        if (activeTab === '00') {
+            matchesTab = isDefaultRequest;
+        } else {
+            // All other tabs exclude the default request
+            if (isDefaultRequest) return false;
+
+            if (activeTab === 'ACTIVE') matchesTab = req.status !== 'Done';
+            else if (activeTab === 'COMPLETED') matchesTab = req.status === 'Done';
+        }
 
         if (!matchesTab) return false;
 
@@ -251,8 +270,12 @@ export default function RequestsClient({
         const counts: Record<string, number> = {};
         subTabs.forEach(tab => {
             counts[tab] = visibleRequests.filter(req => {
+                const isDefaultRequest = req.title === '00-Updates-Followups' || req.title === '00-UPDATES-FOLLOWUPS';
+                if (tab === '00') return isDefaultRequest;
+                if (isDefaultRequest) return false;
+
                 if (tab === 'ALL' || tab === 'All') return true;
-                if (tab === 'ONGOING') return req.status !== 'Done';
+                if (tab === 'ACTIVE') return req.status !== 'Done';
                 if (tab === 'COMPLETED') return req.status === 'Done';
                 return true;
             }).length;
@@ -264,11 +287,11 @@ export default function RequestsClient({
         <div className="relative">
             <button
                 onClick={() => setIsFilterOpen(!isFilterOpen)}
-                className={`relative flex items-center gap-2 px-3 py-1.5 rounded-lg border transition-all text-xs font-bold z-10 ${Object.values(filters).some(v => v !== '') || searchQuery !== '' ? 'bg-[#279da6]/20 border-[#279da6]/60 text-[#279da6] active:scale-95' : 'border-shark bg-[#121214] text-santas-gray hover:text-white hover:bg-shark/40'}`}
+                className={`relative flex items-center gap-2 px-3 py-1.5 rounded-lg border transition-all text-[12px] font-bold z-10 ${Object.values(filters).some(v => v !== '') || searchQuery !== '' ? 'bg-[#279da6]/20 border-[#279da6]/60 text-[#279da6] active:scale-95' : 'border-shark bg-[#121214] text-santas-gray hover:text-white hover:bg-shark/40'}`}
             >
-                <Filter size={14} className={Object.values(filters).some(v => v !== '') || searchQuery !== '' ? 'fill-[#279da6]/20' : ''} />
+                <Filter size={16} className={Object.values(filters).some(v => v !== '') || searchQuery !== '' ? 'fill-[#279da6]/20' : ''} />
                 <span className="hidden sm:inline">Filters</span>
-                <ChevronDown size={14} className={isFilterOpen ? 'rotate-180 transition-transform' : 'transition-transform'} />
+                <ChevronDown size={16} className={isFilterOpen ? 'rotate-180 transition-transform' : 'transition-transform'} />
             </button>
 
             {isFilterOpen && (
@@ -427,7 +450,7 @@ export default function RequestsClient({
                             onConfirm={handleInlineCreate}
                             onCancel={() => {
                                 setIsCreating(false);
-                                setRequestFormData({ title: '', priority: 'Medium', description: '', due_date: '', client_id: '', create_folder: false });
+                                setRequestFormData({ title: '', description: '', due_date: '', client_id: '', create_folder: false });
                             }}
                             isSubmitting={isSubmitting}
                             rightToolbar={filtersElement}
@@ -455,9 +478,9 @@ export default function RequestsClient({
                                             </div>
 
                                             <div className="flex-1 space-y-6">
-                                                {/* Top Row: Title & Priority & Client */}
+                                                {/* Top Row: Title & Client */}
                                                 <div className="grid grid-cols-1 md:grid-cols-4 gap-5">
-                                                    <div className="space-y-1.5 md:col-span-2">
+                                                    <div className="space-y-1.5 md:col-span-3">
                                                         <label className="text-[10px] font-black text-storm-gray uppercase tracking-widest ml-1">Request Title</label>
                                                         <div className="relative group">
                                                             <Pencil size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-storm-gray group-focus-within:text-[#279da6] transition-colors" />
@@ -467,22 +490,9 @@ export default function RequestsClient({
                                                                 value={requestFormData.title}
                                                                 onChange={(e) => setRequestFormData({ ...requestFormData, title: e.target.value })}
                                                                 placeholder="What do you need?"
-                                                                className="w-full bg-black/40 border border-shark/50 rounded-xl py-2.5 pl-10 pr-4 text-xs text-iron placeholder:text-storm-gray focus:outline-none focus:border-[#279da6]/40 transition-all font-bold"
+                                                                className="w-full bg-black/40 border border-shark/50 rounded-xl py-2.5 pl-10 pr-4 text-[12px] text-iron placeholder:text-storm-gray focus:outline-none focus:border-[#279da6]/40 transition-all font-bold"
                                                             />
                                                         </div>
-                                                    </div>
-                                                    <div className="space-y-1.5">
-                                                        <label className="text-[10px] font-black text-storm-gray uppercase tracking-widest ml-1">Priority</label>
-                                                        <CustomDropdown
-                                                            value={requestFormData.priority}
-                                                            onChange={(val: any) => setRequestFormData({ ...requestFormData, priority: val })}
-                                                            options={[
-                                                                { label: 'Low', value: 'Low', icon: <div className="w-2 h-2 rounded-full bg-storm-gray" /> },
-                                                                { label: 'Medium', value: 'Medium', icon: <div className="w-2 h-2 rounded-full bg-blue-400" /> },
-                                                                { label: 'High', value: 'High', icon: <div className="w-2 h-2 rounded-full bg-amber-500" /> },
-                                                                { label: 'Critical', value: 'Critical', icon: <div className="w-2 h-2 rounded-full bg-rose-500" /> }
-                                                            ]}
-                                                        />
                                                     </div>
                                                     <div className="space-y-1.5">
                                                         <label className="text-[10px] font-black text-storm-gray uppercase tracking-widest ml-1">Client</label>
@@ -511,7 +521,7 @@ export default function RequestsClient({
                                                                 value={requestFormData.description}
                                                                 onChange={(e) => setRequestFormData({ ...requestFormData, description: e.target.value })}
                                                                 placeholder="Add details about your request..."
-                                                                className="w-full bg-black/40 border border-shark/50 rounded-xl py-2.5 pl-10 pr-4 text-xs text-iron placeholder:text-storm-gray focus:outline-none focus:border-[#279da6]/40 transition-all font-bold min-h-[42px] max-h-[120px] custom-scrollbar"
+                                                                className="w-full bg-black/40 border border-shark/50 rounded-xl py-2.5 pl-10 pr-4 text-[12px] text-iron placeholder:text-storm-gray focus:outline-none focus:border-[#279da6]/40 transition-all font-bold min-h-[42px] max-h-[120px] custom-scrollbar"
                                                             />
                                                         </div>
                                                     </div>
@@ -523,7 +533,7 @@ export default function RequestsClient({
                                                                 type="date"
                                                                 value={requestFormData.due_date}
                                                                 onChange={(e) => setRequestFormData({ ...requestFormData, due_date: e.target.value })}
-                                                                className="w-full bg-black/40 border border-shark/50 rounded-xl py-2.5 pl-10 pr-4 text-xs text-iron focus:outline-none focus:border-[#279da6]/40 transition-all font-bold [color-scheme:dark]"
+                                                                className="w-full bg-black/40 border border-shark/50 rounded-xl py-2.5 pl-10 pr-4 text-[12px] text-iron focus:outline-none focus:border-[#279da6]/40 transition-all font-bold [color-scheme:dark]"
                                                             />
                                                         </div>
                                                     </div>

@@ -112,7 +112,7 @@ export default function CreateRequestModal({ isOpen, onClose, onSuccess, initial
                 const data = await response.json();
                 onSuccess();
                 onClose();
-                router.push(`/requests/${data.id}`);
+                router.push(`/requests/${data.id}?tab=tasks`);
                 // Reset form
                 setStep(1);
                 setSelectedClientId('');

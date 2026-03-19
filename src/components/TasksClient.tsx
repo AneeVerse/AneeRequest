@@ -24,7 +24,7 @@ import {
     Circle,
     Eye
 } from 'lucide-react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams, usePathname } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import CustomDropdown from '@/components/CustomDropdown';
 
@@ -46,7 +46,18 @@ export default function TasksClient({ initialTasks, profiles, teamMembers, reque
 
     const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
     const [isMobileOpen, setIsMobileOpen] = useState(false);
-    const [activeTab, setActiveTab] = useState('ONGOING');
+    const searchParams = useSearchParams();
+    const pathname = usePathname();
+    const initialTabFromUrl = searchParams.get('status')?.toUpperCase();
+    const activeTab = (initialTabFromUrl && ['ACTIVE', 'COMPLETED', 'ALL', '00', '00-C'].includes(initialTabFromUrl))
+        ? initialTabFromUrl
+        : 'ACTIVE';
+
+    const setActiveTab = (tab: string) => {
+        const params = new URLSearchParams(searchParams.toString());
+        params.set('status', tab.toLowerCase());
+        router.replace(`${pathname}?${params.toString()}`, { scroll: false });
+    };
     const [tasks, setTasks] = useState<TaskItem[]>(initialTasks);
     const [searchQuery, setSearchQuery] = useState('');
     const [isCreating, setIsCreating] = useState(false);
@@ -64,7 +75,6 @@ export default function TasksClient({ initialTasks, profiles, teamMembers, reque
 
     const [taskFormData, setTaskFormData] = useState({
         title: '',
-        priority: 'Medium',
         description: '',
         assigned_to: '',
         due_date: '',
@@ -79,7 +89,7 @@ export default function TasksClient({ initialTasks, profiles, teamMembers, reque
     const [activeFilterHeader, setActiveFilterHeader] = useState<string | null>(null);
     const dateInputRefs = React.useRef<{ [key: string]: HTMLInputElement | null }>({});
 
-    const taskTabs = ['ONGOING', 'COMPLETED', 'ALL'];
+    const taskTabs = ['ACTIVE', 'COMPLETED', 'ALL', '00', '00-C'];
 
     // Update state when initial props change (from SSR refresh)
     React.useEffect(() => {
@@ -153,7 +163,7 @@ export default function TasksClient({ initialTasks, profiles, teamMembers, reque
 
             if (res.ok) {
                 setIsCreating(false);
-                setTaskFormData({ title: '', priority: 'Medium', description: '', assigned_to: '', due_date: '', request_ids: [] });
+                setTaskFormData({ title: '', description: '', assigned_to: '', due_date: '', request_ids: [] });
                 router.refresh();
             } else {
                 const err = await res.json();
@@ -184,10 +194,24 @@ export default function TasksClient({ initialTasks, profiles, teamMembers, reque
             task.title?.toLowerCase().includes(searchLower) ||
             task.description?.toLowerCase().includes(searchLower);
 
+        // Detect if task belongs to a "00-UPDATES-FOLLOWUPS" request
+        const is00Request = !!task.request_links?.some(link =>
+            link.request?.title?.toUpperCase() === '00-UPDATES-FOLLOWUPS'
+        );
+
         // Tab filters
         let matchesTab = true;
-        if (activeTab === 'ONGOING') matchesTab = ['Todo', 'In Progress', 'Review'].includes(task.status || '');
-        else if (activeTab === 'COMPLETED') matchesTab = task.status === 'Done';
+        if (activeTab === 'ACTIVE') {
+            matchesTab = !is00Request && ['Todo', 'In Progress', 'Review'].includes(task.status || '');
+        } else if (activeTab === 'COMPLETED') {
+            matchesTab = !is00Request && task.status === 'Done';
+        } else if (activeTab === 'ALL') {
+            matchesTab = !is00Request;
+        } else if (activeTab === '00') {
+            matchesTab = is00Request && task.status !== 'Done';
+        } else if (activeTab === '00-C') {
+            matchesTab = is00Request && task.status === 'Done';
+        }
 
         // Advanced filters
         const matchesTitle = !filters.title || task.title?.toLowerCase().includes(filters.title.toLowerCase());
@@ -205,6 +229,7 @@ export default function TasksClient({ initialTasks, profiles, teamMembers, reque
         }
 
         return (matchesSearch || false) && matchesTab && matchesTitle && matchesRequest && matchesAssignee && matchesStatus && matchesPriority && matchesDate;
+
     });
 
     const handleSort = (key: string) => {
@@ -254,9 +279,15 @@ export default function TasksClient({ initialTasks, profiles, teamMembers, reque
         const counts: Record<string, number> = {};
         taskTabs.forEach(tab => {
             counts[tab] = visibleTasks.filter(task => {
-                if (tab === 'ALL' || tab === 'All') return true;
-                if (tab === 'ONGOING') return ['Todo', 'In Progress', 'Review'].includes(task.status || '');
-                if (tab === 'COMPLETED') return task.status === 'Done';
+                const is00Request = task.request_links?.some(link =>
+                    link.request?.title?.toUpperCase() === '00-UPDATES-FOLLOWUPS'
+                );
+
+                if (tab === 'ACTIVE') return !is00Request && ['Todo', 'In Progress', 'Review'].includes(task.status || '');
+                if (tab === 'COMPLETED') return !is00Request && task.status === 'Done';
+                if (tab === 'ALL') return !is00Request;
+                if (tab === '00') return is00Request && task.status !== 'Done';
+                if (tab === '00-C') return is00Request && task.status === 'Done';
                 return true;
             }).length;
         });
@@ -267,11 +298,11 @@ export default function TasksClient({ initialTasks, profiles, teamMembers, reque
         <div className="relative">
             <button
                 onClick={() => setIsFilterOpen(!isFilterOpen)}
-                className={`relative flex items-center gap-2 px-3 py-1.5 rounded-lg border transition-all text-xs font-bold z-10 ${Object.values(filters).some(v => v !== '') || searchQuery !== '' || (sortConfig.key !== '' && !(sortConfig.key === 'created_at' && sortConfig.direction === 'desc')) ? 'bg-[#279da6]/20 border-[#279da6]/60 text-[#279da6] active:scale-95' : 'border-shark bg-[#121214] text-santas-gray hover:text-white hover:bg-shark/40'}`}
+                className={`relative flex items-center gap-2 px-3 py-1.5 rounded-lg border transition-all text-[12px] font-bold z-10 ${Object.values(filters).some(v => v !== '') || searchQuery !== '' || (sortConfig.key !== '' && !(sortConfig.key === 'created_at' && sortConfig.direction === 'desc')) ? 'bg-[#279da6]/20 border-[#279da6]/60 text-[#279da6] active:scale-95' : 'border-shark bg-[#121214] text-santas-gray hover:text-white hover:bg-shark/40'}`}
             >
-                <Filter size={14} className={Object.values(filters).some(v => v !== '') || searchQuery !== '' || (sortConfig.key !== '' && !(sortConfig.key === 'created_at' && sortConfig.direction === 'desc')) ? 'fill-[#279da6]/20' : ''} />
+                <Filter size={16} className={Object.values(filters).some(v => v !== '') || searchQuery !== '' || (sortConfig.key !== '' && !(sortConfig.key === 'created_at' && sortConfig.direction === 'desc')) ? 'fill-[#279da6]/20' : ''} />
                 <span className="hidden sm:inline">Filters</span>
-                <ChevronDown size={14} className={isFilterOpen ? 'rotate-180 transition-transform' : 'transition-transform'} />
+                <ChevronDown size={16} className={isFilterOpen ? 'rotate-180 transition-transform' : 'transition-transform'} />
             </button>
 
             {isFilterOpen && (
@@ -431,7 +462,7 @@ export default function TasksClient({ initialTasks, profiles, teamMembers, reque
                             onConfirm={handleInlineCreate}
                             onCancel={() => {
                                 setIsCreating(false);
-                                setTaskFormData({ title: '', priority: 'Medium', description: '', assigned_to: '', due_date: '', request_ids: [] });
+                                setTaskFormData({ title: '', description: '', assigned_to: '', due_date: '', request_ids: [] });
                             }}
                             isSubmitting={isSubmitting}
                             rightToolbar={filtersElement}
@@ -459,9 +490,9 @@ export default function TasksClient({ initialTasks, profiles, teamMembers, reque
                                             </div>
 
                                             <div className="flex-1 space-y-6">
-                                                {/* Top Row: Title & Priority & Assignee */}
+                                                {/* Top Row: Title & Assignee */}
                                                 <div className="grid grid-cols-1 md:grid-cols-4 gap-5">
-                                                    <div className="space-y-1.5 md:col-span-2">
+                                                    <div className="space-y-1.5 md:col-span-3">
                                                         <label className="text-[10px] font-black text-storm-gray uppercase tracking-widest ml-1">Task Title</label>
                                                         <div className="relative group">
                                                             <Pencil size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-storm-gray group-focus-within:text-[#279da6] transition-colors" />
@@ -471,22 +502,9 @@ export default function TasksClient({ initialTasks, profiles, teamMembers, reque
                                                                 value={taskFormData.title}
                                                                 onChange={(e) => setTaskFormData({ ...taskFormData, title: e.target.value })}
                                                                 placeholder="What needs to be done?"
-                                                                className="w-full bg-black/40 border border-shark/50 rounded-xl py-2.5 pl-10 pr-4 text-xs text-iron placeholder:text-storm-gray focus:outline-none focus:border-[#279da6]/40 transition-all font-bold"
+                                                                className="w-full bg-black/40 border border-shark/50 rounded-xl py-2.5 pl-10 pr-4 text-[12px] text-iron placeholder:text-storm-gray focus:outline-none focus:border-[#279da6]/40 transition-all font-bold"
                                                             />
                                                         </div>
-                                                    </div>
-                                                    <div className="space-y-1.5">
-                                                        <label className="text-[10px] font-black text-storm-gray uppercase tracking-widest ml-1">Priority</label>
-                                                        <CustomDropdown
-                                                            value={taskFormData.priority}
-                                                            onChange={(val: any) => setTaskFormData({ ...taskFormData, priority: val })}
-                                                            options={[
-                                                                { label: 'Low', value: 'Low', icon: <Flag size={14} className="text-storm-gray" />, color: 'text-storm-gray' },
-                                                                { label: 'Medium', value: 'Medium', icon: <Flag size={14} className="text-blue-400" />, color: 'text-blue-400' },
-                                                                { label: 'High', value: 'High', icon: <Flag size={14} className="text-amber-500" />, color: 'text-amber-500' },
-                                                                { label: 'Critical', value: 'Critical', icon: <Flag size={14} className="text-rose-500" />, color: 'text-rose-500' }
-                                                            ]}
-                                                        />
                                                     </div>
                                                     <div className="space-y-1.5">
                                                         <label className="text-[10px] font-black text-storm-gray uppercase tracking-widest ml-1">Assignee</label>
@@ -515,7 +533,7 @@ export default function TasksClient({ initialTasks, profiles, teamMembers, reque
                                                                 value={taskFormData.description}
                                                                 onChange={(e) => setTaskFormData({ ...taskFormData, description: e.target.value })}
                                                                 placeholder="Add details about this task..."
-                                                                className="w-full bg-black/40 border border-shark/50 rounded-xl py-2.5 pl-10 pr-4 text-xs text-iron placeholder:text-storm-gray focus:outline-none focus:border-[#279da6]/40 transition-all font-bold min-h-[42px] max-h-[120px] custom-scrollbar"
+                                                                className="w-full bg-black/40 border border-shark/50 rounded-xl py-2.5 pl-10 pr-4 text-[12px] text-iron placeholder:text-storm-gray focus:outline-none focus:border-[#279da6]/40 transition-all font-bold min-h-[42px] max-h-[120px] custom-scrollbar"
                                                             />
                                                         </div>
                                                     </div>
@@ -527,7 +545,7 @@ export default function TasksClient({ initialTasks, profiles, teamMembers, reque
                                                                 type="date"
                                                                 value={taskFormData.due_date}
                                                                 onChange={(e) => setTaskFormData({ ...taskFormData, due_date: e.target.value })}
-                                                                className="w-full bg-black/40 border border-shark/50 rounded-xl py-2.5 pl-10 pr-4 text-xs text-iron focus:outline-none focus:border-[#279da6]/40 transition-all font-bold [color-scheme:dark]"
+                                                                className="w-full bg-black/40 border border-shark/50 rounded-xl py-2.5 pl-10 pr-4 text-[12px] text-iron focus:outline-none focus:border-[#279da6]/40 transition-all font-bold [color-scheme:dark]"
                                                             />
                                                         </div>
                                                     </div>

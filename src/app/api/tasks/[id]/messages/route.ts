@@ -73,3 +73,64 @@ export async function POST(
         return NextResponse.json({ error: error.message }, { status: 500 });
     }
 }
+
+export async function PATCH(
+    request: Request,
+    { params }: { params: Promise<{ id: string }> }
+) {
+    try {
+        const body = await request.json();
+        const { id, message } = body;
+
+        if (!id || !message) {
+            return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
+        }
+
+        const supabase = createServiceClient();
+        const { data, error } = await supabase
+            .from('task_messages')
+            .update({
+                message,
+                is_edited: true,
+                updated_at: new Date().toISOString()
+            })
+            .eq('id', id)
+            .select(`
+                *,
+                sender:sender_id (full_name, role, avatar_url)
+            `)
+            .single();
+
+        if (error) throw error;
+
+        return NextResponse.json(data);
+    } catch (error: any) {
+        return NextResponse.json({ error: error.message }, { status: 500 });
+    }
+}
+
+export async function DELETE(
+    request: Request,
+    { params }: { params: Promise<{ id: string }> }
+) {
+    try {
+        const { searchParams } = new URL(request.url);
+        const messageId = searchParams.get('messageId');
+
+        if (!messageId) {
+            return NextResponse.json({ error: "Missing message ID" }, { status: 400 });
+        }
+
+        const supabase = createServiceClient();
+        const { error } = await supabase
+            .from('task_messages')
+            .delete()
+            .eq('id', messageId);
+
+        if (error) throw error;
+
+        return NextResponse.json({ success: true });
+    } catch (error: any) {
+        return NextResponse.json({ error: error.message }, { status: 500 });
+    }
+}

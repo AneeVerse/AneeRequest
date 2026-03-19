@@ -12,8 +12,8 @@ export async function GET(request: Request) {
 
         let selectStr = `
             *,
-            assignee:assigned_to (id, full_name),
-            creator:created_by (id, full_name),
+            assignee:assigned_to (id, full_name, avatar_url),
+            creator:created_by (id, full_name, avatar_url),
             request_links:task_request_links (
                 request:request_id (id, slug, title)
             )
@@ -23,8 +23,8 @@ export async function GET(request: Request) {
         if (requestId) {
             selectStr = `
                 *,
-                assignee:assigned_to (id, full_name),
-                creator:created_by (id, full_name),
+                assignee:assigned_to (id, full_name, avatar_url),
+                creator:created_by (id, full_name, avatar_url),
                 request_links:task_request_links!inner (
                     request:request_id (id, slug, title)
                 )

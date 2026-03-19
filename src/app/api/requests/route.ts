@@ -60,7 +60,7 @@ export async function GET(request: Request) {
             .select(`
                 *,
                 client:client_id (id, full_name:name, organization, email),
-                assignee:assigned_to (id, full_name)
+                assignee:assigned_to (id, full_name, avatar_url)
             `);
 
         // 3. Apply role-based filtering
@@ -105,7 +105,7 @@ export async function GET(request: Request) {
                 .select(`
                     *,
                     client:client_id (id, full_name:name, organization, email),
-                    assignee:assigned_to (id, full_name)
+                    assignee:assigned_to (id, full_name, avatar_url)
                 `)
                 .eq(isUuid ? 'id' : 'slug', id)
                 .maybeSingle();
