@@ -23,6 +23,10 @@
 # misc
 .DS_Store
 *.pem
+check_columns.js
+check_db.js
+eslint_output.txt
+tsc_output.txt
 
 # debug
 npm-debug.log*

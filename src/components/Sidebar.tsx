@@ -138,7 +138,7 @@ export default function Sidebar({ isCollapsed, isMobileOpen = false, onMobileClo
         { name: 'Overview', icon: Home, path: '/', id: 'dashboard' },
         { name: 'Requests', icon: MessageSquare, path: '/requests', id: 'requests' },
         { name: 'Tasks', icon: CheckSquare, path: '/tasks', isInternalOnly: true, id: 'tasks' },
-        { name: 'Files', icon: FolderOpen, path: '/files', id: 'files' },
+        { name: 'DRIVE', icon: FolderOpen, path: '/files', id: 'files' },
         { name: 'Users', icon: Users, path: '/clients', id: 'users' },
     ];
 

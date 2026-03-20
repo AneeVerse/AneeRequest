@@ -300,9 +300,9 @@ export default function TasksClient({ initialTasks, profiles, teamMembers, reque
                 onClick={() => setIsFilterOpen(!isFilterOpen)}
                 className={`relative flex items-center gap-2 px-3 py-1.5 rounded-lg border transition-all text-[12px] font-bold z-10 ${Object.values(filters).some(v => v !== '') || searchQuery !== '' || (sortConfig.key !== '' && !(sortConfig.key === 'created_at' && sortConfig.direction === 'desc')) ? 'bg-[#279da6]/20 border-[#279da6]/60 text-[#279da6] active:scale-95' : 'border-shark bg-[#101011] text-santas-gray hover:text-white hover:bg-shark/40'}`}
             >
-                <Filter size={16} className={Object.values(filters).some(v => v !== '') || searchQuery !== '' || (sortConfig.key !== '' && !(sortConfig.key === 'created_at' && sortConfig.direction === 'desc')) ? 'fill-[#279da6]/20' : ''} />
+                <Filter size={20} className={Object.values(filters).some(v => v !== '') || searchQuery !== '' || (sortConfig.key !== '' && !(sortConfig.key === 'created_at' && sortConfig.direction === 'desc')) ? 'fill-[#279da6]/20' : ''} />
                 <span className="hidden sm:inline">Filters</span>
-                <ChevronDown size={16} className={isFilterOpen ? 'rotate-180 transition-transform' : 'transition-transform'} />
+                <ChevronDown size={20} className={isFilterOpen ? 'rotate-180 transition-transform' : 'transition-transform'} />
             </button>
 
             {isFilterOpen && (
@@ -452,7 +452,7 @@ export default function TasksClient({ initialTasks, profiles, teamMembers, reque
 
                             onMobileMenuToggle={() => setIsMobileOpen(true)}
                             label="Team Tasks"
-                            labelIcon={<CheckSquare size={16} className="text-[#279da6]" />}
+                            labelIcon={<CheckSquare size={20} className="text-[#279da6]" />}
                             tabs={taskTabs}
                             activeTab={activeTab}
                             setActiveTab={setActiveTab}

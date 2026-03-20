@@ -17,10 +17,10 @@ export async function GET(
         const id = await resolveRequestSlug(idOrSlug);
         const supabase = createServiceClient();
 
-        // 1. Get request details (title + client_link_id)
+        // 1. Get request details (title + client_id + drive_folder_id)
         const { data: req, error: reqErr } = await supabase
             .from('requests')
-            .select('title, client_link_id')
+            .select('title, client_id, drive_folder_id')
             .eq('id', id)
             .single();
 
@@ -32,7 +32,7 @@ export async function GET(
         const { data: client } = await supabase
             .from('clients')
             .select('organization, name, drive_folder_id')
-            .eq('id', req.client_link_id)
+            .eq('id', req.client_id)
             .maybeSingle();
 
         const clientName = client?.organization || client?.name || 'Unknown';
@@ -52,7 +52,12 @@ export async function GET(
         }
 
         // Find the request folder
-        const requestFolderId = await findFolder(baseFolderId, req.title);
+        let requestFolderId: string | null = req.drive_folder_id || null;
+
+        if (!requestFolderId) {
+            requestFolderId = await findFolder(baseFolderId, req.title);
+        }
+
         if (!requestFolderId) {
             return NextResponse.json([]);
         }
@@ -157,10 +162,22 @@ export async function POST(
 
         // 3. Ensure folder path exists
         // This will create Client Folder > Request Folder > production & distributed
-        await ensureFolderPath(clientName, req.title, 'production', client?.drive_folder_id);
+        const prodFolderId = await ensureFolderPath(clientName, req.title, 'production', client?.drive_folder_id);
         const distributedFolderId = await ensureFolderPath(clientName, req.title, 'distributed', client?.drive_folder_id);
 
-        return NextResponse.json({ success: true, folderId: distributedFolderId });
+        // Find the parent request folder ID (hacky because ensureFolderPath returns subfolder)
+        // A better search would be needed or modify ensureFolderPath to return parent
+        const requestFolderId = await findFolder(client?.drive_folder_id || await getRootFolderId(), req.title);
+
+        if (requestFolderId) {
+            // Update request in DB with the drive_folder_id
+            await supabase
+                .from('requests')
+                .update({ drive_folder_id: requestFolderId })
+                .eq('id', id);
+        }
+
+        return NextResponse.json({ success: true, folderId: requestFolderId || distributedFolderId });
     } catch (error: any) {
         console.error('Create Request Folder Error:', error);
         return NextResponse.json({ error: error.message }, { status: 500 });

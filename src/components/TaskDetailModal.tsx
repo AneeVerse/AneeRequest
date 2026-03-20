@@ -12,6 +12,7 @@ import { useAuth } from '@/context/AuthContext';
 import { TaskItem } from '@/lib/data/tasks';
 
 import { supabase } from '@/lib/supabase';
+import Image from 'next/image';
 import CustomDropdown from '@/components/CustomDropdown';
 
 interface TaskDetailModalProps {
@@ -294,12 +295,14 @@ export default function TaskDetailModal({
                                     </span>
                                     {task.request_links?.[0]?.request?.client && (
                                         <div className="flex items-center gap-2 border-l border-shark/60 pl-3">
-                                            <div className="w-5 h-5 rounded bg-shark flex items-center justify-center text-[8px] text-[#279da6] font-black shrink-0 border border-white/5 overflow-hidden">
+                                            <div className="w-5 h-5 rounded bg-shark flex items-center justify-center text-[8px] text-[#279da6] font-black shrink-0 border border-white/5 overflow-hidden relative">
                                                 {task.request_links[0].request.client.avatar_url ? (
-                                                    <img
+                                                    <Image
                                                         src={task.request_links[0].request.client.avatar_url}
                                                         alt={task.request_links[0].request.client.organization || 'Org'}
-                                                        className="w-full h-full object-cover"
+                                                        fill
+                                                        unoptimized
+                                                        className="object-cover"
                                                     />
                                                 ) : (
                                                     task.request_links[0].request.client.organization?.[0] || 'O'

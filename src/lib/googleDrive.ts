@@ -69,11 +69,15 @@ class SimpleCache {
 
 const driveCache = new SimpleCache(60); // 1 minute cache for folder listings
 
-/**
- * Manually clear the drive cache to force fresh data on the next fetch.
- */
 export function clearDriveCache() {
     driveCache.clear();
+}
+
+/**
+ * Returns the cache key for a folder's contents.
+ */
+function getFolderCacheKey(folderId: string) {
+    return `contents_${folderId}`;
 }
 
 function getDrive(): drive_v3.Drive {
@@ -174,8 +178,8 @@ export async function createFolder(parentId: string, folderName: string): Promis
         },
         fields: 'id',
     });
-    // Invalidate cache on write
-    driveCache.clear();
+    // Invalidate cache for the parent folder on write
+    driveCache.invalidate(getFolderCacheKey(parentId));
     return res.data.id!;
 }
 
@@ -209,7 +213,7 @@ export async function createGoogleFile(parentId: string, fileName: string, type:
         },
     });
 
-    driveCache.clear();
+    driveCache.invalidate(getFolderCacheKey(parentId));
     return {
         id: res.data.id!,
         webViewLink: res.data.webViewLink!,
@@ -298,8 +302,8 @@ export async function uploadFileToDrive(
         fields: 'webViewLink, webContentLink',
     });
 
-    // Invalidate cache on write
-    driveCache.clear();
+    // Invalidate parent cache on write
+    driveCache.invalidate(getFolderCacheKey(folderId));
 
     return {
         fileId,
@@ -316,7 +320,7 @@ export async function renameFileInDrive(fileId: string, newName: string): Promis
         fileId,
         requestBody: { name: newName },
     });
-    // Invalidate cache on write
+    // Invalidate cache (parent unknown - clearing all for safety)
     driveCache.clear();
 }
 
@@ -326,7 +330,7 @@ export async function renameFileInDrive(fileId: string, newName: string): Promis
 export async function deleteFileFromDrive(fileId: string): Promise<void> {
     const drive = getDrive();
     await drive.files.delete({ fileId });
-    // Invalidate cache on write
+    // Invalidate cache (parent unknown - clearing all for safety)
     driveCache.clear();
 }
 
@@ -354,7 +358,7 @@ export async function renameFolderInDrive(folderId: string, newName: string): Pr
         fileId: folderId,
         requestBody: { name: newName },
     });
-    // Invalidate cache on write
+    // Invalidate cache (parent unknown - clearing all for safety)
     driveCache.clear();
 }
 
@@ -364,7 +368,7 @@ export async function renameFolderInDrive(folderId: string, newName: string): Pr
 export async function deleteFolderFromDrive(folderId: string): Promise<void> {
     const drive = getDrive();
     await drive.files.delete({ fileId: folderId });
-    // Invalidate cache on write
+    // Invalidate cache (parent unknown - clearing all for safety)
     driveCache.clear();
 }
 
@@ -373,7 +377,7 @@ export async function deleteFolderFromDrive(folderId: string): Promise<void> {
  * Returns them sorted: folders first, then files, both alphabetical.
  */
 export async function listFolderContents(folderId: string): Promise<drive_v3.Schema$File[]> {
-    const cacheKey = `contents_${folderId}`;
+    const cacheKey = getFolderCacheKey(folderId);
     const cached = driveCache.get(cacheKey);
     if (cached) return cached;
 

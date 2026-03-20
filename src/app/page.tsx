@@ -34,7 +34,7 @@ export default function DashboardPage() {
 
             onMobileMenuToggle={() => setIsMobileOpen(true)}
             label="Overview"
-            labelIcon={<LayoutDashboard size={16} className="text-santas-gray" />}
+            labelIcon={<LayoutDashboard size={20} className="text-santas-gray" />}
             tabs={overviewTabs}
             activeTab={activeTab}
             setActiveTab={setActiveTab}

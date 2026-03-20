@@ -15,6 +15,7 @@ export interface RequestItem {
     assignee: { id: string; full_name: string } | null;
     due_date: string;
     request_number?: number;
+    drive_folder_id?: string | null;
     created_at: string;
     updated_at: string;
 }
@@ -39,6 +40,7 @@ export interface Client {
     drive_folder_id?: string | null;
     avatar_url?: string | null;
     profile_id?: string | null;
+    slug?: string;
 }
 
 /**

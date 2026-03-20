@@ -37,6 +37,7 @@ import {
 } from 'lucide-react';
 import AvatarUpload from '@/components/AvatarUpload';
 import { useRouter } from 'next/navigation';
+import Image from 'next/image';
 import { useAuth } from '@/context/AuthContext';
 import CustomDropdown from '@/components/CustomDropdown';
 import CustomDateRangePicker from '@/components/CustomDateRangePicker';
@@ -425,9 +426,9 @@ export default function ClientsClient({ initialClients }: ClientsClientProps) {
                     onClick={() => setIsFilterOpen(!isFilterOpen)}
                     className={`relative flex items-center gap-2 px-3 py-1.5 rounded-lg border transition-all text-xs font-bold z-10 ${Object.values(filters).some(v => v !== '') || searchQuery !== '' || (sortConfig.key !== '' && !(sortConfig.key === 'createdAtRaw' && sortConfig.direction === 'desc')) ? 'bg-[#279da6]/20 border-[#279da6]/60 text-[#279da6] active:scale-95' : 'border-shark bg-[#101011] text-santas-gray hover:text-white hover:bg-shark/40'}`}
                 >
-                    <Filter size={14} className={Object.values(filters).some(v => v !== '') || searchQuery !== '' || (sortConfig.key !== '' && !(sortConfig.key === 'createdAtRaw' && sortConfig.direction === 'desc')) ? 'fill-[#279da6]/20' : ''} />
+                    <Filter size={20} className={Object.values(filters).some(v => v !== '') || searchQuery !== '' || (sortConfig.key !== '' && !(sortConfig.key === 'createdAtRaw' && sortConfig.direction === 'desc')) ? 'fill-[#279da6]/20' : ''} />
                     <span className="hidden sm:inline">Filters</span>
-                    <ChevronDown size={14} className={isFilterOpen ? 'rotate-180 transition-transform' : 'transition-transform'} />
+                    <ChevronDown size={20} className={isFilterOpen ? 'rotate-180 transition-transform' : 'transition-transform'} />
                 </button>
 
                 {isFilterOpen && (
@@ -569,7 +570,7 @@ export default function ClientsClient({ initialClients }: ClientsClientProps) {
 
                             onMobileMenuToggle={() => setIsMobileOpen(true)}
                             label={panelMode === 'edit' ? 'Edit Client' : 'Users'}
-                            labelIcon={<UsersIcon size={16} className="text-[#279da6]" />}
+                            labelIcon={<UsersIcon size={20} className="text-[#279da6]" />}
                             tabs={clientCategories}
                             activeTab={activeTab}
                             setActiveTab={setActiveTab}
@@ -797,9 +798,9 @@ export default function ClientsClient({ initialClients }: ClientsClientProps) {
                                             <div key={client.id} className="p-4 bg-shark/5 flex flex-col gap-4 animate-zoom-in">
                                                 {/* Card Header: Avatar & Organization */}
                                                 <div className="flex items-start gap-3">
-                                                    <div className="w-[46px] h-[46px] rounded-2xl bg-shark/80 border border-white/5 overflow-hidden flex items-center justify-center text-[12px] text-white font-black bg-gradient-to-br from-[#279da6]/20 to-transparent shrink-0">
+                                                    <div className="w-[46px] h-[46px] rounded-2xl bg-shark/80 border border-white/5 overflow-hidden flex items-center justify-center text-[12px] text-white font-black bg-gradient-to-br from-[#279da6]/20 to-transparent shrink-0 relative">
                                                         {client.avatar_url ? (
-                                                            <img src={client.avatar_url} alt={client.organization} className="w-full h-full object-cover" />
+                                                            <Image src={client.avatar_url} alt={client.organization || 'Client'} fill className="object-cover" />
                                                         ) : (
                                                             client.organization.split(' ').map((n: string) => n[0]).join('').slice(0, 2)
                                                         )}
@@ -1014,9 +1015,9 @@ export default function ClientsClient({ initialClients }: ClientsClientProps) {
                                                             onClick={() => router.push(`/clients/${client.slug}`)}
                                                         >
                                                             <div className="flex items-center gap-4">
-                                                                <div className="w-[46px] h-[46px] rounded-full bg-shark/80 border border-white/5 overflow-hidden flex items-center justify-center text-[12px] text-white font-black bg-gradient-to-br from-[#279da6]/20 to-transparent group-hover/cell:scale-105 transition-transform shrink-0">
+                                                                <div className="w-[46px] h-[46px] rounded-full bg-shark/80 border border-white/5 overflow-hidden flex items-center justify-center text-[12px] text-white font-black bg-gradient-to-br from-[#279da6]/20 to-transparent group-hover/cell:scale-105 transition-transform shrink-0 relative">
                                                                     {client.avatar_url ? (
-                                                                        <img src={client.avatar_url} alt={client.organization} className="w-full h-full object-cover" />
+                                                                        <Image src={client.avatar_url} alt={client.organization || 'Client'} fill className="object-cover" />
                                                                     ) : (
                                                                         client.organization.split(' ').map((n: string) => n[0]).join('').slice(0, 2)
                                                                     )}

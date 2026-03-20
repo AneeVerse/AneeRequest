@@ -1,7 +1,8 @@
 'use client';
 
 import React from 'react';
-import { X, Download, FileText, File as FileIcon, Image as ImageIcon, ExternalLink } from 'lucide-react';
+import Image from 'next/image';
+import { X, Download, FileText, File as FileIcon, ImageIcon, ExternalLink } from 'lucide-react';
 import { formatDate } from '@/lib/dateUtils';
 
 interface FilePreviewModalProps {
@@ -85,11 +86,15 @@ export default function FilePreviewModal({ isOpen, onClose, file }: FilePreviewM
                 {/* Content */}
                 <div className="flex-1 overflow-auto flex items-center justify-center p-6 bg-[#09090B]/30 min-h-[400px]">
                     {isImage ? (
-                        <img
-                            src={displayUrl}
-                            alt={file.name}
-                            className="max-w-full max-h-[70vh] object-contain rounded-xl shadow-2xl"
-                        />
+                        <div className="relative w-full h-[70vh]">
+                            <Image
+                                src={displayUrl}
+                                alt={file.name}
+                                fill
+                                unoptimized
+                                className="object-contain rounded-xl shadow-2xl"
+                            />
+                        </div>
                     ) : isPdf ? (
                         <iframe
                             src={displayUrl}

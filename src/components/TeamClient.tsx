@@ -39,6 +39,7 @@ import {
 } from 'lucide-react';
 import AvatarUpload from '@/components/AvatarUpload';
 import { useRouter } from 'next/navigation';
+import Image from 'next/image';
 import { useAuth } from '@/context/AuthContext';
 import { formatDate, formatTime } from '@/lib/dateUtils';
 import CustomDropdown from '@/components/CustomDropdown';
@@ -347,9 +348,9 @@ export default function TeamClient({ initialMembers, initialCounts }: TeamClient
                     onClick={() => setIsFilterOpen(!isFilterOpen)}
                     className={`relative flex items-center gap-2 px-3 py-1.5 rounded-xl border transition-all text-[12px] font-bold z-10 ${Object.values(filters).some(v => v !== '') || searchQuery !== '' || (sortConfig.key !== '' && !(sortConfig.key === 'created_at' && sortConfig.direction === 'desc')) ? 'bg-[#279da6]/20 border-[#279da6]/60 text-[#279da6]' : 'border-shark bg-black/40 text-santas-gray hover:text-white hover:bg-shark/40'}`}
                 >
-                    <Filter size={14} className={Object.values(filters).some(v => v !== '') || searchQuery !== '' || (sortConfig.key !== '' && !(sortConfig.key === 'created_at' && sortConfig.direction === 'desc')) ? 'fill-[#279da6]/20' : ''} />
+                    <Filter size={20} className={Object.values(filters).some(v => v !== '') || searchQuery !== '' || (sortConfig.key !== '' && !(sortConfig.key === 'created_at' && sortConfig.direction === 'desc')) ? 'fill-[#279da6]/20' : ''} />
                     <span className="hidden sm:inline">Filters</span>
-                    <ChevronDown size={14} className={isFilterOpen ? 'rotate-180 transition-transform' : 'transition-transform'} />
+                    <ChevronDown size={20} className={isFilterOpen ? 'rotate-180 transition-transform' : 'transition-transform'} />
                 </button>
 
                 {isFilterOpen && (
@@ -443,7 +444,7 @@ export default function TeamClient({ initialMembers, initialCounts }: TeamClient
 
                             onMobileMenuToggle={() => setIsMobileOpen(true)}
                             label={panelMode === 'edit' ? 'Edit Team Member' : 'Users'}
-                            labelIcon={<Users size={16} className="text-[#279da6]" />}
+                            labelIcon={<Users size={20} className="text-[#279da6]" />}
                             onCreate={() => {
                                 setPanelMode('create');
                                 setIsCreating(true);
@@ -632,7 +633,7 @@ export default function TeamClient({ initialMembers, initialCounts }: TeamClient
                                                 {/* Card Header: Avatar & Member Info */}
                                                 <div className="flex items-start gap-3">
                                                     <div
-                                                        className="w-[46px] h-[46px] rounded-full bg-shark flex items-center justify-center text-[12px] font-black text-white overflow-hidden border border-white/5 bg-gradient-to-br from-[#279da6]/20 to-transparent shrink-0 cursor-pointer"
+                                                        className="w-[46px] h-[46px] rounded-full bg-shark flex items-center justify-center text-[12px] font-black text-white overflow-hidden border border-white/5 bg-gradient-to-br from-[#279da6]/20 to-transparent shrink-0 cursor-pointer relative"
                                                         onClick={() => {
                                                             if (member.profile_id) {
                                                                 impersonate({
@@ -647,7 +648,7 @@ export default function TeamClient({ initialMembers, initialCounts }: TeamClient
                                                         }}
                                                     >
                                                         {member.avatar_url ? (
-                                                            <img src={member.avatar_url} alt={member.name} className="w-full h-full object-cover" />
+                                                            <Image src={member.avatar_url} alt={member.name || 'Team Member'} fill className="object-cover" />
                                                         ) : (
                                                             member.name.split(' ').map((n: string) => n[0]).join('')
                                                         )}
@@ -906,9 +907,9 @@ export default function TeamClient({ initialMembers, initialCounts }: TeamClient
                                                                     }
                                                                 }}
                                                             >
-                                                                <div className="w-[46px] h-[46px] rounded-full bg-shark flex items-center justify-center text-[12px] font-black text-white overflow-hidden border border-white/5 group-hover/name:ring-2 ring-[#279da6]/30 transition-all shrink-0 bg-gradient-to-br from-[#279da6]/10 to-transparent">
+                                                                <div className="w-[46px] h-[46px] rounded-full bg-shark flex items-center justify-center text-[12px] font-black text-white overflow-hidden border border-white/5 group-hover/name:ring-2 ring-[#279da6]/30 transition-all shrink-0 bg-gradient-to-br from-[#279da6]/10 to-transparent relative">
                                                                     {member.avatar_url ? (
-                                                                        <img src={member.avatar_url} alt={member.name} className="w-full h-full object-cover" />
+                                                                        <Image src={member.avatar_url} alt={member.name || 'Team Member'} fill className="object-cover" />
                                                                     ) : (
                                                                         member.name.split(' ').map((n: string) => n[0]).join('')
                                                                     )}

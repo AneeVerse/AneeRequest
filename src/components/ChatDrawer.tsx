@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
+import Image from 'next/image';
 import Linkify from 'linkify-react';
 import {
     X,
@@ -217,8 +218,8 @@ export default function ChatDrawer({ isOpen, onClose, requestId, requestTitle }:
 
         if (isImage) {
             return (
-                <div key={att.url} className="mt-2 rounded-lg overflow-hidden border border-white/10 group/img relative cursor-pointer" onClick={() => window.open(att.url, '_blank')}>
-                    <img src={att.url} alt={att.name} className="max-w-full h-auto max-h-60 object-cover" />
+                <div key={att.url} className="mt-2 rounded-lg overflow-hidden border border-white/10 group/img relative cursor-pointer aspect-video" onClick={() => window.open(att.url, '_blank')}>
+                    <Image src={att.url} alt={att.name} fill unoptimized className="object-contain" />
                     <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
                         <Download size={20} className="text-white" />
                     </div>
@@ -342,9 +343,9 @@ export default function ChatDrawer({ isOpen, onClose, requestId, requestTitle }:
                             <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-2">
                                 {selectedFiles.map((file: File, idx: number) => (
                                     <div key={idx} className="relative group/file-preview shrink-0">
-                                        <div className="w-12 h-12 rounded-xl bg-shark/40 border border-shark flex items-center justify-center overflow-hidden">
+                                        <div className="w-12 h-12 rounded-xl bg-shark/40 border border-shark flex items-center justify-center overflow-hidden relative">
                                             {file.type.startsWith('image/') ? (
-                                                <img src={URL.createObjectURL(file)} className="w-full h-full object-cover" />
+                                                <Image src={URL.createObjectURL(file)} alt={file.name} fill unoptimized className="object-cover" />
                                             ) : (
                                                 <FileIcon size={20} className="text-storm-gray" />
                                             )}

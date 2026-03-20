@@ -261,8 +261,8 @@ export default function RequestsTable({
                                                     label: (m.full_name || (m as any).name)?.toUpperCase(),
                                                     value: m.profile_id || m.id,
                                                     icon: m.avatar_url ? (
-                                                        <div className="w-[46px] h-[46px] rounded-full overflow-hidden shrink-0 border border-shark/60">
-                                                            <img src={m.avatar_url} alt={m.full_name} className="w-full h-full object-cover" />
+                                                        <div className="w-[46px] h-[46px] rounded-full overflow-hidden shrink-0 border border-shark/60 relative">
+                                                            <Image src={m.avatar_url} alt={m.full_name || 'Team Member'} fill className="object-cover" />
                                                         </div>
                                                     ) : <User size={20} className="text-[#279da6]" />
                                                 }))
@@ -476,16 +476,13 @@ export default function RequestsTable({
                                         {showClientColumn && (
                                             <td className="px-6 py-3 border-r border-shark/60 hover:bg-white/5 transition-colors">
                                                 <div className="flex items-center gap-3">
-                                                    <div className="w-[46px] h-[46px] rounded-full flex items-center justify-center bg-shark/40 border border-shark/60 text-[12px] font-black text-[#279da6] shrink-0 overflow-hidden">
+                                                    <div className="w-[46px] h-[46px] rounded-full flex items-center justify-center bg-shark/40 border border-shark/60 text-[12px] font-black text-[#279da6] shrink-0 overflow-hidden relative">
                                                         {(item.client as any)?.avatar_url ? (
-                                                            <img
+                                                            <Image
                                                                 src={(item.client as any).avatar_url}
                                                                 alt={(item.client as any).organization || item.client?.full_name || 'Client'}
-                                                                className="w-full h-full object-cover"
-                                                                onError={(e) => {
-                                                                    (e.target as any).style.display = 'none';
-                                                                    (e.target as any).parentElement.innerHTML = `<span>${(item.client as any)?.organization?.[0] || item.client?.full_name?.[0] || 'C'}</span>`;
-                                                                }}
+                                                                fill
+                                                                className="object-cover"
                                                             />
                                                         ) : (
                                                             <span>{(item.client as any)?.organization?.[0] || item.client?.full_name?.[0] || 'C'}</span>
@@ -530,8 +527,8 @@ export default function RequestsTable({
                                                         label: (tm.name || tm.full_name)?.toUpperCase(),
                                                         value: tm.profile_id,
                                                         icon: tm.avatar_url ? (
-                                                            <div className="w-[46px] h-[46px] rounded-full overflow-hidden shrink-0 border border-shark/60">
-                                                                <img src={tm.avatar_url} alt={tm.name} className="w-full h-full object-cover" />
+                                                            <div className="w-[46px] h-[46px] rounded-full overflow-hidden shrink-0 border border-shark/60 relative">
+                                                                <Image src={tm.avatar_url} alt={tm.name || 'Team Member'} fill className="object-cover" />
                                                             </div>
                                                         ) : <User size={20} className="text-[#279da6]" />
                                                     }))

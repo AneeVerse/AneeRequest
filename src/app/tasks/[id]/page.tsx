@@ -603,7 +603,7 @@ export default function TaskDetailsPage() {
                         <div className="border-b border-shark">
                             <Header
                                 onMobileMenuToggle={() => setIsMobileOpen(true)}
-                                labelIcon={<CheckSquare size={16} className="text-[#279da6]" />}
+                                labelIcon={<CheckSquare size={20} className="text-[#279da6]" />}
                                 tabs={[
                                     { label: 'task', icon: <CheckSquare size={12} /> },
                                     { label: 'files', icon: <FolderOpen size={12} /> }
@@ -1045,9 +1045,9 @@ export default function TaskDetailsPage() {
                                         <div className="flex items-center justify-between gap-4">
                                             <span className="w-20 text-[12px] font-bold text-storm-gray shrink-0 uppercase">Created By:</span>
                                             <div className="flex-1 flex items-center gap-2.5 bg-transparent border-none px-3.5 py-2.5 transition-all">
-                                                <div className="w-[46px] h-[46px] rounded-full bg-shark flex items-center justify-center text-sm text-[#279da6] font-black shrink-0 border border-white/5 shadow-inner overflow-hidden">
+                                                <div className="w-[46px] h-[46px] rounded-full bg-shark flex items-center justify-center text-sm text-[#279da6] font-black shrink-0 border border-white/5 shadow-inner overflow-hidden relative">
                                                     {task.creator?.avatar_url ? (
-                                                        <img src={task.creator.avatar_url} alt={task.creator.full_name} className="w-full h-full object-cover" />
+                                                        <Image src={task.creator.avatar_url} alt={task.creator.full_name || 'Creator'} fill unoptimized className="object-cover" />
                                                     ) : (
                                                         task.creator?.full_name?.split(' ').map(n => n[0]).join('')
                                                     )}
@@ -1103,11 +1103,11 @@ export default function TaskDetailsPage() {
                                                         label: tm.name || 'Unknown',
                                                         value: tm.profile_id,
                                                         icon: tm.avatar_url ? (
-                                                            <div className="w-[46px] h-[46px] rounded-full overflow-hidden border border-white/10">
-                                                                <img src={tm.avatar_url} alt={tm.name} className="w-full h-full object-cover" />
+                                                            <div className="w-8 h-8 rounded-full overflow-hidden border border-white/10 relative">
+                                                                <Image src={tm.avatar_url} alt={tm.name} fill unoptimized className="object-cover" />
                                                             </div>
                                                         ) : (
-                                                            <div className="w-[46px] h-[46px] rounded-full bg-shark flex items-center justify-center text-sm text-[#279da6] font-black shrink-0 border border-white/5 shadow-inner">
+                                                            <div className="w-8 h-8 rounded-full bg-shark flex items-center justify-center text-[8px] text-[#279da6] font-black shrink-0 border border-white/5 shadow-inner">
                                                                 {tm.name?.split(' ').map((n: string) => n[0]).join('')}
                                                             </div>
                                                         )

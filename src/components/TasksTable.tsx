@@ -225,21 +225,13 @@ export default function TasksTable({
                                     <div className="flex flex-col gap-1 mt-1.5">
                                         {showOrganizationColumn && item.request_links && item.request_links[0]?.request?.client && (
                                             <div className="flex items-center gap-1.5 overflow-hidden">
-                                                <div className="w-[46px] h-[46px] rounded bg-shark/40 border border-shark/60 flex items-center justify-center text-[12px] font-black text-[#279da6] shrink-0 overflow-hidden">
+                                                <div className="w-[46px] h-[46px] rounded bg-shark/40 border border-shark/60 flex items-center justify-center text-[12px] font-black text-[#279da6] shrink-0 overflow-hidden relative">
                                                     {item.request_links?.[0]?.request?.client?.avatar_url ? (
-                                                        <img
+                                                        <Image
                                                             src={item.request_links[0].request.client.avatar_url}
                                                             alt={item.request_links[0].request.client.organization || 'Org'}
-                                                            className="w-full h-full object-cover"
-                                                            onError={(e) => {
-                                                                const target = e.target as HTMLImageElement;
-                                                                target.style.display = 'none';
-                                                                const parent = target.parentElement;
-                                                                if (parent) {
-                                                                    const char = item.request_links?.[0]?.request?.client?.organization?.[0] || 'O';
-                                                                    parent.innerHTML = `<span>${char}</span>`;
-                                                                }
-                                                            }}
+                                                            fill
+                                                            className="object-cover"
                                                         />
                                                     ) : (
                                                         <span>{item.request_links?.[0]?.request?.client?.organization?.[0] || 'O'}</span>
@@ -297,8 +289,8 @@ export default function TasksTable({
                                                 label: (tm.name || tm.full_name)?.toUpperCase(),
                                                 value: tm.profile_id,
                                                 icon: tm.avatar_url ? (
-                                                    <div className="w-[46px] h-[46px] rounded-full overflow-hidden shrink-0 border border-shark/60">
-                                                        <img src={tm.avatar_url} alt={tm.name} className="w-full h-full object-cover" />
+                                                    <div className="w-[46px] h-[46px] rounded-full overflow-hidden shrink-0 border border-shark/60 relative">
+                                                        <Image src={tm.avatar_url} alt={tm.name || 'Team Member'} fill className="object-cover" />
                                                     </div>
                                                 ) : <UserIcon size={20} className="text-[#279da6]" />
                                             }))
@@ -514,21 +506,13 @@ export default function TasksTable({
                                         <td className="px-6 py-3 border-r border-shark/60 hover:bg-white/5 transition-colors">
                                             {item.request_links?.[0]?.request?.client ? (
                                                 <div className="flex items-center gap-3">
-                                                    <div className="w-[46px] h-[46px] rounded-full flex items-center justify-center bg-shark/40 border border-shark/60 text-[12px] font-black text-[#279da6] shrink-0 overflow-hidden">
+                                                    <div className="w-[46px] h-[46px] rounded-full flex items-center justify-center bg-shark/40 border border-shark/60 text-[12px] font-black text-[#279da6] shrink-0 overflow-hidden relative">
                                                         {item.request_links[0].request.client.avatar_url ? (
-                                                            <img
+                                                            <Image
                                                                 src={item.request_links[0].request.client.avatar_url}
                                                                 alt={item.request_links[0].request.client.organization || 'Org'}
-                                                                className="w-full h-full object-cover"
-                                                                onError={(e) => {
-                                                                    const target = e.target as HTMLImageElement;
-                                                                    target.style.display = 'none';
-                                                                    const parent = target.parentElement;
-                                                                    if (parent) {
-                                                                        const char = item.request_links?.[0]?.request?.client?.organization?.[0] || 'O';
-                                                                        parent.innerHTML = `<span>${char}</span>`;
-                                                                    }
-                                                                }}
+                                                                fill
+                                                                className="object-cover"
                                                             />
                                                         ) : (
                                                             <span>{item.request_links[0].request.client.organization?.[0] || 'O'}</span>
@@ -599,8 +583,8 @@ export default function TasksTable({
                                                     label: (tm.name || tm.full_name)?.toUpperCase(),
                                                     value: tm.profile_id,
                                                     icon: tm.avatar_url ? (
-                                                        <div className="w-[46px] h-[46px] rounded-full overflow-hidden shrink-0 border border-shark/60">
-                                                            <img src={tm.avatar_url} alt={tm.name} className="w-full h-full object-cover" />
+                                                        <div className="w-[46px] h-[46px] rounded-full overflow-hidden shrink-0 border border-shark/60 relative">
+                                                            <Image src={tm.avatar_url} alt={tm.name || 'Team Member'} fill className="object-cover" />
                                                         </div>
                                                     ) : <UserIcon size={20} className="text-[#279da6]" />
                                                 }))

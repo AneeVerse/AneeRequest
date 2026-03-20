@@ -43,6 +43,7 @@ import {
     Flag,
     Circle,
     Eye,
+    Search,
     User as UserIcon
 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
@@ -212,8 +213,10 @@ export default function RequestDetailsPage() {
     });
     const [allRequests, setAllRequests] = useState<any[]>([]);
     const [isCreatingRequestedFolder, setIsCreatingRequestedFolder] = useState(false);
-    const [isLinkFolderModalOpen, setIsLinkFolderModalOpen] = useState(false);
-    const [linkedFolderId, setLinkedFolderId] = useState('');
+    const [isLinkModalOpen, setIsLinkModalOpen] = useState(false);
+    const [linkFolderInput, setLinkFolderInput] = useState('');
+    const [isValidatingLink, setIsValidatingLink] = useState(false);
+    const [linkFolderError, setLinkFolderError] = useState<string | null>(null);
     const [isEditingDescription, setIsEditingDescription] = useState(false);
     const [editedDescription, setEditedDescription] = useState('');
 
@@ -647,17 +650,61 @@ export default function RequestDetailsPage() {
 
     // Fetch request files from Google Drive
     const fetchRequestFiles = async () => {
+        if (!id) return;
         setIsLoadingFiles(true);
         try {
-            const response = await fetch(`/api/requests/${id}/files`);
-            if (response.ok) {
-                const data = await response.json();
+            const res = await fetch(`/api/requests/${id}/files`);
+            const data = await res.json();
+            if (Array.isArray(data)) {
                 setRequestFiles(data);
             }
         } catch (error) {
-            console.error('Error fetching request files:', error);
+            console.error('Fetch Files Error:', error);
         } finally {
             setIsLoadingFiles(false);
+        }
+    };
+
+    const handleLinkFolder = async () => {
+        if (!linkFolderInput.trim()) return;
+
+        setIsValidatingLink(true);
+        setLinkFolderError(null);
+
+        try {
+            // 1. Validate folder
+            const res = await fetch('/api/drive/validate', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ folderId: linkFolderInput.trim() })
+            });
+
+            const data = await res.json();
+
+            if (!data.valid) {
+                setLinkFolderError(data.error || 'Invalid folder or no access');
+                setIsValidatingLink(false);
+                return;
+            }
+
+            // 2. Update request in DB
+            const { error: updateError } = await supabase
+                .from('requests')
+                .update({ drive_folder_id: data.folderId })
+                .eq('id', id);
+
+            if (updateError) throw updateError;
+
+            // 3. Success!
+            setIsLinkModalOpen(false);
+            setLinkFolderInput('');
+            fetchRequestFiles();
+
+        } catch (error: any) {
+            console.error('Link Folder Error:', error);
+            setLinkFolderError(error.message || 'Failed to link folder');
+        } finally {
+            setIsValidatingLink(false);
         }
     };
 
@@ -811,7 +858,7 @@ export default function RequestDetailsPage() {
                             <Header
 
                                 onMobileMenuToggle={() => setIsMobileOpen(true)}
-                                labelIcon={<MessageSquare size={16} className="text-[#279da6]" />}
+                                labelIcon={<MessageSquare size={20} className="text-[#279da6]" />}
                                 tabs={[
                                     { label: 'request', icon: <MessageSquare size={12} /> },
                                     { label: 'tasks', icon: <CheckSquare size={12} /> },
@@ -1089,8 +1136,8 @@ export default function RequestDetailsPage() {
                                                                                                 className="block group/at cursor-pointer"
                                                                                             >
                                                                                                 {at.type?.startsWith('image/') ? (
-                                                                                                    <div className="relative rounded-lg overflow-hidden border border-white/10 shadow-lg max-w-[240px]">
-                                                                                                        <img src={displayUrl} alt={at.name} className="w-full h-auto" />
+                                                                                                    <div className="relative rounded-lg overflow-hidden border border-white/10 shadow-lg max-w-[240px] aspect-video">
+                                                                                                        <Image src={displayUrl} alt={at.name} fill unoptimized className="object-contain" />
                                                                                                         <div className="absolute inset-0 bg-black/40 opacity-0 group-hover/at:opacity-100 transition-opacity flex items-center justify-center">
                                                                                                             <span className="text-[10px] font-black uppercase text-white">View Full Image</span>
                                                                                                         </div>
@@ -1179,6 +1226,7 @@ export default function RequestDetailsPage() {
                                         </div>
                                     </div>
                                 )}
+
 
                                 {/* Tasks Tab */}
                                 {activeTab === 'tasks' && (
@@ -1311,6 +1359,23 @@ export default function RequestDetailsPage() {
                                                                     </div>
                                                                 </div>
                                                             </div>
+
+                                                            <div className="px-8 py-5 bg-shark/20 border-t border-shark/50 flex items-center justify-end gap-3">
+                                                                <button
+                                                                    onClick={() => setIsCreatingTask(false)}
+                                                                    className="px-5 py-2 text-[10px] font-black text-storm-gray hover:text-white uppercase tracking-[0.2em] transition-colors"
+                                                                >
+                                                                    Cancel
+                                                                </button>
+                                                                <button
+                                                                    onClick={handleCreateLinkedTask}
+                                                                    disabled={!taskFormData.title.trim()}
+                                                                    className="px-8 py-3 bg-[#279da6] text-white rounded-xl text-[10px] font-black uppercase tracking-[0.2em] shadow-lg shadow-[#279da6]/20 hover:bg-[#279da6]/90 transition-all flex items-center gap-2"
+                                                                >
+                                                                    <Plus size={12} />
+                                                                    Create Task
+                                                                </button>
+                                                            </div>
                                                         </div>
                                                     </div>
                                                 </div>
@@ -1337,52 +1402,100 @@ export default function RequestDetailsPage() {
                                 {activeTab === 'files' && (
                                     <div className="flex-1 overflow-y-auto custom-scrollbar p-6">
                                         <div className="max-w-4xl mx-auto">
-                                            {/* Refresh button */}
-                                            <div className="flex items-center justify-between mb-6">
-                                                <h3 className="text-sm font-black text-iron uppercase tracking-widest">Request Files</h3>
-                                                <button
-                                                    onClick={fetchRequestFiles}
-                                                    className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-shark/30 border border-shark text-storm-gray text-[10px] font-black uppercase tracking-widest hover:text-white hover:border-[#279da6]/30 transition-all"
-                                                >
-                                                    <RefreshCw size={12} className={isLoadingFiles ? 'animate-spin' : ''} />
-                                                    Refresh
-                                                </button>
+                                            {/* Folder Sync Status */}
+                                            {requestFiles.length > 0 && (
+                                                <div className="mb-8 p-6 rounded-3xl bg-[#279da6]/5 border border-[#279da6]/20 flex items-center justify-between group overflow-hidden relative">
+                                                    <div className="absolute -top-12 -right-12 w-32 h-32 bg-[#279da6]/10 rounded-full blur-[40px] group-hover:bg-[#279da6]/15 transition-all duration-700" />
+                                                    <div className="flex items-center gap-5 relative">
+                                                        <div className="w-14 h-14 rounded-2xl bg-[#279da6]/10 border border-[#279da6]/20 flex items-center justify-center text-[#279da6] shadow-[0_0_20px_rgba(39,157,166,0.15)] group-hover:scale-105 group-hover:rotate-6 transition-all duration-500">
+                                                            <CheckCircle2 size={28} />
+                                                        </div>
+                                                        <div>
+                                                            <h4 className="text-sm font-black text-white uppercase tracking-widest mb-1.5 flex items-center gap-2">
+                                                                Folder Synced
+                                                                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                                                            </h4>
+                                                            <p className="text-[10px] font-bold text-storm-gray uppercase tracking-widest leading-relaxed max-w-xs">
+                                                                This request is linked to a Google Drive folder. All files are synchronized in real-time.
+                                                            </p>
+                                                        </div>
+                                                    </div>
+                                                    <div className="flex items-center gap-3 relative">
+                                                        {(isSuperAdmin || isTeamAdmin) && (
+                                                            <button
+                                                                onClick={() => setIsLinkModalOpen(true)}
+                                                                className="px-5 py-2.5 rounded-xl bg-shark/40 border border-shark/60 hover:bg-shark text-storm-gray hover:text-white font-black text-[9px] uppercase tracking-widest transition-all hover:-translate-y-0.5"
+                                                            >
+                                                                Change Link
+                                                            </button>
+                                                        )}
+                                                        <button
+                                                            onClick={fetchRequestFiles}
+                                                            className="w-10 h-10 rounded-xl bg-shark/40 border border-shark/60 hover:bg-shark text-storm-gray hover:text-[#279da6] flex items-center justify-center transition-all hover:rotate-180 duration-500"
+                                                        >
+                                                            <RefreshCw size={16} className={isLoadingFiles ? 'animate-spin' : ''} />
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            )}
+
+                                            {/* Header */}
+                                            <div className="flex items-center justify-between mb-8 px-2">
+                                                <div className="flex items-center gap-3">
+                                                    <div className="w-1 h-6 bg-[#279da6] rounded-full shadow-[0_0_10px_rgba(39,157,166,0.5)]" />
+                                                    <h3 className="text-sm font-black text-iron uppercase tracking-[0.2em]">Request Infrastructure</h3>
+                                                </div>
+                                                {requestFiles.length > 0 && (
+                                                    <span className="text-[10px] font-black text-storm-gray/40 uppercase tracking-widest">{requestFiles.length} Object(s)</span>
+                                                )}
                                             </div>
 
                                             {isLoadingFiles ? (
-                                                <div className="flex items-center justify-center py-20">
-                                                    <Loader2 size={24} className="animate-spin text-[#279da6]" />
+                                                <div className="flex items-center justify-center py-32 bg-shark/5 rounded-[40px] border border-shark/30">
+                                                    <div className="flex flex-col items-center gap-4">
+                                                        <Loader2 size={40} className="animate-spin text-[#279da6]" />
+                                                        <p className="text-[10px] font-black text-storm-gray uppercase tracking-[0.2em] animate-pulse">Scanning Drive Network...</p>
+                                                    </div>
                                                 </div>
                                             ) : requestFiles.length === 0 ? (
-                                                <div className="flex flex-col items-center justify-center py-20 text-center">
-                                                    <div className="w-20 h-20 rounded-3xl bg-shark/30 border border-shark flex items-center justify-center mb-6 shadow-inner ring-1 ring-white/5">
-                                                        <FolderOpen size={32} className="text-storm-gray/50" />
-                                                    </div>
-                                                    <h3 className="text-xl font-bold text-iron mb-2 uppercase tracking-tight">No Folder Linked</h3>
-                                                    <p className="text-sm text-storm-gray mb-10 max-w-xs mx-auto">
-                                                        Connect a Google Drive folder to manage this request&apos;s project files directly from this dashboard.
-                                                    </p>
+                                                <div className="flex flex-col items-center justify-center py-24 text-center bg-[#111114] border border-shark/40 rounded-[40px] relative overflow-hidden group shadow-2xl">
+                                                    <div className="absolute inset-0 bg-gradient-to-b from-[#279da6]/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-1000" />
+                                                    <div className="absolute -top-24 -right-24 w-64 h-64 bg-[#279da6]/5 rounded-full blur-[100px]" />
 
-                                                    <div className="flex flex-col gap-3 w-full max-w-[280px]">
-                                                        <button
-                                                            onClick={handleCreateFolder}
-                                                            disabled={isCreatingRequestedFolder || isLoadingFiles}
-                                                            className="w-full flex items-center justify-center gap-2 px-6 py-3 rounded-xl bg-[#279da6] text-white text-xs font-black uppercase tracking-widest hover:bg-[#279da6]/90 transition-all shadow-[0_10px_20px_rgba(39,157,166,0.2)] disabled:opacity-50"
-                                                        >
-                                                            {isCreatingRequestedFolder ? <Loader2 size={14} className="animate-spin" /> : <Plus size={14} />}
-                                                            Create New Folder
-                                                        </button>
-                                                        <button
-                                                            onClick={() => alert('Folder linking coming soon - currently you can create the standard folder structure.')}
-                                                            className="w-full flex items-center justify-center gap-2 px-6 py-3 rounded-xl bg-shark/30 border border-shark text-storm-gray text-xs font-black uppercase tracking-widest hover:text-white hover:border-shark/80 transition-all"
-                                                        >
-                                                            <LinkIcon size={14} />
-                                                            Link Existing Folder
-                                                        </button>
+                                                    <div className="relative">
+                                                        <div className="w-24 h-24 rounded-[32px] bg-shark/40 border border-shark flex items-center justify-center mb-8 mx-auto group-hover:scale-110 group-hover:rotate-12 transition-all duration-700 shadow-xl group-hover:border-[#279da6]/20">
+                                                            <FolderOpen size={40} className="text-storm-gray/40 group-hover:text-[#279da6]/60 transition-colors" />
+                                                        </div>
+                                                        <h3 className="text-2xl font-black text-white mb-3 uppercase tracking-tight">No Folder Linked</h3>
+                                                        <p className="text-sm text-storm-gray mb-12 max-w-sm mx-auto font-bold leading-relaxed opacity-60">
+                                                            Connect a localized Google Drive environment to manage this request&apos;s architectural assets directly from your command center.
+                                                        </p>
+
+                                                        <div className="flex flex-col sm:flex-row gap-4 w-full max-w-md mx-auto px-6">
+                                                            {(isSuperAdmin || isTeamAdmin) && (
+                                                                <>
+                                                                    <button
+                                                                        onClick={handleCreateFolder}
+                                                                        disabled={isCreatingRequestedFolder || isLoadingFiles}
+                                                                        className="flex-1 flex items-center justify-center gap-3 px-8 py-4 rounded-2xl bg-[#279da6] text-white text-[10px] font-black uppercase tracking-[0.2em] hover:bg-[#279da6]/90 transition-all shadow-[0_15px_30px_rgba(39,157,166,0.3)] hover:-translate-y-1 active:scale-95 disabled:opacity-50"
+                                                                    >
+                                                                        {isCreatingRequestedFolder ? <Loader2 size={16} className="animate-spin" /> : <Plus size={16} />}
+                                                                        Create New Folder
+                                                                    </button>
+                                                                    <button
+                                                                        onClick={() => setIsLinkModalOpen(true)}
+                                                                        className="flex-1 flex items-center justify-center gap-3 px-8 py-4 rounded-2xl bg-shark/40 border border-shark text-storm-gray hover:text-white hover:border-[#279da6]/30 hover:bg-shark text-[10px] font-black uppercase tracking-[0.2em] transition-all hover:-translate-y-1 active:scale-95 shadow-xl"
+                                                                    >
+                                                                        <LinkIcon size={16} />
+                                                                        Link Existing
+                                                                    </button>
+                                                                </>
+                                                            )}
+                                                        </div>
                                                     </div>
                                                 </div>
                                             ) : (
-                                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 animate-fade-in">
                                                     {requestFiles.map(file => (
                                                         <div
                                                             key={file.id}
@@ -1395,40 +1508,32 @@ export default function RequestDetailsPage() {
                                                                 });
                                                                 setIsPreviewOpen(true);
                                                             }}
-                                                            className="flex items-center gap-3 p-4 rounded-xl bg-shark/15 border border-shark/40 hover:border-[#279da6]/30 hover:bg-shark/25 cursor-pointer transition-all group"
+                                                            className="flex items-center gap-4 p-5 rounded-2xl bg-[#111114] border border-shark/40 hover:border-[#279da6]/40 hover:bg-[#18181b] cursor-pointer transition-all group relative overflow-hidden"
                                                         >
-                                                            <div className="w-10 h-10 rounded-lg bg-shark/40 border border-shark flex items-center justify-center shrink-0">
+                                                            <div className="absolute inset-0 bg-gradient-to-r from-[#279da6]/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+                                                            <div className="w-12 h-12 rounded-xl bg-shark/40 border border-shark flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform duration-500 relative z-10">
                                                                 {getFileIcon(file.mimeType)}
                                                             </div>
-                                                            <div className="flex-1 min-w-0">
-                                                                <p className="text-xs font-bold text-iron truncate group-hover:text-white transition-colors">{file.name}</p>
-                                                                <div className="flex items-center gap-2 mt-1">
-                                                                    <span className="text-[9px] font-black uppercase tracking-widest text-storm-gray/60">{file.folder}</span>
+                                                            <div className="flex-1 min-w-0 relative z-10">
+                                                                <p className="text-[13px] font-bold text-iron truncate group-hover:text-white transition-colors uppercase tracking-tight">{file.name}</p>
+                                                                <div className="flex items-center gap-2 mt-1.5">
+                                                                    <span className="px-1.5 py-0.5 rounded bg-shark/60 border border-shark text-[8px] font-black uppercase tracking-widest text-storm-gray group-hover:text-[#279da6] group-hover:border-[#279da6]/20 transition-all">{file.folder}</span>
                                                                     {file.size && (
-                                                                        <>
-                                                                            <span className="text-storm-gray/30">·</span>
-                                                                            <span className="text-[9px] text-storm-gray/60">{formatFileSize(file.size)}</span>
-                                                                        </>
-                                                                    )}
-                                                                    {file.createdTime && (
-                                                                        <>
-                                                                            <span className="text-storm-gray/30">·</span>
-                                                                            <span className="text-[9px] text-storm-gray/60">
-                                                                                {formatDate(file.createdTime)}
-                                                                            </span>
-                                                                        </>
+                                                                        <span className="text-[9px] font-black text-storm-gray/40 uppercase tracking-widest">{formatFileSize(file.size)}</span>
                                                                     )}
                                                                 </div>
                                                             </div>
-                                                            <a
-                                                                href={file.webViewLink}
-                                                                target="_blank"
-                                                                rel="noopener noreferrer"
-                                                                onClick={(e) => e.stopPropagation()}
-                                                                className="p-2 rounded-lg hover:bg-shark text-storm-gray/40 hover:text-[#279da6] transition-all opacity-0 group-hover:opacity-100"
-                                                            >
-                                                                <ExternalLink size={14} />
-                                                            </a>
+                                                            <div className="relative z-10">
+                                                                <a
+                                                                    href={file.webViewLink}
+                                                                    target="_blank"
+                                                                    rel="noopener noreferrer"
+                                                                    onClick={(e) => e.stopPropagation()}
+                                                                    className="w-8 h-8 rounded-lg bg-shark/40 border border-shark flex items-center justify-center text-storm-gray hover:text-[#279da6] hover:border-[#279da6]/40 transition-all opacity-0 group-hover:opacity-100"
+                                                                >
+                                                                    <ExternalLink size={14} />
+                                                                </a>
+                                                            </div>
                                                         </div>
                                                     ))}
                                                 </div>
@@ -1436,7 +1541,6 @@ export default function RequestDetailsPage() {
                                         </div>
                                     </div>
                                 )}
-
                             </div>
 
                             {/* Right Sidebar - Summary */}
@@ -1455,9 +1559,9 @@ export default function RequestDetailsPage() {
                                             <div className="flex items-center justify-between gap-4">
                                                 <span className="w-20 text-[12px] font-bold text-storm-gray shrink-0 uppercase tracking-wider">Client:</span>
                                                 <div className="flex-1 flex items-center gap-2.5 bg-transparent border-none px-3.5 py-2.5 cursor-pointer transition-all">
-                                                    <div className="w-[46px] h-[46px] rounded-full bg-shark flex items-center justify-center text-sm text-[#279da6] font-black shrink-0 border border-white/5 shadow-inner overflow-hidden">
+                                                    <div className="w-[46px] h-[46px] rounded-full bg-shark flex items-center justify-center text-sm text-[#279da6] font-black shrink-0 border border-white/5 shadow-inner overflow-hidden relative">
                                                         {request.client?.avatar_url ? (
-                                                            <img src={request.client.avatar_url} alt={request.client.full_name} className="w-full h-full object-cover" />
+                                                            <Image src={request.client.avatar_url} alt={request.client.full_name || 'Client'} fill unoptimized className="object-cover" />
                                                         ) : (
                                                             request.client?.full_name?.split(' ').map(n => n[0]).join('')
                                                         )}
@@ -1512,11 +1616,11 @@ export default function RequestDetailsPage() {
                                                             label: tm.name || tm.profile?.full_name || tm.profile?.email || 'Unknown',
                                                             value: tm.profile_id,
                                                             icon: tm.avatar_url ? (
-                                                                <div className="w-[46px] h-[46px] rounded-full overflow-hidden border border-white/10">
-                                                                    <img src={tm.avatar_url} alt={tm.name} className="w-full h-full object-cover" />
+                                                                <div className="w-8 h-8 rounded-full overflow-hidden border border-white/10 relative">
+                                                                    <Image src={tm.avatar_url} alt={tm.name} fill unoptimized className="object-cover" />
                                                                 </div>
                                                             ) : (
-                                                                <div className="w-[46px] h-[46px] rounded-full bg-shark flex items-center justify-center text-sm text-[#279da6] font-black shrink-0 border border-white/5 shadow-inner">
+                                                                <div className="w-8 h-8 rounded-full bg-shark flex items-center justify-center text-[8px] text-[#279da6] font-black shrink-0 border border-white/5 shadow-inner">
                                                                     {tm.name?.split(' ').map((n: string) => n[0]).join('')}
                                                                 </div>
                                                             )
@@ -1550,11 +1654,11 @@ export default function RequestDetailsPage() {
                                                 <div className="space-y-2">
                                                     {involvedMembers.map(tm => (
                                                         <div key={tm.id} className="flex items-center gap-3 p-2 rounded-lg bg-shark/20 border border-shark/40 transition-all">
-                                                            <div className="w-[46px] h-[46px] rounded-full bg-shark flex items-center justify-center text-sm font-black text-[#279da6] shrink-0 overflow-hidden border border-white/5 shadow-inner">
+                                                            <div className="w-[46px] h-[46px] rounded-full bg-shark flex items-center justify-center text-sm font-black text-[#279da6] shrink-0 overflow-hidden border border-white/5 shadow-inner relative">
                                                                 {tm.avatar_url ? (
-                                                                    <img src={tm.avatar_url} alt={tm.name} className="w-full h-full object-cover" />
+                                                                    <Image src={tm.avatar_url} alt={tm.name || 'Team Member'} fill unoptimized className="object-cover" />
                                                                 ) : (
-                                                                    tm.name.split(' ').map(n => n[0]).join('')
+                                                                    tm.name?.split(' ').map(n => n[0]).join('')
                                                                 )}
                                                             </div>
                                                             <div className="flex-1 min-w-0">
@@ -1584,60 +1688,124 @@ export default function RequestDetailsPage() {
                         </div>
                     </div>
                 </div>
-            </div >
+            </div>
 
+            {/* Link Folder Modal */}
+            {isLinkModalOpen && (
+                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-fade-in">
+                    <div className="bg-[#18181B] border border-shark w-full max-w-md rounded-[32px] overflow-hidden shadow-2xl relative animate-zoom-in">
+                        <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-[#279da6] to-transparent opacity-50" />
+                        <div className="p-8">
+                            <div className="w-16 h-16 rounded-2xl bg-[#279da6]/10 border border-[#279da6]/20 flex items-center justify-center text-[#279da6] mb-6 shadow-lg">
+                                <LinkIcon size={32} />
+                            </div>
+                            <h3 className="text-xl font-black text-white uppercase tracking-tight mb-2">Connect Folder</h3>
+                            <p className="text-xs text-storm-gray mb-8 font-bold leading-relaxed">
+                                Paste a Google Drive folder URL or ID below to link this request to an existing environment.
+                            </p>
+
+                            <div className="space-y-4">
+                                <div className="space-y-1.5">
+                                    <label className="text-[10px] font-black text-storm-gray uppercase tracking-widest ml-1">Drive URL or Folder ID</label>
+                                    <div className="relative group">
+                                        <Search size={14} className="absolute left-4 top-1/2 -translate-y-1/2 text-storm-gray group-focus-within:text-[#279da6] transition-colors" />
+                                        <input
+                                            autoFocus
+                                            type="text"
+                                            value={linkFolderInput}
+                                            onChange={(e) => setLinkFolderInput(e.target.value)}
+                                            placeholder="https://drive.google.com/drive/folders/..."
+                                            className="w-full bg-shark/30 border border-shark rounded-xl pl-11 pr-4 py-4 text-xs text-iron focus:outline-none focus:border-[#279da6]/40 transition-all font-bold placeholder:text-storm-gray/40 shadow-inner"
+                                            onKeyDown={(e) => {
+                                                if (e.key === 'Enter' && linkFolderInput.trim()) handleLinkFolder();
+                                                if (e.key === 'Escape') setIsLinkModalOpen(false);
+                                            }}
+                                        />
+                                    </div>
+                                </div>
+                            </div>
+
+                            {linkFolderError && (
+                                <div className="mt-6 p-4 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-400 text-[10px] font-black uppercase tracking-tight flex items-center gap-3 animate-shake">
+                                    <AlertCircle size={14} />
+                                    {linkFolderError}
+                                </div>
+                            )}
+                        </div>
+
+                        <div className="px-8 py-6 bg-shark/20 border-t border-shark flex items-center justify-end gap-3">
+                            <button
+                                onClick={() => {
+                                    setIsLinkModalOpen(false);
+                                    setLinkFolderInput('');
+                                    setLinkFolderError(null);
+                                }}
+                                className="px-5 py-2 text-[10px] font-black text-storm-gray hover:text-white uppercase tracking-[0.2em] transition-colors"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                onClick={handleLinkFolder}
+                                disabled={isValidatingLink || !linkFolderInput.trim()}
+                                className="px-8 py-3 bg-[#279da6] text-white rounded-xl text-[10px] font-black uppercase tracking-[0.2em] shadow-lg shadow-[#279da6]/20 hover:bg-[#279da6]/90 disabled:opacity-50 transition-all flex items-center gap-2"
+                            >
+                                {isValidatingLink ? <Loader2 size={12} className="animate-spin" /> : <CheckCircle2 size={12} />}
+                                Link Folder
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
 
             {/* Delete Modal */}
-            {
-                isDeleteModalOpen && (
-                    <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/90 backdrop-blur-md animate-fade-in">
-                        <div className="bg-[#18181B] border border-rose-500/20 rounded-[32px] p-8 max-w-md w-full shadow-[0_0_50px_rgba(244,63,94,0.15)] animate-slide-up relative overflow-hidden">
-                            <div className="absolute -top-24 -right-24 w-48 h-48 bg-rose-500/10 rounded-full blur-[80px]" />
-                            <div className="relative">
-                                <div className="w-16 h-16 rounded-2xl bg-rose-500/10 border border-rose-500/20 flex items-center justify-center text-rose-500 mb-6 mx-auto">
-                                    <Trash2 size={32} />
+            {isDeleteModalOpen && (
+                <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/90 backdrop-blur-md animate-fade-in">
+                    <div className="bg-[#18181B] border border-rose-500/20 rounded-[32px] p-8 max-w-md w-full shadow-[0_0_50px_rgba(244,63,94,0.15)] animate-slide-up relative overflow-hidden">
+                        <div className="absolute -top-24 -right-24 w-48 h-48 bg-rose-500/10 rounded-full blur-[80px]" />
+                        <div className="relative">
+                            <div className="w-16 h-16 rounded-2xl bg-rose-500/10 border border-rose-500/20 flex items-center justify-center text-rose-500 mb-6 mx-auto">
+                                <Trash2 size={32} />
+                            </div>
+                            <h2 className="text-xl font-black text-white text-center uppercase tracking-tight mb-3">Delete Request?</h2>
+                            <p className="text-storm-gray text-center text-sm leading-relaxed mb-8">
+                                You are about to permanently delete <span className="text-white font-bold">"{request?.title}"</span>. This action will remove all messages and attachments associated with this request. This cannot be undone.
+                            </p>
+                            {deleteError && (
+                                <div className="mb-6 p-4 rounded-2xl bg-rose-500/10 border border-rose-500/20 flex items-center gap-3 text-rose-400 text-xs font-bold animate-shake">
+                                    <AlertCircle size={16} />
+                                    {deleteError}
                                 </div>
-                                <h2 className="text-xl font-black text-white text-center uppercase tracking-tight mb-3">Delete Request?</h2>
-                                <p className="text-storm-gray text-center text-sm leading-relaxed mb-8">
-                                    You are about to permanently delete <span className="text-white font-bold">"{request?.title}"</span>. This action will remove all messages and attachments associated with this request. This cannot be undone.
-                                </p>
-                                {deleteError && (
-                                    <div className="mb-6 p-4 rounded-2xl bg-rose-500/10 border border-rose-500/20 flex items-center gap-3 text-rose-400 text-xs font-bold animate-shake">
-                                        <AlertCircle size={16} />
-                                        {deleteError}
-                                    </div>
-                                )}
-                                <div className="grid grid-cols-2 gap-4">
-                                    <button
-                                        onClick={() => {
-                                            setIsDeleteModalOpen(false);
-                                            setDeleteError(null);
-                                        }}
-                                        disabled={isDeleting}
-                                        className="py-4 rounded-2xl bg-shark/40 border border-shark hover:bg-shark/60 text-iron font-black text-[10px] uppercase tracking-widest transition-all disabled:opacity-50"
-                                    >
-                                        Cancel
-                                    </button>
-                                    <button
-                                        onClick={handleDeleteRequest}
-                                        disabled={isDeleting}
-                                        className="py-4 rounded-2xl bg-rose-500 hover:bg-rose-600 text-white font-black text-[10px] uppercase tracking-widest transition-all shadow-lg shadow-rose-500/25 flex items-center justify-center gap-2 disabled:opacity-50"
-                                    >
-                                        {isDeleting ? (
-                                            <>
-                                                <Loader2 size={14} className="animate-spin" />
-                                                Deleting...
-                                            </>
-                                        ) : (
-                                            'Confirm Delete'
-                                        )}
-                                    </button>
-                                </div>
+                            )}
+                            <div className="grid grid-cols-2 gap-4">
+                                <button
+                                    onClick={() => {
+                                        setIsDeleteModalOpen(false);
+                                        setDeleteError(null);
+                                    }}
+                                    disabled={isDeleting}
+                                    className="py-4 rounded-2xl bg-shark/40 border border-shark hover:bg-shark/60 text-iron font-black text-[10px] uppercase tracking-widest transition-all disabled:opacity-50"
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    onClick={handleDeleteRequest}
+                                    disabled={isDeleting}
+                                    className="py-4 rounded-2xl bg-rose-500 hover:bg-rose-600 text-white font-black text-[10px] uppercase tracking-widest transition-all shadow-lg shadow-rose-500/25 flex items-center justify-center gap-2 disabled:opacity-50"
+                                >
+                                    {isDeleting ? (
+                                        <>
+                                            <Loader2 size={14} className="animate-spin" />
+                                            Deleting...
+                                        </>
+                                    ) : (
+                                        'Confirm Delete'
+                                    )}
+                                </button>
                             </div>
                         </div>
                     </div>
-                )
-            }
+                </div>
+            )}
 
             <FilePreviewModal
                 isOpen={isPreviewOpen}
