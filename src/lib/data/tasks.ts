@@ -129,7 +129,7 @@ export async function getAllTasksData() {
         getTasksData(),
         supabase.from('profiles').select('id, full_name, email, role'),
         getTeamMembers(),
-        supabase.from('requests').select('id, title').order('created_at', { ascending: false })
+        supabase.from('requests').select('id, title, client:client_id (id, name, organization)').order('created_at', { ascending: false })
     ]);
 
     return {

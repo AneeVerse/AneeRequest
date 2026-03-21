@@ -78,8 +78,10 @@ export default function TasksClient({ initialTasks, profiles, teamMembers, reque
         description: '',
         assigned_to: '',
         due_date: '',
+        priority: 'Medium',
         request_ids: [] as string[]
     });
+    const [selectedClientId, setSelectedClientId] = useState<string>('');
 
     const inlineTaskInputRef = React.useRef<HTMLInputElement>(null);
     const [sortConfig, setSortConfig] = useState<{ key: string; direction: 'asc' | 'desc' | null }>({
@@ -163,7 +165,7 @@ export default function TasksClient({ initialTasks, profiles, teamMembers, reque
 
             if (res.ok) {
                 setIsCreating(false);
-                setTaskFormData({ title: '', description: '', assigned_to: '', due_date: '', request_ids: [] });
+                setTaskFormData({ title: '', description: '', assigned_to: '', due_date: '', priority: 'Medium', request_ids: [] }); setSelectedClientId('');
                 router.refresh();
             } else {
                 const err = await res.json();
@@ -462,7 +464,7 @@ export default function TasksClient({ initialTasks, profiles, teamMembers, reque
                             onConfirm={handleInlineCreate}
                             onCancel={() => {
                                 setIsCreating(false);
-                                setTaskFormData({ title: '', description: '', assigned_to: '', due_date: '', request_ids: [] });
+                                setTaskFormData({ title: '', description: '', assigned_to: '', due_date: '', priority: 'Medium', request_ids: [] }); setSelectedClientId('');
                             }}
                             isSubmitting={isSubmitting}
                             rightToolbar={filtersElement}
@@ -523,16 +525,16 @@ export default function TasksClient({ initialTasks, profiles, teamMembers, reque
                                                     </div>
                                                 </div>
 
-                                                {/* Bottom Row: Description & Due Date & Requests */}
-                                                <div className="grid grid-cols-1 md:grid-cols-4 gap-5">
-                                                    <div className="space-y-1.5 md:col-span-2">
+                                                {/* Bottom Row: Description, Due Date, Priority, Client, Request */}
+                                                <div className="grid grid-cols-1 md:grid-cols-5 gap-5">
+                                                    <div className="space-y-1.5">
                                                         <label className="text-[10px] font-black text-storm-gray uppercase tracking-widest ml-1">Description</label>
                                                         <div className="relative group/input">
                                                             <FileText size={14} className="absolute left-3.5 top-3 text-storm-gray group-focus-within/input:text-[#279da6] transition-colors" />
                                                             <textarea
                                                                 value={taskFormData.description}
                                                                 onChange={(e) => setTaskFormData({ ...taskFormData, description: e.target.value })}
-                                                                placeholder="Add details about this task..."
+                                                                placeholder="Add details..."
                                                                 className="w-full bg-black/40 border border-shark/50 rounded-xl py-2.5 pl-10 pr-4 text-[12px] text-iron placeholder:text-storm-gray focus:outline-none focus:border-[#279da6]/40 transition-all font-bold min-h-[42px] max-h-[120px] custom-scrollbar"
                                                             />
                                                         </div>
@@ -550,38 +552,58 @@ export default function TasksClient({ initialTasks, profiles, teamMembers, reque
                                                         </div>
                                                     </div>
                                                     <div className="space-y-1.5">
-                                                        <label className="text-[10px] font-black text-storm-gray uppercase tracking-widest ml-1">Link to Requests</label>
+                                                        <label className="text-[10px] font-black text-storm-gray uppercase tracking-widest ml-1">Priority</label>
                                                         <CustomDropdown
-                                                            value={''} // Multiple selection not handled by CustomDropdown easily, but we'll show available requests
-                                                            onChange={(val: any) => {
-                                                                if (val && !taskFormData.request_ids.includes(val)) {
-                                                                    setTaskFormData({ ...taskFormData, request_ids: [...taskFormData.request_ids, val] });
-                                                                }
-                                                            }}
+                                                            value={taskFormData.priority}
+                                                            onChange={(val: any) => setTaskFormData({ ...taskFormData, priority: val })}
                                                             options={[
-                                                                { label: 'Select Requests', value: '' },
-                                                                ...requests.map((r: any) => ({
-                                                                    label: r.title,
-                                                                    value: r.id,
-                                                                    icon: <FileText size={14} className={taskFormData.request_ids.includes(r.id) ? 'text-[#279da6]' : 'text-storm-gray'} />
-                                                                }))
+                                                                { label: 'Low', value: 'Low', icon: <Flag size={14} className="text-storm-gray" /> },
+                                                                { label: 'Medium', value: 'Medium', icon: <Flag size={14} className="text-blue-400" /> },
+                                                                { label: 'High', value: 'High', icon: <Flag size={14} className="text-amber-500" /> },
+                                                                { label: 'Critical', value: 'Critical', icon: <Flag size={14} className="text-rose-500" /> }
                                                             ]}
                                                         />
-                                                        {taskFormData.request_ids.length > 0 && (
-                                                            <div className="flex flex-wrap gap-1 mt-1">
-                                                                {taskFormData.request_ids.map(id => {
-                                                                    const req = requests.find((r: any) => r.id === id);
-                                                                    return (
-                                                                        <div key={id} className="flex items-center gap-1 px-2 py-0.5 bg-[#279da6]/10 border border-[#279da6]/20 rounded-md text-[9px] font-bold text-[#279da6]">
-                                                                            <span className="truncate max-w-[80px]">{req?.title || 'Unknown'}</span>
-                                                                            <button onClick={() => setTaskFormData({ ...taskFormData, request_ids: taskFormData.request_ids.filter(rid => rid !== id) })}>
-                                                                                <X size={10} />
-                                                                            </button>
-                                                                        </div>
-                                                                    );
-                                                                })}
-                                                            </div>
-                                                        )}
+                                                    </div>
+                                                    <div className="space-y-1.5">
+                                                        <label className="text-[10px] font-black text-storm-gray uppercase tracking-widest ml-1">Client</label>
+                                                        <CustomDropdown
+                                                            value={selectedClientId}
+                                                            onChange={(val: any) => {
+                                                                setSelectedClientId(val);
+                                                                setTaskFormData({ ...taskFormData, request_ids: [] });
+                                                            }}
+                                                            placeholder="Select Client"
+                                                            options={[
+                                                                { label: 'Select Client', value: '' },
+                                                                ...Array.from(
+                                                                    new Map(
+                                                                        requests
+                                                                            .filter((r: any) => r.client?.id)
+                                                                            .map((r: any) => [r.client.id, { label: r.client.organization || r.client.name || r.client.full_name || 'Unknown', value: r.client.id, icon: <UserCog size={14} className="text-[#279da6]" /> }])
+                                                                    ).values()
+                                                                )
+                                                            ]}
+                                                        />
+                                                    </div>
+                                                    <div className="space-y-1.5">
+                                                        <label className="text-[10px] font-black text-storm-gray uppercase tracking-widest ml-1">Link Request</label>
+                                                        <CustomDropdown
+                                                            value={taskFormData.request_ids[0] || ''}
+                                                            onChange={(val: any) => setTaskFormData({ ...taskFormData, request_ids: val ? [val] : [] })}
+                                                            placeholder={selectedClientId ? 'Select Request' : 'Select client first'}
+                                                            options={[
+                                                                { label: selectedClientId ? 'No Request' : 'Select client first', value: '' },
+                                                                ...(selectedClientId
+                                                                    ? requests
+                                                                        .filter((r: any) => r.client?.id === selectedClientId)
+                                                                        .map((r: any) => ({
+                                                                            label: r.title,
+                                                                            value: r.id,
+                                                                            icon: <FileText size={14} className="text-[#279da6]" />
+                                                                        }))
+                                                                    : [])
+                                                            ]}
+                                                        />
                                                     </div>
                                                 </div>
                                             </div>
