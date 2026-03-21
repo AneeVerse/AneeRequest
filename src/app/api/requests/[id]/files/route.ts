@@ -15,8 +15,32 @@ export async function GET(
 ) {
     try {
         const { id: idOrSlug } = await params;
+        const { searchParams } = new URL(request.url);
+        const browseFolderId = searchParams.get('browseFolderId');
         const id = await resolveRequestSlug(idOrSlug);
         const supabase = createServiceClient();
+
+        // If browsing a subfolder, just list its contents directly
+        if (browseFolderId) {
+            const items = await listFolderContents(browseFolderId);
+            const files = items.map((f: any) => {
+                const isFolder = f.mimeType === 'application/vnd.google-apps.folder';
+                return {
+                    id: f.id,
+                    name: f.name,
+                    mimeType: f.mimeType,
+                    isFolder,
+                    size: f.size ? parseInt(f.size) : null,
+                    createdTime: f.createdTime,
+                    folder: 'subfolder',
+                    previewUrl: isFolder ? null : `/api/drive/view?fileId=${f.id}`,
+                    webViewLink: f.webViewLink || (isFolder
+                        ? `https://drive.google.com/drive/folders/${f.id}`
+                        : `https://drive.google.com/file/d/${f.id}/view`),
+                };
+            });
+            return NextResponse.json({ files, folderLinked: true, folderId: browseFolderId });
+        }
 
         // 1. Get request details
         const { data: req, error: reqErr } = await supabase
@@ -75,63 +99,44 @@ export async function GET(
             return NextResponse.json({ files: [], folderLinked: false });
         }
 
-        // 4. List all contents from production and distributed subfolders
+        // 4. List all contents from the request folder (files + subfolders)
         const allFiles: any[] = [];
 
-        // Check for production subfolder
-        const productionId = await findFolder(requestFolderId, 'production');
-        if (productionId) {
-            const prodFiles = await listFolderContents(productionId);
-            for (const f of prodFiles) {
-                if (f.mimeType !== 'application/vnd.google-apps.folder') {
-                    allFiles.push({
-                        id: f.id,
-                        name: f.name,
-                        mimeType: f.mimeType,
-                        size: f.size ? parseInt(f.size) : null,
-                        createdTime: f.createdTime,
-                        folder: 'production',
-                        previewUrl: `/api/drive/view?fileId=${f.id}`,
-                        webViewLink: f.webViewLink || `https://drive.google.com/file/d/${f.id}/view`,
-                    });
-                }
-            }
-        }
+        const directItems = await listFolderContents(requestFolderId);
+        for (const f of directItems) {
+            const isFolder = f.mimeType === 'application/vnd.google-apps.folder';
+            allFiles.push({
+                id: f.id,
+                name: f.name,
+                mimeType: f.mimeType,
+                isFolder,
+                size: f.size ? parseInt(f.size) : null,
+                createdTime: f.createdTime,
+                folder: 'root',
+                previewUrl: isFolder ? null : `/api/drive/view?fileId=${f.id}`,
+                webViewLink: f.webViewLink || (isFolder
+                    ? `https://drive.google.com/drive/folders/${f.id}`
+                    : `https://drive.google.com/file/d/${f.id}/view`),
+            });
 
-        // Check for distributed subfolder
-        const distributedId = await findFolder(requestFolderId, 'distributed');
-        if (distributedId) {
-            const distFiles = await listFolderContents(distributedId);
-            for (const f of distFiles) {
-                if (f.mimeType !== 'application/vnd.google-apps.folder') {
-                    allFiles.push({
-                        id: f.id,
-                        name: f.name,
-                        mimeType: f.mimeType,
-                        size: f.size ? parseInt(f.size) : null,
-                        createdTime: f.createdTime,
-                        folder: 'distributed',
-                        previewUrl: `/api/drive/view?fileId=${f.id}`,
-                        webViewLink: f.webViewLink || `https://drive.google.com/file/d/${f.id}/view`,
-                    });
+            // If it's a subfolder, also list its contents
+            if (isFolder) {
+                const subItems = await listFolderContents(f.id!);
+                for (const sf of subItems) {
+                    if (sf.mimeType !== 'application/vnd.google-apps.folder') {
+                        allFiles.push({
+                            id: sf.id,
+                            name: sf.name,
+                            mimeType: sf.mimeType,
+                            isFolder: false,
+                            size: sf.size ? parseInt(sf.size) : null,
+                            createdTime: sf.createdTime,
+                            folder: (f.name || 'subfolder').toLowerCase(),
+                            previewUrl: `/api/drive/view?fileId=${sf.id}`,
+                            webViewLink: sf.webViewLink || `https://drive.google.com/file/d/${sf.id}/view`,
+                        });
+                    }
                 }
-            }
-        }
-
-        // Also list files directly in the request folder (not in subfolders)
-        const directFiles = await listFolderContents(requestFolderId);
-        for (const f of directFiles) {
-            if (f.mimeType !== 'application/vnd.google-apps.folder') {
-                allFiles.push({
-                    id: f.id,
-                    name: f.name,
-                    mimeType: f.mimeType,
-                    size: f.size ? parseInt(f.size) : null,
-                    createdTime: f.createdTime,
-                    folder: 'root',
-                    previewUrl: `/api/drive/view?fileId=${f.id}`,
-                    webViewLink: f.webViewLink || `https://drive.google.com/file/d/${f.id}/view`,
-                });
             }
         }
 

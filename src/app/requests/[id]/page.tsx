@@ -10,7 +10,8 @@ import {
     ImageIcon,
     Film,
     FileText,
-    AlertCircle
+    AlertCircle,
+    FolderOpen
 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/context/AuthContext';
@@ -515,6 +516,7 @@ export default function RequestDetailsPage() {
     };
 
     const getFileIcon = (mimeType: string) => {
+        if (mimeType === 'application/vnd.google-apps.folder') return <FolderOpen size={20} className="text-[#279da6]" />;
         if (mimeType.startsWith('image/')) return <ImageIcon size={20} className="text-blue-400" />;
         if (mimeType.startsWith('video/')) return <Film size={20} className="text-purple-400" />;
         if (mimeType === 'application/pdf') return <FileText size={20} className="text-rose-400" />;
@@ -671,6 +673,7 @@ export default function RequestDetailsPage() {
 
                                 {activeTab === 'files' && (
                                     <FilesTab
+                                        requestId={resolvedId || undefined}
                                         requestFiles={requestFiles}
                                         isFolderLinked={isFolderLinked}
                                         isSuperAdmin={isSuperAdmin}
