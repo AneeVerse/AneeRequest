@@ -14,6 +14,7 @@ interface ClientTasksTabProps {
     taskFormData: any;
     setTaskFormData: (data: any) => void;
     inlineTaskInputRef: React.RefObject<HTMLInputElement | null>;
+    requests?: any[];
 }
 
 export default function ClientTasksTab({
@@ -24,7 +25,8 @@ export default function ClientTasksTab({
     isCreatingTask,
     taskFormData,
     setTaskFormData,
-    inlineTaskInputRef
+    inlineTaskInputRef,
+    requests = []
 }: ClientTasksTabProps) {
     return (
         <div className="space-y-6 animate-fade-in">
@@ -35,6 +37,7 @@ export default function ClientTasksTab({
                 setFormData={setTaskFormData}
                 inputRef={inlineTaskInputRef}
                 teamMembers={teamMembers}
+                requests={requests}
             />
 
             {isLoadingData ? (

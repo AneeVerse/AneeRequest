@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { LayoutGrid, Pencil, CheckCircle2, Calendar, Users } from 'lucide-react';
+import { LayoutGrid, Pencil, CheckCircle2, Calendar, Users, FileText } from 'lucide-react';
 import CustomDropdown from '@/components/CustomDropdown';
 
 interface InlineTaskFormProps {
@@ -11,6 +11,7 @@ interface InlineTaskFormProps {
     setFormData: (data: any) => void;
     inputRef: React.RefObject<HTMLInputElement | null>;
     teamMembers: any[];
+    requests?: any[];
 }
 
 export default function InlineTaskForm({
@@ -19,7 +20,8 @@ export default function InlineTaskForm({
     formData,
     setFormData,
     inputRef,
-    teamMembers
+    teamMembers,
+    requests = []
 }: InlineTaskFormProps) {
     return (
         <div
@@ -86,9 +88,9 @@ export default function InlineTaskForm({
                                 </div>
                             </div>
 
-                            {/* Bottom Row: Description & Due Date */}
+                            {/* Bottom Row: Description, Due Date & Link Request */}
                             <div className="grid grid-cols-1 md:grid-cols-4 gap-5">
-                                <div className="space-y-1.5 md:col-span-3">
+                                <div className="space-y-1.5 md:col-span-2">
                                     <label className="text-[10px] font-black text-storm-gray uppercase tracking-widest ml-1">Description</label>
                                     <textarea
                                         value={formData.description}
@@ -109,6 +111,24 @@ export default function InlineTaskForm({
                                         />
                                     </div>
                                 </div>
+                                {requests.length > 0 && (
+                                    <div className="space-y-1.5">
+                                        <label className="text-[10px] font-black text-storm-gray uppercase tracking-widest ml-1">Link Request</label>
+                                        <CustomDropdown
+                                            value={formData.request_ids?.[0] || ''}
+                                            onChange={(val: any) => setFormData({ ...formData, request_ids: val ? [val] : [] })}
+                                            placeholder="Select Request"
+                                            options={[
+                                                { label: 'No Request', value: '' },
+                                                ...requests.map((r: any) => ({
+                                                    label: r.title,
+                                                    value: r.id,
+                                                    icon: <FileText size={14} className="text-[#279da6]" />
+                                                }))
+                                            ]}
+                                        />
+                                    </div>
+                                )}
                             </div>
                         </div>
                     </div>

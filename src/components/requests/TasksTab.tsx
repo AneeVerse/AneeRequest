@@ -8,7 +8,6 @@ import {
     UserCog,
     FileText,
     Calendar,
-    X,
     Plus,
     Loader2
 } from 'lucide-react';
@@ -135,38 +134,19 @@ const TasksTab: React.FC<TasksTabProps> = ({
                                             </div>
                                         </div>
                                         <div className="space-y-1.5">
-                                            <label className="text-[10px] font-black text-storm-gray uppercase tracking-widest ml-1">Link to Requests</label>
+                                            <label className="text-[10px] font-black text-storm-gray uppercase tracking-widest ml-1">Link to Request</label>
                                             <CustomDropdown
-                                                value={''}
-                                                onChange={(val: any) => {
-                                                    if (val && !taskFormData.request_ids.includes(val)) {
-                                                        setTaskFormData({ ...taskFormData, request_ids: [...taskFormData.request_ids, val] });
-                                                    }
-                                                }}
+                                                value={taskFormData.request_ids?.[0] || ''}
+                                                onChange={(val: any) => setTaskFormData({ ...taskFormData, request_ids: val ? [val] : [] })}
                                                 options={[
-                                                    { label: 'Select Requests', value: '' },
+                                                    { label: 'No Request', value: '' },
                                                     ...allRequests.map((r: any) => ({
                                                         label: r.title,
                                                         value: r.id,
-                                                        icon: <FileText size={14} className={taskFormData.request_ids.includes(r.id) ? 'text-[#279da6]' : 'text-storm-gray'} />
+                                                        icon: <FileText size={14} className="text-[#279da6]" />
                                                     }))
                                                 ]}
                                             />
-                                            {taskFormData.request_ids.length > 0 && (
-                                                <div className="flex flex-wrap gap-1 mt-1">
-                                                    {taskFormData.request_ids.map((rid: string) => {
-                                                        const req = allRequests.find((r: any) => r.id === rid);
-                                                        return (
-                                                            <div key={rid} className="flex items-center gap-1 px-2 py-0.5 bg-[#279da6]/10 border border-[#279da6]/20 rounded-md text-[9px] font-bold text-[#279da6]">
-                                                                <span className="truncate max-w-[80px]">{req?.title || 'Unknown'}</span>
-                                                                <button onClick={() => setTaskFormData({ ...taskFormData, request_ids: taskFormData.request_ids.filter((r: string) => r !== rid) })}>
-                                                                    <X size={10} />
-                                                                </button>
-                                                            </div>
-                                                        );
-                                                    })}
-                                                </div>
-                                            )}
                                         </div>
                                     </div>
                                 </div>

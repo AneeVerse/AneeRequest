@@ -26,34 +26,6 @@ export default function CreateTaskModal({ isOpen, onClose, onSuccess, profiles, 
         request_ids: [] as string[]
     });
     const [selectedTeamMemberId, setSelectedTeamMemberId] = useState<string>('');
-    const [suggestedRequests, setSuggestedRequests] = useState<any[]>([]);
-    const [isLoadingSuggestions, setIsLoadingSuggestions] = useState(false);
-
-    React.useEffect(() => {
-        if (!selectedTeamMemberId || !isOpen) {
-            setSuggestedRequests([]);
-            setIsLoadingSuggestions(false);
-            return;
-        }
-
-        const fetchAutoRequests = async () => {
-            setIsLoadingSuggestions(true);
-            try {
-                const response = await fetch(`/api/team-members/${selectedTeamMemberId}/assigned-requests`);
-                if (response.ok) {
-                    const assignedRequestIds = await response.json();
-                    const matchedRequests = requests.filter(r => assignedRequestIds.includes(r.id));
-                    setSuggestedRequests(matchedRequests);
-                }
-            } catch (error) {
-                console.error('Auto-selection error:', error);
-            } finally {
-                setIsLoadingSuggestions(false);
-            }
-        };
-
-        fetchAutoRequests();
-    }, [selectedTeamMemberId, isOpen, requests]);
 
     if (!isOpen) return null;
 
@@ -157,7 +129,6 @@ export default function CreateTaskModal({ isOpen, onClose, onSuccess, profiles, 
                                         const tm = assignees.find(a => a.tmId === val);
                                         setSelectedTeamMemberId(val);
                                         setFormData(prev => ({ ...prev, assigned_to: tm?.profileId || '' }));
-                                        setSuggestedRequests([]);
                                     }}
                                     placeholder="Unassigned"
                                     options={[
@@ -191,87 +162,20 @@ export default function CreateTaskModal({ isOpen, onClose, onSuccess, profiles, 
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                             {/* Link to Request */}
                             <div className="space-y-2">
-                                <label className="text-[11px] font-black text-storm-gray uppercase tracking-widest ml-1">Link to Request(s) (Optional)</label>
-                                <div className="space-y-3">
-                                    <CustomDropdown
-                                        value=""
-                                        onChange={val => {
-                                            if (val) {
-                                                setFormData(prev => ({
-                                                    ...prev,
-                                                    request_ids: prev.request_ids.includes(val)
-                                                        ? prev.request_ids
-                                                        : [...prev.request_ids, val]
-                                                }));
-                                            }
-                                        }}
-                                        placeholder="Add Request Link..."
-                                        options={[
-                                            { label: 'Add Request Link...', value: '' },
-                                            ...requests.filter(r => !formData.request_ids.includes(r.id)).map(r => ({
-                                                label: r.title,
-                                                value: r.id,
-                                                icon: <LayoutList size={14} className="text-[#279da6]" />
-                                            }))
-                                        ]}
-                                    />
-
-                                    {/* Suggested Requests Section — shown whenever a team member is selected */}
-                                    {selectedTeamMemberId && (
-                                        <div className="bg-shark/10 border border-shark/40 rounded-xl p-3 space-y-2">
-                                            <p className="text-[9px] font-black text-storm-gray uppercase tracking-widest px-1">Suggested from Assignee</p>
-                                            {isLoadingSuggestions ? (
-                                                <div className="flex items-center gap-2 px-1">
-                                                    <Loader2 size={12} className="animate-spin text-storm-gray" />
-                                                    <span className="text-[10px] text-storm-gray font-bold">Loading requests...</span>
-                                                </div>
-                                            ) : suggestedRequests.filter(r => !formData.request_ids.includes(r.id)).length === 0 ? (
-                                                <p className="text-[10px] text-storm-gray/60 italic px-1">No assigned requests found for this member.</p>
-                                            ) : (
-                                                <div className="flex flex-wrap gap-1.5">
-                                                    {suggestedRequests
-                                                        .filter(r => !formData.request_ids.includes(r.id))
-                                                        .map(r => (
-                                                            <button
-                                                                key={r.id}
-                                                                type="button"
-                                                                onClick={() => setFormData(prev => ({
-                                                                    ...prev,
-                                                                    request_ids: [...prev.request_ids, r.id]
-                                                                }))}
-                                                                className="text-[10px] bg-shark/40 hover:bg-[#279da6]/20 border border-shark/60 hover:border-[#279da6]/40 text-iron hover:text-[#279da6] px-2 py-1 rounded-lg transition-all font-bold truncate max-w-[200px]"
-                                                            >
-                                                                + {r.title}
-                                                            </button>
-                                                        ))}
-                                                </div>
-                                            )}
-                                        </div>
-                                    )}
-
-                                    {/* Selected Requests Pills */}
-                                    {formData.request_ids.length > 0 && (
-                                        <div className="flex flex-wrap gap-2 pt-1">
-                                            {formData.request_ids.map(rid => {
-                                                const req = requests.find(r => r.id === rid);
-                                                return (
-                                                    <div key={rid} className="flex items-center gap-2 bg-[#279da6]/10 border border-[#279da6]/30 rounded-lg px-2 py-1">
-                                                        <span className="text-[10px] font-bold text-[#279da6] truncate max-w-[150px]">
-                                                            {req ? req.title : 'Loading...'}
-                                                        </span>
-                                                        <button
-                                                            type="button"
-                                                            onClick={() => setFormData(prev => ({ ...prev, request_ids: prev.request_ids.filter(id => id !== rid) }))}
-                                                            className="text-storm-gray hover:text-white transition-colors"
-                                                        >
-                                                            <X size={12} />
-                                                        </button>
-                                                    </div>
-                                                );
-                                            })}
-                                        </div>
-                                    )}
-                                </div>
+                                <label className="text-[11px] font-black text-storm-gray uppercase tracking-widest ml-1">Link to Request (Optional)</label>
+                                <CustomDropdown
+                                    value={formData.request_ids[0] || ''}
+                                    onChange={val => setFormData(prev => ({ ...prev, request_ids: val ? [val] : [] }))}
+                                    placeholder="Select Request"
+                                    options={[
+                                        { label: 'No Request', value: '' },
+                                        ...requests.map(r => ({
+                                            label: r.title,
+                                            value: r.id,
+                                            icon: <LayoutList size={14} className="text-[#279da6]" />
+                                        }))
+                                    ]}
+                                />
                             </div>
 
                             {/* Due Date */}

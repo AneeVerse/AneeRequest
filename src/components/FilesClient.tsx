@@ -17,7 +17,6 @@ import {
   Image as ImageIcon,
   Film,
   Pencil,
-  Trash2,
   Download,
   X,
   ArrowLeft,
@@ -118,8 +117,6 @@ export default function FilesClient({ initialRootId, initialDriveItems, initialD
 
   // CRUD state
   const [contextMenuFile, setContextMenuFile] = useState<DriveItem | null>(null);
-  const [isDeleting, setIsDeleting] = useState(false);
-  const [deleteTarget, setDeleteTarget] = useState<DriveItem | null>(null);
   const [isCreatingFolder, setIsCreatingFolder] = useState(false);
   const [newFolderName, setNewFolderName] = useState('');
   const [isNewMenuOpen, setIsNewMenuOpen] = useState(false);
@@ -371,22 +368,6 @@ export default function FilesClient({ initialRootId, initialDriveItems, initialD
   };
 
 
-  const handleDelete = async () => {
-    if (!deleteTarget) return;
-    try {
-      const res = await fetch(
-        `/api/drive/browse?id=${deleteTarget.id}&isFolder=${deleteTarget.isFolder}`,
-        { method: 'DELETE' }
-      );
-      if (res.ok) {
-        setDeleteTarget(null);
-        setIsDeleting(false);
-        refreshFolder();
-      }
-    } catch (e) {
-      console.error('Delete error:', e);
-    }
-  };
 
   const handleCopyLink = (id: string, link: string) => {
     if (!link) return;
@@ -826,13 +807,6 @@ export default function FilesClient({ initialRootId, initialDriveItems, initialD
                                   >
                                     {copiedId === item.id ? <Check size={18} /> : <Link size={18} />}
                                   </button>
-                                  <button
-                                    onClick={(e) => { e.stopPropagation(); setDeleteTarget(item); setIsDeleting(true); }}
-                                    className="p-1.5 hover:text-rose-400 transition-colors"
-                                    title="Delete Folder"
-                                  >
-                                    <Trash2 size={18} />
-                                  </button>
                                 </div>
                               </div>
                             ))}
@@ -920,13 +894,6 @@ export default function FilesClient({ initialRootId, initialDriveItems, initialD
                                   >
                                     <Download size={12} />
                                   </a>
-                                  <button
-                                    onClick={(e) => { e.stopPropagation(); setDeleteTarget(item); setIsDeleting(true); }}
-                                    className="p-2 rounded-xl bg-[#09090B]/80 backdrop-blur-md border border-shark hover:bg-rose-500/20 hover:border-rose-500/40 text-storm-gray hover:text-rose-400 transition-all"
-                                    title="Delete"
-                                  >
-                                    <Trash2 size={12} />
-                                  </button>
                                 </div>
                               </div>
                             ))}
@@ -1028,13 +995,6 @@ export default function FilesClient({ initialRootId, initialDriveItems, initialD
                               >
                                 {copiedId === item.id ? <Check size={18} /> : <Link size={18} />}
                               </button>
-                              <button
-                                onClick={(e) => { e.stopPropagation(); setDeleteTarget(item); setIsDeleting(true); }}
-                                className="p-2 rounded-xl bg-shark/40 border border-shark/60 text-storm-gray hover:text-rose-400 hover:border-rose-500/40 transition-all"
-                                title="Delete"
-                              >
-                                <Trash2 size={14} />
-                              </button>
                             </div>
                           </div>
 
@@ -1112,13 +1072,6 @@ export default function FilesClient({ initialRootId, initialDriveItems, initialD
                                   <Download size={12} />
                                 </a>
                               )}
-                              <button
-                                onClick={(e) => { e.stopPropagation(); setDeleteTarget(item); setIsDeleting(true); }}
-                                className="p-1.5 rounded-lg hover:bg-rose-500/20 text-storm-gray hover:text-rose-400 transition-all"
-                                title="Delete"
-                              >
-                                <Trash2 size={14} />
-                              </button>
                             </div>
                           </div>
                         </div>
@@ -1132,36 +1085,6 @@ export default function FilesClient({ initialRootId, initialDriveItems, initialD
         </div >
       </div >
 
-      {/* Delete Confirmation */}
-      {
-        isDeleting && deleteTarget && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center px-4 bg-black/80 backdrop-blur-sm animate-fade-in">
-            <div className="bg-[#18181B] border border-shark rounded-3xl p-8 max-w-md w-full shadow-2xl animate-scale-in">
-              <div className="w-16 h-16 rounded-2xl bg-rose-500/10 flex items-center justify-center text-rose-500 mb-6 mx-auto">
-                <Trash2 size={32} />
-              </div>
-              <h3 className="text-xl font-black text-white text-center mb-2 uppercase tracking-tight">Confirm Deletion</h3>
-              <p className="text-sm font-bold text-storm-gray text-center mb-8 uppercase tracking-widest text-[12px]">
-                Are you sure you want to delete <span className="text-iron">"{deleteTarget?.name}"</span>? This action cannot be undone.
-              </p>
-              <div className="flex gap-3">
-                <button
-                  onClick={() => { setIsDeleting(false); setDeleteTarget(null); }}
-                  className="flex-1 px-6 py-3 rounded-2xl bg-shark/40 hover:bg-shark border border-shark text-iron text-xs font-black uppercase tracking-widest transition-all"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={handleDelete}
-                  className="flex-1 px-6 py-3 rounded-2xl bg-rose-500 hover:bg-rose-600 text-white text-xs font-black uppercase tracking-widest transition-all shadow-lg shadow-rose-500/20"
-                >
-                  Delete Now
-                </button>
-              </div>
-            </div>
-          </div>
-        )
-      }
 
       {/* File Preview Modal */}
       <FilePreviewModal

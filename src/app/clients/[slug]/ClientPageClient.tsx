@@ -1013,6 +1013,7 @@ export default function ClientPageClient({
                   taskFormData={taskFormData}
                   setTaskFormData={setTaskFormData}
                   inlineTaskInputRef={inlineTaskInputRef}
+                  requests={requests}
                 />
               )}
 

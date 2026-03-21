@@ -353,30 +353,23 @@ export default function RequestDetailsPage() {
         if (!taskFormData.title.trim()) return;
 
         try {
-            const { data: taskData, error: taskError } = await supabase
-                .from('tasks')
-                .insert({
+            const res = await fetch('/api/tasks', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
                     title: taskFormData.title,
                     priority: taskFormData.priority,
                     description: taskFormData.description,
                     assigned_to: taskFormData.assigned_to || null,
                     due_date: taskFormData.due_date || null,
-                    status: 'Todo'
+                    status: 'Todo',
+                    request_ids: taskFormData.request_ids
                 })
-                .select()
-                .single();
+            });
 
-            if (taskError) throw taskError;
-
-            if (taskFormData.request_ids.length > 0) {
-                const links = taskFormData.request_ids.map(rid => ({
-                    task_id: taskData.id,
-                    request_id: rid
-                }));
-                const { error: linkError } = await supabase
-                    .from('task_request_links')
-                    .insert(links);
-                if (linkError) throw linkError;
+            if (!res.ok) {
+                const err = await res.json();
+                throw new Error(err.error || 'Failed to create task');
             }
 
             setIsCreatingTask(false);
