@@ -80,7 +80,9 @@ export default function RequestDetailsPage() {
     const { profile, viewAsProfile, isImpersonating } = useAuth();
     const displayProfile = viewAsProfile || profile;
 
+    const [resolvedId, setResolvedId] = useState<string | null>(null);
     const [request, setRequest] = useState<RequestDetails | null>(null);
+    const [notFound, setNotFound] = useState(false);
     const [messages, setMessages] = useState<Message[]>([]);
     const [newMessage, setNewMessage] = useState('');
     const [isLoading, setIsLoading] = useState(true);
@@ -107,11 +109,12 @@ export default function RequestDetailsPage() {
         description: '',
         assigned_to: '',
         due_date: '',
-        request_ids: [id]
+        request_ids: [] as string[]
     });
 
     // File states
     const [requestFiles, setRequestFiles] = useState<any[]>([]);
+    const [isFolderLinked, setIsFolderLinked] = useState(false);
     const [isLoadingFiles, setIsLoadingFiles] = useState(false);
     const [isCreatingRequestedFolder, setIsCreatingRequestedFolder] = useState(false);
     const [isPreviewOpen, setIsPreviewOpen] = useState(false);
@@ -140,15 +143,10 @@ export default function RequestDetailsPage() {
     const isSuperAdmin = displayProfile?.role === 'super_admin';
     const isTeamAdmin = displayProfile?.team_role === 'admin';
 
+    // Fetch request details via API (handles slug resolution server-side)
     useEffect(() => {
-        if (id) {
-            fetchRequestDetails();
-            fetchMessages();
-            fetchLinkedTasks();
-            fetchAllRequests();
-            fetchTeamMembers();
-            fetchRequestFiles();
-        }
+        if (!id) return;
+        fetchRequestDetails();
     }, [id]);
 
     useEffect(() => {
@@ -161,6 +159,12 @@ export default function RequestDetailsPage() {
         }
     }, [request]);
 
+    useEffect(() => {
+        if (resolvedId) {
+            setTaskFormData(prev => ({ ...prev, request_ids: [resolvedId] }));
+        }
+    }, [resolvedId]);
+
     const scrollToBottom = () => {
         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     };
@@ -168,27 +172,28 @@ export default function RequestDetailsPage() {
     const fetchRequestDetails = async () => {
         if (!id) return;
         try {
-            const { data, error } = await supabase
-                .from('requests')
-                .select(`
-                    *,
-                    client:client_id (*),
-                    assignee:assigned_to (id, full_name, avatar_url)
-                `)
-                .eq('id', id)
-                .single();
-
-            if (error) throw error;
+            const res = await fetch(`/api/requests?id=${encodeURIComponent(id)}`);
+            if (!res.ok) throw new Error('Request not found');
+            const data = await res.json();
             setRequest(data);
+            setResolvedId(data.id);
+            // Trigger dependent fetches now that we have the real UUID
+            fetchMessages(data.id);
+            fetchLinkedTasks(data.id);
+            fetchAllRequests();
+            fetchTeamMembers();
+            fetchRequestFiles(data.id);
         } catch (error) {
             console.error('Error fetching request details:', error);
+            setNotFound(true);
         } finally {
             setIsLoading(false);
         }
     };
 
-    const fetchMessages = async () => {
-        if (!id) return;
+    const fetchMessages = async (reqId?: string) => {
+        const rid = reqId || resolvedId;
+        if (!rid) return;
         try {
             const { data, error } = await supabase
                 .from('request_messages')
@@ -196,7 +201,7 @@ export default function RequestDetailsPage() {
                     *,
                     sender:sender_id (full_name, avatar_url, role)
                 `)
-                .eq('request_id', id)
+                .eq('request_id', rid)
                 .order('created_at', { ascending: true });
 
             if (error) throw error;
@@ -206,22 +211,15 @@ export default function RequestDetailsPage() {
         }
     };
 
-    const fetchLinkedTasks = async () => {
-        if (!id) return;
+    const fetchLinkedTasks = async (reqId?: string) => {
+        const rid = reqId || resolvedId;
+        if (!rid) return;
         setIsLoadingTasks(true);
         try {
-            const { data, error } = await supabase
-                .from('task_requests')
-                .select(`
-                    task:task_id (
-                        *,
-                        assignee:assigned_to (id, full_name, avatar_url)
-                    )
-                `)
-                .eq('request_id', id);
-
-            if (error) throw error;
-            setLinkedTasks(data?.map(d => (d.task as unknown) as TaskItem) || []);
+            const res = await fetch(`/api/tasks?request_id=${encodeURIComponent(rid)}`);
+            if (!res.ok) throw new Error('Failed to fetch tasks');
+            const data = await res.json();
+            setLinkedTasks(Array.isArray(data) ? data : []);
         } catch (error) {
             console.error('Error fetching linked tasks:', error);
         } finally {
@@ -231,12 +229,10 @@ export default function RequestDetailsPage() {
 
     const fetchAllRequests = async () => {
         try {
-            const { data, error } = await supabase
-                .from('requests')
-                .select('id, title')
-                .order('title');
-            if (error) throw error;
-            setAllRequests(data || []);
+            const res = await fetch('/api/requests');
+            if (!res.ok) return;
+            const data = await res.json();
+            setAllRequests((data || []).map((r: any) => ({ id: r.id, title: r.title })));
         } catch (error) {
             console.error('Error fetching all requests:', error);
         }
@@ -244,24 +240,32 @@ export default function RequestDetailsPage() {
 
     const fetchTeamMembers = async () => {
         try {
-            const { data, error } = await supabase
-                .from('team_members')
-                .select('*');
-            if (error) throw error;
+            const res = await fetch('/api/team');
+            if (!res.ok) return;
+            const data = await res.json();
             setTeamMembers(data || []);
         } catch (error) {
             console.error('Error fetching team members:', error);
         }
     };
 
-    const fetchRequestFiles = async () => {
-        if (!id) return;
+    const fetchRequestFiles = async (reqId?: string) => {
+        const rid = reqId || resolvedId;
+        if (!rid) return;
         setIsLoadingFiles(true);
         try {
-            const res = await fetch(`/api/requests/${id}/files`);
+            const res = await fetch(`/api/requests/${rid}/files`);
             const data = await res.json();
-            setRequestFiles(data.files || []);
+            if (Array.isArray(data)) {
+                setRequestFiles(data);
+                setIsFolderLinked(data.length > 0);
+            } else if (data.files !== undefined) {
+                setRequestFiles(Array.isArray(data.files) ? data.files : []);
+                setIsFolderLinked(!!data.folderLinked);
+            }
+            // If API returned an error object, keep existing state
         } catch (error) {
+            // On error during refresh, keep existing state instead of resetting
             console.error('Error fetching request files:', error);
         } finally {
             setIsLoadingFiles(false);
@@ -269,7 +273,7 @@ export default function RequestDetailsPage() {
     };
 
     const handleSendMessage = async (contentOverride?: string, attachments?: any[]) => {
-        const messageToSend = contentOverride || editorRef.current?.innerHTML || '';
+        const messageToSend = String(contentOverride || editorRef.current?.innerHTML || '');
         if (!messageToSend.trim() && !contentOverride && (!attachments || attachments.length === 0)) return;
 
         setIsSending(true);
@@ -277,7 +281,7 @@ export default function RequestDetailsPage() {
             const { error } = await supabase
                 .from('request_messages')
                 .insert({
-                    request_id: id,
+                    request_id: resolvedId,
                     sender_id: displayProfile?.id,
                     message: messageToSend,
                     attachments: attachments || []
@@ -296,29 +300,25 @@ export default function RequestDetailsPage() {
 
     const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
-        if (!file || !id) return;
+        if (!file || !resolvedId) return;
 
         setIsUploading(true);
         try {
-            const fileExt = file.name.split('.').pop();
-            const fileName = `${Math.random()}.${fileExt}`;
-            const filePath = `${id}/${fileName}`;
+            const formData = new FormData();
+            formData.append('file', file);
+            formData.append('requestId', resolvedId);
+            if (displayProfile?.id) formData.append('senderId', displayProfile.id);
 
-            const { error: uploadError } = await supabase.storage
-                .from('request-attachments')
-                .upload(filePath, file);
-
-            if (uploadError) throw uploadError;
-
-            const { data: { publicUrl } } = supabase.storage
-                .from('request-attachments')
-                .getPublicUrl(filePath);
+            const res = await fetch('/api/upload', { method: 'POST', body: formData });
+            if (!res.ok) throw new Error('Upload failed');
+            const data = await res.json();
 
             const attachment = {
-                name: file.name,
-                url: publicUrl,
-                type: file.type,
-                size: file.size
+                name: data.name || file.name,
+                url: data.url,
+                type: data.type || file.type,
+                size: file.size,
+                drive_file_id: data.drive_file_id || null
             };
 
             await handleSendMessage(`Shared a file: ${file.name}`, [attachment]);
@@ -331,12 +331,12 @@ export default function RequestDetailsPage() {
     };
 
     const handleUpdateField = async (field: string, value: any) => {
-        if (!id) return;
+        if (!resolvedId) return;
         try {
             const { error } = await supabase
                 .from('requests')
                 .update({ [field]: value })
-                .eq('id', id);
+                .eq('id', resolvedId);
 
             if (error) throw error;
             fetchRequestDetails();
@@ -374,7 +374,7 @@ export default function RequestDetailsPage() {
                     request_id: rid
                 }));
                 const { error: linkError } = await supabase
-                    .from('task_requests')
+                    .from('task_request_links')
                     .insert(links);
                 if (linkError) throw linkError;
             }
@@ -386,7 +386,7 @@ export default function RequestDetailsPage() {
                 description: '',
                 assigned_to: '',
                 due_date: '',
-                request_ids: [id]
+                request_ids: [resolvedId!]
             });
             fetchLinkedTasks();
         } catch (error) {
@@ -408,10 +408,10 @@ export default function RequestDetailsPage() {
     };
 
     const handleCreateFolder = async () => {
-        if (!id) return;
+        if (!resolvedId) return;
         setIsCreatingRequestedFolder(true);
         try {
-            const res = await fetch(`/api/requests/${id}/files`, { method: 'POST' });
+            const res = await fetch(`/api/requests/${resolvedId}/files`, { method: 'POST' });
             if (!res.ok) throw new Error('Failed to create folder');
             fetchRequestFiles();
         } catch (error) {
@@ -422,7 +422,7 @@ export default function RequestDetailsPage() {
     };
 
     const handleLinkFolder = async () => {
-        if (!linkFolderInput.trim() || !id) return;
+        if (!linkFolderInput.trim() || !resolvedId) return;
         setIsValidatingLink(true);
         setLinkFolderError(null);
 
@@ -430,7 +430,7 @@ export default function RequestDetailsPage() {
             const res = await fetch('/api/drive/validate', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ url: linkFolderInput })
+                body: JSON.stringify({ folderId: linkFolderInput })
             });
 
             const data = await res.json();
@@ -439,12 +439,16 @@ export default function RequestDetailsPage() {
                 return;
             }
 
-            const { error: updateError } = await supabase
-                .from('requests')
-                .update({ drive_folder_id: data.folderId })
-                .eq('id', id);
-
-            if (updateError) throw updateError;
+            // Use API (service client) to update — browser client can't see drive_folder_id column
+            const updateRes = await fetch(`/api/requests?id=${resolvedId}`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ drive_folder_id: data.folderId })
+            });
+            if (!updateRes.ok) {
+                const err = await updateRes.json();
+                throw new Error(err.error || 'Failed to update request');
+            }
 
             setIsLinkModalOpen(false);
             setLinkFolderInput('');
@@ -457,13 +461,13 @@ export default function RequestDetailsPage() {
     };
 
     const handleDeleteRequest = async () => {
-        if (!id) return;
+        if (!resolvedId) return;
         setIsDeleting(true);
         try {
             const { error } = await supabase
                 .from('requests')
                 .delete()
-                .eq('id', id);
+                .eq('id', resolvedId);
             if (error) throw error;
             router.push('/requests');
         } catch (error: any) {
@@ -535,10 +539,23 @@ export default function RequestDetailsPage() {
         .map(mid => teamMembers.find(tm => tm.profile_id === mid))
         .filter(Boolean);
 
-    if (isLoading || !request) {
+    if (isLoading) {
         return (
             <div className="h-screen bg-[#09090B] flex items-center justify-center">
                 <Loader2 size={40} className="animate-spin text-[#279da6]" />
+            </div>
+        );
+    }
+
+    if (notFound || !request) {
+        return (
+            <div className="h-screen bg-[#09090B] flex flex-col items-center justify-center gap-4">
+                <AlertCircle size={48} className="text-storm-gray" />
+                <h2 className="text-xl font-bold text-iron uppercase tracking-tight">Request Not Found</h2>
+                <p className="text-sm text-storm-gray">This request may have been deleted or you don&apos;t have access.</p>
+                <button onClick={() => router.push('/requests')} className="mt-4 px-6 py-2 rounded-xl bg-[#279da6] text-white text-xs font-black uppercase tracking-widest hover:bg-[#279da6]/90 transition-all">
+                    Back to Requests
+                </button>
             </div>
         );
     }
@@ -566,7 +583,7 @@ export default function RequestDetailsPage() {
                             handleCreateLinkedTask={handleCreateLinkedTask}
                             onCancelCreateTask={() => {
                                 setIsCreatingTask(false);
-                                setTaskFormData({ title: '', priority: 'Medium', description: '', assigned_to: '', due_date: '', request_ids: [id] });
+                                setTaskFormData({ title: '', priority: 'Medium', description: '', assigned_to: '', due_date: '', request_ids: [resolvedId!] });
                             }}
                             request={request}
                             isOnline={isOnline}
@@ -662,6 +679,7 @@ export default function RequestDetailsPage() {
                                 {activeTab === 'files' && (
                                     <FilesTab
                                         requestFiles={requestFiles}
+                                        isFolderLinked={isFolderLinked}
                                         isSuperAdmin={isSuperAdmin}
                                         isTeamAdmin={isTeamAdmin}
                                         setIsLinkModalOpen={setIsLinkModalOpen}

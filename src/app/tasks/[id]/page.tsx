@@ -311,7 +311,12 @@ export default function TaskDetailsPage() {
             const response = await fetch(`/api/requests/${requestId}/files`);
             if (response.ok) {
                 const data = await response.json();
-                setRequestFiles(data);
+                // API returns { files, folderLinked } or legacy array
+                if (Array.isArray(data)) {
+                    setRequestFiles(data);
+                } else {
+                    setRequestFiles(Array.isArray(data.files) ? data.files : []);
+                }
             }
         } catch (error) {
             console.error('Error fetching request files:', error);
@@ -343,6 +348,43 @@ export default function TaskDetailsPage() {
         }
     };
 
+    const handleLinkExistingFolder = async () => {
+        const requestId = task?.request_links?.[0]?.request?.id;
+        if (!requestId) return;
+
+        const input = prompt('Paste the Google Drive folder URL or ID:');
+        if (!input?.trim()) return;
+
+        try {
+            // Validate the folder first
+            const validateRes = await fetch('/api/drive/validate', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ folderId: input.trim() })
+            });
+            const validateData = await validateRes.json();
+            if (!validateData.valid) {
+                alert(validateData.error || 'Invalid folder or no access');
+                return;
+            }
+
+            // Link the folder to the request
+            const linkRes = await fetch(`/api/requests?id=${requestId}`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ drive_folder_id: validateData.folderId })
+            });
+            if (linkRes.ok) {
+                fetchRequestFiles();
+            } else {
+                alert('Failed to link folder');
+            }
+        } catch (error) {
+            console.error('Failed to link folder:', error);
+            alert('Failed to link folder. Please try again.');
+        }
+    };
+
     const getFileIcon = (mimeType: string) => {
         if (mimeType?.startsWith('image/')) return <ImageIcon size={18} className="text-purple-400" />;
         if (mimeType?.startsWith('video/')) return <Film size={18} className="text-rose-400" />;
@@ -357,7 +399,7 @@ export default function TaskDetailsPage() {
     };
 
     useEffect(() => {
-        if (activeTab === 'files' && requestFiles.length === 0) {
+        if (activeTab === 'files') {
             fetchRequestFiles();
         }
     }, [activeTab, task?.request_links]);
@@ -944,7 +986,7 @@ export default function TaskDetailsPage() {
                                                             Create New Folder
                                                         </button>
                                                         <button
-                                                            onClick={() => alert('Folder linking coming soon - currently you can create the standard folder structure.')}
+                                                            onClick={handleLinkExistingFolder}
                                                             className="w-full flex items-center justify-center gap-2 px-6 py-3 rounded-xl bg-shark/30 border border-shark text-storm-gray text-xs font-black uppercase tracking-widest hover:text-white hover:border-shark/80 transition-all"
                                                         >
                                                             <LinkIcon size={14} />

@@ -1,7 +1,6 @@
 'use client';
 
 import React from 'react';
-import Image from 'next/image';
 import {
     Pencil,
     Trash2,
@@ -80,8 +79,8 @@ const RequestMessages: React.FC<RequestMessagesProps> = ({
     const isHtmlContent = (str: string) => /<[a-z][\s\S]*>/i.test(str);
 
     return (
-        <div className="flex-1 flex flex-col overflow-hidden">
-            <div className="flex-1 overflow-y-auto custom-scrollbar">
+        <div className="flex flex-col">
+            <div>
                 <div className="pt-6 pb-8 px-8 max-w-4xl mx-auto w-full">
                     <div className="space-y-8">
                         {messages.map((msg) => {
@@ -91,13 +90,13 @@ const RequestMessages: React.FC<RequestMessagesProps> = ({
                                     <div className={`w-[46px] h-[46px] rounded-full flex items-center justify-center shrink-0 border border-white/5 shadow-lg relative overflow-hidden ${isMe ? 'bg-shark text-[#279da6]' : 'bg-shark text-[#279da6]'}`}>
                                         {isMe ? (
                                             profile?.avatar_url ? (
-                                                <Image src={profile.avatar_url} alt={profile.full_name || 'User'} fill unoptimized className="object-cover" />
+                                                <img src={profile.avatar_url} alt={profile.full_name || 'User'} className="w-full h-full object-cover" />
                                             ) : (
                                                 <span className="font-black text-sm">{profile?.full_name?.split(' ').map((n: string) => n[0]).join('')}</span>
                                             )
                                         ) : (
                                             msg.sender?.avatar_url ? (
-                                                <Image src={msg.sender.avatar_url} alt={msg.sender.full_name || 'User'} fill unoptimized className="object-cover" />
+                                                <img src={msg.sender.avatar_url} alt={msg.sender.full_name || 'User'} className="w-full h-full object-cover" />
                                             ) : (
                                                 <span className="font-black text-sm">{msg.sender?.full_name?.split(' ').map((n: string) => n[0]).join('')}</span>
                                             )
@@ -191,8 +190,8 @@ const RequestMessages: React.FC<RequestMessagesProps> = ({
                                                                 className="block group/at cursor-pointer"
                                                             >
                                                                 {at.type?.startsWith('image/') ? (
-                                                                    <div className="relative rounded-lg overflow-hidden border border-white/10 shadow-lg max-w-[240px] aspect-video">
-                                                                        <Image src={displayUrl} alt={at.name} fill unoptimized className="object-contain" />
+                                                                    <div className="relative rounded-lg overflow-hidden border border-white/10 shadow-lg max-w-[240px]">
+                                                                        <img src={displayUrl} alt={at.name} className="w-full h-auto object-contain" />
                                                                         <div className="absolute inset-0 bg-black/40 opacity-0 group-hover/at:opacity-100 transition-opacity flex items-center justify-center">
                                                                             <span className="text-[10px] font-black uppercase text-white">View Full Image</span>
                                                                         </div>
@@ -221,9 +220,9 @@ const RequestMessages: React.FC<RequestMessagesProps> = ({
                 </div>
             </div>
 
-            <div className="mt-auto px-6 pb-4 pt-2">
+            <div className="sticky bottom-0 z-10 px-6 pb-4 pt-6">
                 <div className="max-w-4xl mx-auto">
-                    <div className="bg-shark/30 border border-shark/60 rounded-[2rem] overflow-hidden shadow-inner focus-within:border-[#279da6]/50 transition-all">
+                    <div className="bg-[#18181b] border border-shark/60 rounded-[2rem] overflow-hidden shadow-inner focus-within:border-[#279da6]/50 transition-all">
                         <div className="flex items-center gap-1 p-3 bg-shark/10 border-b border-shark/40">
                             <button type="button" onMouseDown={(e) => e.preventDefault()} onClick={() => execFormat('bold')} title="Bold" className="p-1.5 hover:bg-shark rounded text-storm-gray hover:text-white transition-all"><Bold size={14} /></button>
                             <button type="button" onMouseDown={(e) => e.preventDefault()} onClick={() => execFormat('italic')} title="Italic" className="p-1.5 hover:bg-shark rounded text-storm-gray hover:text-white transition-all"><Italic size={14} /></button>
@@ -253,7 +252,7 @@ const RequestMessages: React.FC<RequestMessagesProps> = ({
                                 <span>{isUploading ? 'Uploading...' : 'ATTACH FILE'}</span>
                             </button>
                             <button
-                                onClick={handleSendMessage}
+                                onClick={() => handleSendMessage()}
                                 disabled={isSending || !newMessage.trim()}
                                 className="bg-[#279da6] hover:bg-[#20838b] text-white px-8 py-3 rounded-2xl flex items-center justify-center gap-2 transition-all font-bold text-[12px] uppercase tracking-widest disabled:opacity-40 shadow-[0_10px_20px_rgba(39,157,166,0.15)] active:scale-95"
                             >

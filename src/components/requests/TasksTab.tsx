@@ -171,22 +171,6 @@ const TasksTab: React.FC<TasksTabProps> = ({
                                     </div>
                                 </div>
 
-                                <div className="px-8 py-5 bg-shark/20 border-t border-shark/50 flex items-center justify-end gap-3">
-                                    <button
-                                        onClick={() => setIsCreatingTask(false)}
-                                        className="px-5 py-2 text-[10px] font-black text-storm-gray hover:text-white uppercase tracking-[0.2em] transition-colors"
-                                    >
-                                        Cancel
-                                    </button>
-                                    <button
-                                        onClick={handleCreateLinkedTask}
-                                        disabled={!taskFormData.title.trim()}
-                                        className="px-8 py-3 bg-[#279da6] text-white rounded-xl text-[10px] font-black uppercase tracking-[0.2em] shadow-lg shadow-[#279da6]/20 hover:bg-[#279da6]/90 transition-all flex items-center gap-2"
-                                    >
-                                        <Plus size={12} />
-                                        Create Task
-                                    </button>
-                                </div>
                             </div>
                         </div>
                     </div>

@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(grep -n \"task_requests\\\\|task_request_links\" /c/Users/Roger/Desktop/Aneerequest/src/app/requests/[id]/page.tsx)",
+      "Bash(grep -n \"FilesTab\\\\|activeTab.*files\" /c/Users/Roger/Desktop/Aneerequest/src/app/tasks/[id]/page.tsx)",
+      "Bash(grep -n \"handleCreateFolder\\\\|handleLinkFolder\\\\|setIsLinkModalOpen\" /c/Users/Roger/Desktop/Aneerequest/src/app/requests/[id]/page.tsx)",
+      "Bash(grep -n \"getFileIcon\\\\|formatFileSize\" /c/Users/Roger/Desktop/Aneerequest/src/app/requests/[id]/page.tsx)",
+      "Bash(grep -B 5 -A 10 \"task_requests\" /c/Users/Roger/Desktop/Aneerequest/src/app/requests/[id]/page.tsx)"
+    ]
+  }
+}

@@ -23,6 +23,7 @@ interface FileItem {
 
 interface FilesTabProps {
     requestFiles: FileItem[];
+    isFolderLinked: boolean;
     isSuperAdmin: boolean;
     isTeamAdmin: boolean;
     setIsLinkModalOpen: (open: boolean) => void;
@@ -38,6 +39,7 @@ interface FilesTabProps {
 
 const FilesTab: React.FC<FilesTabProps> = ({
     requestFiles,
+    isFolderLinked,
     isSuperAdmin,
     isTeamAdmin,
     setIsLinkModalOpen,
@@ -54,7 +56,7 @@ const FilesTab: React.FC<FilesTabProps> = ({
         <div className="flex-1 overflow-y-auto custom-scrollbar p-6">
             <div className="max-w-4xl mx-auto">
                 {/* Folder Sync Status */}
-                {requestFiles.length > 0 && (
+                {(isFolderLinked || requestFiles.length > 0) && (
                     <div className="mb-8 p-6 rounded-3xl bg-[#279da6]/5 border border-[#279da6]/20 flex items-center justify-between group overflow-hidden relative">
                         <div className="absolute -top-12 -right-12 w-32 h-32 bg-[#279da6]/10 rounded-full blur-[40px] group-hover:bg-[#279da6]/15 transition-all duration-700" />
                         <div className="flex items-center gap-5 relative">
@@ -81,7 +83,7 @@ const FilesTab: React.FC<FilesTabProps> = ({
                                 </button>
                             )}
                             <button
-                                onClick={fetchRequestFiles}
+                                onClick={() => fetchRequestFiles()}
                                 className="w-10 h-10 rounded-xl bg-shark/40 border border-shark/60 hover:bg-shark text-storm-gray hover:text-[#279da6] flex items-center justify-center transition-all hover:rotate-180 duration-500"
                             >
                                 <RefreshCw size={16} className={isLoadingFiles ? 'animate-spin' : ''} />
@@ -101,14 +103,14 @@ const FilesTab: React.FC<FilesTabProps> = ({
                     )}
                 </div>
 
-                {isLoadingFiles ? (
+                {isLoadingFiles && requestFiles.length === 0 ? (
                     <div className="flex items-center justify-center py-32 bg-shark/5 rounded-[40px] border border-shark/30">
                         <div className="flex flex-col items-center gap-4">
                             <Loader2 size={40} className="animate-spin text-[#279da6]" />
                             <p className="text-[10px] font-black text-storm-gray uppercase tracking-[0.2em] animate-pulse">Scanning Drive Network...</p>
                         </div>
                     </div>
-                ) : requestFiles.length === 0 ? (
+                ) : !isFolderLinked && requestFiles.length === 0 ? (
                     <div className="flex flex-col items-center justify-center py-24 text-center bg-[#111114] border border-shark/40 rounded-[40px] relative overflow-hidden group shadow-2xl">
                         <div className="absolute inset-0 bg-gradient-to-b from-[#279da6]/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-1000" />
                         <div className="absolute -top-24 -right-24 w-64 h-64 bg-[#279da6]/5 rounded-full blur-[100px]" />
@@ -144,6 +146,23 @@ const FilesTab: React.FC<FilesTabProps> = ({
                                 )}
                             </div>
                         </div>
+                    </div>
+                ) : isFolderLinked && requestFiles.length === 0 ? (
+                    <div className="flex flex-col items-center justify-center py-24 text-center bg-[#111114] border border-shark/40 rounded-[40px] relative overflow-hidden">
+                        <div className="w-20 h-20 rounded-2xl bg-[#279da6]/10 border border-[#279da6]/20 flex items-center justify-center mb-6">
+                            <FolderOpen size={36} className="text-[#279da6]/60" />
+                        </div>
+                        <h3 className="text-lg font-black text-white mb-2 uppercase tracking-tight">Folder Connected</h3>
+                        <p className="text-xs text-storm-gray font-bold opacity-60 mb-6 max-w-xs">
+                            The Drive folder is linked but contains no files yet. Upload files directly in Google Drive and they&apos;ll appear here.
+                        </p>
+                        <button
+                            onClick={() => fetchRequestFiles()}
+                            className="px-6 py-2.5 rounded-xl bg-shark/40 border border-shark text-storm-gray hover:text-white text-[9px] font-black uppercase tracking-widest transition-all hover:border-[#279da6]/30"
+                        >
+                            <RefreshCw size={12} className={`inline mr-2 ${isLoadingFiles ? 'animate-spin' : ''}`} />
+                            Refresh
+                        </button>
                     </div>
                 ) : (
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 animate-fade-in">

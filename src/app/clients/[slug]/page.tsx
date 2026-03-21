@@ -6,14 +6,15 @@ import { getTeamMembers } from '@/lib/data/team';
 import { slugify } from '@/lib/utils';
 
 interface PageProps {
-  params: {
+  params: Promise<{
     slug: string;
-  };
+  }>;
 }
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
+  const { slug } = await params;
   const clients = await getClients();
-  const client = clients.find(c => c.slug === params.slug || c.id === params.slug || slugify(c.organization) === params.slug);
+  const client = clients.find(c => c.slug === slug || c.id === slug || slugify(c.organization) === slug);
 
   return {
     title: `${client?.organization || 'Client'} | AneeRequest`,
@@ -22,7 +23,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 }
 
 export default async function Page({ params }: PageProps) {
-  const { slug } = params;
+  const { slug } = await params;
 
   // Fetch initial data on the server
   const [clients, allRequests, allTasks, profiles, teamMembers] = await Promise.all([

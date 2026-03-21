@@ -37,7 +37,6 @@ import {
 } from 'lucide-react';
 import AvatarUpload from '@/components/AvatarUpload';
 import { useRouter } from 'next/navigation';
-import Image from 'next/image';
 import { useAuth } from '@/context/AuthContext';
 import CustomDropdown from '@/components/CustomDropdown';
 import CustomDateRangePicker from '@/components/CustomDateRangePicker';
@@ -800,7 +799,7 @@ export default function ClientsClient({ initialClients }: ClientsClientProps) {
                                                 <div className="flex items-start gap-3">
                                                     <div className="w-[46px] h-[46px] rounded-2xl bg-shark/80 border border-white/5 overflow-hidden flex items-center justify-center text-[12px] text-white font-black bg-gradient-to-br from-[#279da6]/20 to-transparent shrink-0 relative">
                                                         {client.avatar_url ? (
-                                                            <Image src={client.avatar_url} alt={client.organization || 'Client'} fill className="object-cover" />
+                                                            <img src={client.avatar_url} alt={client.organization || 'Client'} className="w-full h-full object-cover" />
                                                         ) : (
                                                             client.organization.split(' ').map((n: string) => n[0]).join('').slice(0, 2)
                                                         )}
@@ -1017,7 +1016,7 @@ export default function ClientsClient({ initialClients }: ClientsClientProps) {
                                                             <div className="flex items-center gap-4">
                                                                 <div className="w-[46px] h-[46px] rounded-full bg-shark/80 border border-white/5 overflow-hidden flex items-center justify-center text-[12px] text-white font-black bg-gradient-to-br from-[#279da6]/20 to-transparent group-hover/cell:scale-105 transition-transform shrink-0 relative">
                                                                     {client.avatar_url ? (
-                                                                        <Image src={client.avatar_url} alt={client.organization || 'Client'} fill className="object-cover" />
+                                                                        <img src={client.avatar_url} alt={client.organization || 'Client'} className="w-full h-full object-cover" />
                                                                     ) : (
                                                                         client.organization.split(' ').map((n: string) => n[0]).join('').slice(0, 2)
                                                                     )}

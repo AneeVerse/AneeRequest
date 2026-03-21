@@ -26,7 +26,6 @@ import { RequestItem, Profile } from '@/lib/data/requests';
 import { type TeamMember } from '@/lib/data/team';
 import { formatDate, formatTime, getAutomaticPriority } from '@/lib/dateUtils';
 import { useRouter } from 'next/navigation';
-import Image from 'next/image';
 import CustomDropdown from '@/components/CustomDropdown';
 import CustomDatePicker from '@/components/CustomDatePicker';
 
@@ -210,7 +209,7 @@ export default function RequestsTable({
                                     </div>
                                     <div
                                         className="flex-1 cursor-pointer group"
-                                        onClick={() => router.push(`/requests/${item.slug || item.id}?tab=tasks`)}
+                                        onClick={() => router.push(`/requests/${item.slug || item.id}`)}
                                     >
                                         <h3 className="text-[12px] font-black text-iron uppercase leading-tight group-hover:text-[#279da6] transition-colors line-clamp-2">
                                             {item.title}
@@ -262,7 +261,7 @@ export default function RequestsTable({
                                                     value: m.profile_id || m.id,
                                                     icon: m.avatar_url ? (
                                                         <div className="w-[46px] h-[46px] rounded-full overflow-hidden shrink-0 border border-shark/60 relative">
-                                                            <Image src={m.avatar_url} alt={m.full_name || 'Team Member'} fill className="object-cover" />
+                                                            <img src={m.avatar_url} alt={m.full_name || 'Team Member'} className="w-full h-full object-cover" />
                                                         </div>
                                                     ) : <User size={20} className="text-[#279da6]" />
                                                 }))
@@ -467,7 +466,7 @@ export default function RequestsTable({
                                         </td>
                                         <td
                                             className="px-6 py-3 font-black text-iron border-r border-shark/60 group-hover:text-[#279da6] transition-colors cursor-pointer hover:bg-white/5"
-                                            onClick={() => router.push(`/requests/${item.slug || item.id}?tab=tasks`)}
+                                            onClick={() => router.push(`/requests/${item.slug || item.id}`)}
                                         >
                                             <div className="line-clamp-2 leading-tight uppercase tracking-tight font-black text-[12px]">
                                                 {item.title}
@@ -478,11 +477,10 @@ export default function RequestsTable({
                                                 <div className="flex items-center gap-3">
                                                     <div className="w-[46px] h-[46px] rounded-full flex items-center justify-center bg-shark/40 border border-shark/60 text-[12px] font-black text-[#279da6] shrink-0 overflow-hidden relative">
                                                         {(item.client as any)?.avatar_url ? (
-                                                            <Image
+                                                            <img
                                                                 src={(item.client as any).avatar_url}
                                                                 alt={(item.client as any).organization || item.client?.full_name || 'Client'}
-                                                                fill
-                                                                className="object-cover"
+                                                                className="w-full h-full object-cover"
                                                             />
                                                         ) : (
                                                             <span>{(item.client as any)?.organization?.[0] || item.client?.full_name?.[0] || 'C'}</span>
@@ -528,7 +526,7 @@ export default function RequestsTable({
                                                         value: tm.profile_id,
                                                         icon: tm.avatar_url ? (
                                                             <div className="w-[46px] h-[46px] rounded-full overflow-hidden shrink-0 border border-shark/60 relative">
-                                                                <Image src={tm.avatar_url} alt={tm.name || 'Team Member'} fill className="object-cover" />
+                                                                <img src={tm.avatar_url} alt={tm.name || 'Team Member'} className="w-full h-full object-cover" />
                                                             </div>
                                                         ) : <User size={20} className="text-[#279da6]" />
                                                     }))

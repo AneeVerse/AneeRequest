@@ -249,7 +249,7 @@ export default function FilesClient({ initialRootId, initialDriveItems, initialD
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({ parentId: currentDriveFolderId, folderName: name })
             });
-            if (res.ok) router.refresh();
+            if (res.ok) refreshFolder();
           } catch (err) {
             console.error('Empty folder upload error:', err);
           } finally {
@@ -301,7 +301,6 @@ export default function FilesClient({ initialRootId, initialDriveItems, initialD
         await fetch('/api/drive/browse', { method: 'POST', body: formData });
       }
       refreshFolder();
-      router.refresh();
     } catch (e) {
       console.error('Upload error:', e);
     } finally {
@@ -339,7 +338,6 @@ export default function FilesClient({ initialRootId, initialDriveItems, initialD
               window.open(data.webViewLink, '_blank');
             }
             refreshFolder();
-            router.refresh();
           }
         } catch (e) {
           console.error('Create Google file error:', e);
@@ -366,7 +364,6 @@ export default function FilesClient({ initialRootId, initialDriveItems, initialD
         setIsCreatingFolder(false);
         setNewFolderName('');
         refreshFolder();
-        router.refresh();
       }
     } catch (e) {
       console.error('Create folder error:', e);
@@ -385,7 +382,6 @@ export default function FilesClient({ initialRootId, initialDriveItems, initialD
         setDeleteTarget(null);
         setIsDeleting(false);
         refreshFolder();
-        router.refresh();
       }
     } catch (e) {
       console.error('Delete error:', e);
@@ -581,17 +577,55 @@ export default function FilesClient({ initialRootId, initialDriveItems, initialD
                   </button>
                 )}
                 <div className="flex items-center gap-1.5 overflow-hidden min-w-0">
-                  {driveBreadcrumbs.slice(1).map((crumb, i) => (
-                    <React.Fragment key={crumb.id}>
-                      <ChevronRight size={20} className="text-storm-gray shrink-0" />
-                      <button
-                        onClick={() => navigateToBreadcrumb(i + 1)}
-                        className={`font-black uppercase tracking-widest text-[12px] transition-all truncate ${i === driveBreadcrumbs.length - 2 ? 'text-[#279da6]' : 'text-storm-gray hover:text-iron'} ${i < driveBreadcrumbs.length - 3 ? 'hidden md:block' : ''}`}
-                      >
-                        {i < driveBreadcrumbs.length - 3 && (i + 1) !== 0 ? '...' : crumb.name}
-                      </button>
-                    </React.Fragment>
-                  ))}
+                  {(() => {
+                    const crumbs = driveBreadcrumbs.slice(1);
+                    if (crumbs.length <= 3) {
+                      // Show all crumbs if 3 or fewer
+                      return crumbs.map((crumb, i) => (
+                        <React.Fragment key={crumb.id}>
+                          <ChevronRight size={20} className="text-storm-gray shrink-0" />
+                          <button
+                            onClick={() => navigateToBreadcrumb(i + 1)}
+                            className={`font-black uppercase tracking-widest text-[12px] transition-all truncate ${i === crumbs.length - 1 ? 'text-[#279da6]' : 'text-storm-gray hover:text-iron'}`}
+                          >
+                            {crumb.name}
+                          </button>
+                        </React.Fragment>
+                      ));
+                    }
+                    // Show first crumb, single "...", and last 2 crumbs
+                    const first = crumbs[0];
+                    const lastTwo = crumbs.slice(-2);
+                    return (
+                      <>
+                        <React.Fragment key={first.id}>
+                          <ChevronRight size={20} className="text-storm-gray shrink-0" />
+                          <button
+                            onClick={() => navigateToBreadcrumb(1)}
+                            className="font-black uppercase tracking-widest text-[12px] transition-all truncate text-storm-gray hover:text-iron"
+                          >
+                            {first.name}
+                          </button>
+                        </React.Fragment>
+                        <ChevronRight size={20} className="text-storm-gray shrink-0" />
+                        <span className="font-black uppercase tracking-widest text-[12px] text-storm-gray">...</span>
+                        {lastTwo.map((crumb, i) => {
+                          const originalIndex = crumbs.length - 2 + i;
+                          return (
+                            <React.Fragment key={crumb.id}>
+                              <ChevronRight size={20} className="text-storm-gray shrink-0" />
+                              <button
+                                onClick={() => navigateToBreadcrumb(originalIndex + 1)}
+                                className={`font-black uppercase tracking-widest text-[12px] transition-all truncate ${i === 1 ? 'text-[#279da6]' : 'text-storm-gray hover:text-iron'}`}
+                              >
+                                {crumb.name}
+                              </button>
+                            </React.Fragment>
+                          );
+                        })}
+                      </>
+                    );
+                  })()}
                 </div>
               </div>
 
@@ -776,7 +810,7 @@ export default function FilesClient({ initialRootId, initialDriveItems, initialD
                                               headers: { 'Content-Type': 'application/json' },
                                               body: JSON.stringify({ id: item.id, newName: newName.trim(), isFolder: true })
                                             });
-                                            if (res.ok) { refreshFolder(); router.refresh(); }
+                                            if (res.ok) { refreshFolder(); }
                                           } catch (e) { console.error(e); } finally { setNamingModal(prev => ({ ...prev, isOpen: false })); }
                                         }
                                       });
@@ -791,6 +825,13 @@ export default function FilesClient({ initialRootId, initialDriveItems, initialD
                                     title={copiedId === item.id ? "Copied!" : "Copy Link"}
                                   >
                                     {copiedId === item.id ? <Check size={18} /> : <Link size={18} />}
+                                  </button>
+                                  <button
+                                    onClick={(e) => { e.stopPropagation(); setDeleteTarget(item); setIsDeleting(true); }}
+                                    className="p-1.5 hover:text-rose-400 transition-colors"
+                                    title="Delete Folder"
+                                  >
+                                    <Trash2 size={18} />
                                   </button>
                                 </div>
                               </div>
@@ -838,6 +879,32 @@ export default function FilesClient({ initialRootId, initialDriveItems, initialD
                                 {/* Hover Actions */}
                                 <div className="absolute top-2 right-2 flex flex-col gap-1.5 opacity-0 group-hover:opacity-100 transition-all translate-x-2 group-hover:translate-x-0">
                                   <button
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      setNamingModal({
+                                        isOpen: true,
+                                        type: 'rename',
+                                        title: 'Rename File',
+                                        initialValue: item.name,
+                                        onConfirm: async (newName) => {
+                                          if (!newName.trim()) return;
+                                          try {
+                                            const res = await fetch('/api/drive/browse', {
+                                              method: 'PATCH',
+                                              headers: { 'Content-Type': 'application/json' },
+                                              body: JSON.stringify({ id: item.id, newName: newName.trim(), isFolder: false })
+                                            });
+                                            if (res.ok) { refreshFolder(); }
+                                          } catch (e) { console.error(e); } finally { setNamingModal(prev => ({ ...prev, isOpen: false })); }
+                                        }
+                                      });
+                                    }}
+                                    className="p-2 rounded-xl bg-[#09090B]/80 backdrop-blur-md border border-shark hover:bg-[#279da6]/20 text-storm-gray hover:text-[#279da6] transition-all"
+                                    title="Rename"
+                                  >
+                                    <Pencil size={12} />
+                                  </button>
+                                  <button
                                     onClick={(e) => { e.stopPropagation(); handleCopyLink(item.id, item.webViewLink); }}
                                     className={`p-2 rounded-xl backdrop-blur-md border transition-all ${copiedId === item.id ? 'bg-emerald-500/20 border-emerald-500/40 text-emerald-400' : 'bg-[#09090B]/80 border-shark hover:bg-[#279da6]/20 text-storm-gray hover:text-[#279da6]'}`}
                                     title={copiedId === item.id ? "Copied!" : "Copy Link"}
@@ -853,6 +920,13 @@ export default function FilesClient({ initialRootId, initialDriveItems, initialD
                                   >
                                     <Download size={12} />
                                   </a>
+                                  <button
+                                    onClick={(e) => { e.stopPropagation(); setDeleteTarget(item); setIsDeleting(true); }}
+                                    className="p-2 rounded-xl bg-[#09090B]/80 backdrop-blur-md border border-shark hover:bg-rose-500/20 hover:border-rose-500/40 text-storm-gray hover:text-rose-400 transition-all"
+                                    title="Delete"
+                                  >
+                                    <Trash2 size={12} />
+                                  </button>
                                 </div>
                               </div>
                             ))}
@@ -921,7 +995,6 @@ export default function FilesClient({ initialRootId, initialDriveItems, initialD
                                         });
                                         if (res.ok) {
                                           refreshFolder();
-                                          router.refresh();
                                         }
                                       } catch (e) {
                                         console.error('Rename error:', e);
@@ -954,6 +1027,13 @@ export default function FilesClient({ initialRootId, initialDriveItems, initialD
                                 title={copiedId === item.id ? "Copied!" : "Copy Link"}
                               >
                                 {copiedId === item.id ? <Check size={18} /> : <Link size={18} />}
+                              </button>
+                              <button
+                                onClick={(e) => { e.stopPropagation(); setDeleteTarget(item); setIsDeleting(true); }}
+                                className="p-2 rounded-xl bg-shark/40 border border-shark/60 text-storm-gray hover:text-rose-400 hover:border-rose-500/40 transition-all"
+                                title="Delete"
+                              >
+                                <Trash2 size={14} />
                               </button>
                             </div>
                           </div>
@@ -1001,7 +1081,6 @@ export default function FilesClient({ initialRootId, initialDriveItems, initialD
                                         });
                                         if (res.ok) {
                                           refreshFolder();
-                                          router.refresh();
                                         }
                                       } catch (e) {
                                         console.error('Rename error:', e);
@@ -1033,6 +1112,13 @@ export default function FilesClient({ initialRootId, initialDriveItems, initialD
                                   <Download size={12} />
                                 </a>
                               )}
+                              <button
+                                onClick={(e) => { e.stopPropagation(); setDeleteTarget(item); setIsDeleting(true); }}
+                                className="p-1.5 rounded-lg hover:bg-rose-500/20 text-storm-gray hover:text-rose-400 transition-all"
+                                title="Delete"
+                              >
+                                <Trash2 size={14} />
+                              </button>
                             </div>
                           </div>
                         </div>

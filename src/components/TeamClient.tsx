@@ -39,7 +39,6 @@ import {
 } from 'lucide-react';
 import AvatarUpload from '@/components/AvatarUpload';
 import { useRouter } from 'next/navigation';
-import Image from 'next/image';
 import { useAuth } from '@/context/AuthContext';
 import { formatDate, formatTime } from '@/lib/dateUtils';
 import CustomDropdown from '@/components/CustomDropdown';
@@ -648,7 +647,7 @@ export default function TeamClient({ initialMembers, initialCounts }: TeamClient
                                                         }}
                                                     >
                                                         {member.avatar_url ? (
-                                                            <Image src={member.avatar_url} alt={member.name || 'Team Member'} fill className="object-cover" />
+                                                            <img src={member.avatar_url} alt={member.name || 'Team Member'} className="w-full h-full object-cover" />
                                                         ) : (
                                                             member.name.split(' ').map((n: string) => n[0]).join('')
                                                         )}
@@ -909,7 +908,7 @@ export default function TeamClient({ initialMembers, initialCounts }: TeamClient
                                                             >
                                                                 <div className="w-[46px] h-[46px] rounded-full bg-shark flex items-center justify-center text-[12px] font-black text-white overflow-hidden border border-white/5 group-hover/name:ring-2 ring-[#279da6]/30 transition-all shrink-0 bg-gradient-to-br from-[#279da6]/10 to-transparent relative">
                                                                     {member.avatar_url ? (
-                                                                        <Image src={member.avatar_url} alt={member.name || 'Team Member'} fill className="object-cover" />
+                                                                        <img src={member.avatar_url} alt={member.name || 'Team Member'} className="w-full h-full object-cover" />
                                                                     ) : (
                                                                         member.name.split(' ').map((n: string) => n[0]).join('')
                                                                     )}

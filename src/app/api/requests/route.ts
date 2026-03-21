@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { createServerClient } from '@supabase/ssr';
 import { createServiceClient } from '@/lib/supabase';
-import { ensureFolderPath } from '@/lib/googleDrive';
+import { ensureFolderPath, findFolder, getOrCreateFolder, getRootFolderId } from '@/lib/googleDrive';
 import { generateSlug, resolveRequestSlug } from '@/lib/utils';
 
 export async function GET(request: Request) {
@@ -231,8 +231,23 @@ export async function POST(request: Request) {
 
                 const clientName = client?.organization || client?.name || 'Unknown';
 
-                // Create the folder structure using the numbered title
+                // Create both production and distributed subfolders
                 await ensureFolderPath(clientName, numberedTitle, 'production', client?.drive_folder_id);
+                await ensureFolderPath(clientName, numberedTitle, 'distributed', client?.drive_folder_id);
+
+                // Resolve the client folder the same way ensureFolderPath does
+                const clientFolderId = client?.drive_folder_id
+                    || await getOrCreateFolder(await getRootFolderId(), clientName);
+
+                // Find the request folder inside the client folder and save its ID
+                const requestFolderId = await findFolder(clientFolderId, numberedTitle);
+                if (requestFolderId) {
+                    await supabase
+                        .from('requests')
+                        .update({ drive_folder_id: requestFolderId })
+                        .eq('id', data.id);
+                    data.drive_folder_id = requestFolderId;
+                }
             } catch (err) {
                 console.warn('Could not create Drive folder for request:', err);
             }

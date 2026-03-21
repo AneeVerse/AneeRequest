@@ -4,6 +4,7 @@ import { resolveRequestSlug } from '@/lib/utils';
 import {
     getRootFolderId,
     findFolder,
+    findFolderFuzzy,
     listFolderContents
 } from '@/lib/googleDrive';
 
@@ -17,14 +18,15 @@ export async function GET(
         const id = await resolveRequestSlug(idOrSlug);
         const supabase = createServiceClient();
 
-        // 1. Get request details (title + client_id + drive_folder_id)
+        // 1. Get request details
         const { data: req, error: reqErr } = await supabase
             .from('requests')
-            .select('title, client_id, drive_folder_id')
+            .select('*')
             .eq('id', id)
             .single();
 
         if (reqErr || !req) {
+            console.error('Request Files GET: not found for id:', id, 'error:', reqErr?.message);
             return NextResponse.json({ error: 'Request not found' }, { status: 404 });
         }
 
@@ -46,7 +48,7 @@ export async function GET(
             const rootId = await getRootFolderId();
             const clientFolderId = await findFolder(rootId, clientName);
             if (!clientFolderId) {
-                return NextResponse.json([]);
+                return NextResponse.json({ files: [], folderLinked: false });
             }
             baseFolderId = clientFolderId;
         }
@@ -55,11 +57,22 @@ export async function GET(
         let requestFolderId: string | null = req.drive_folder_id || null;
 
         if (!requestFolderId) {
+            // Try exact match first, then fuzzy match (handles prefixes like "01-" and case differences)
             requestFolderId = await findFolder(baseFolderId, req.title);
+            if (!requestFolderId) {
+                requestFolderId = await findFolderFuzzy(baseFolderId, req.title);
+            }
+            // Auto-link the folder to the request so future lookups are instant
+            if (requestFolderId) {
+                await supabase
+                    .from('requests')
+                    .update({ drive_folder_id: requestFolderId })
+                    .eq('id', id);
+            }
         }
 
         if (!requestFolderId) {
-            return NextResponse.json([]);
+            return NextResponse.json({ files: [], folderLinked: false });
         }
 
         // 4. List all contents from production and distributed subfolders
@@ -122,10 +135,10 @@ export async function GET(
             }
         }
 
-        return NextResponse.json(allFiles);
+        return NextResponse.json({ files: allFiles, folderLinked: true, folderId: requestFolderId });
     } catch (error: any) {
         console.error('Request Files API Error:', error);
-        return NextResponse.json({ error: error.message }, { status: 500 });
+        return NextResponse.json({ files: [], folderLinked: false, error: error.message });
     }
 }
 
@@ -143,11 +156,12 @@ export async function POST(
         // 1. Get request details
         const { data: req, error: reqErr } = await supabase
             .from('requests')
-            .select('title, client_link_id')
+            .select('*')
             .eq('id', id)
             .single();
 
         if (reqErr || !req) {
+            console.error('Request Files POST: not found for id:', id, 'error:', reqErr?.message);
             return NextResponse.json({ error: 'Request not found' }, { status: 404 });
         }
 
@@ -155,7 +169,7 @@ export async function POST(
         const { data: client } = await supabase
             .from('clients')
             .select('organization, name, drive_folder_id')
-            .eq('id', req.client_link_id)
+            .eq('id', req.client_id)
             .maybeSingle();
 
         const clientName = client?.organization || client?.name || 'Unknown';

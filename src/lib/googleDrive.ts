@@ -166,6 +166,43 @@ export async function findFolder(parentId: string, folderName: string): Promise<
 }
 
 /**
+ * Fuzzy-find a folder by name inside a parent.
+ * Strips common prefixes like "01-", "02-" and compares case-insensitively.
+ * Returns the folder ID or null.
+ */
+export async function findFolderFuzzy(parentId: string, folderName: string): Promise<string | null> {
+    const drive = getDrive();
+    const res = await drive.files.list({
+        q: `'${parentId}' in parents and mimeType = 'application/vnd.google-apps.folder' and trashed = false`,
+        fields: 'files(id, name)',
+        pageSize: 200,
+    });
+
+    const folders = res.data.files || [];
+    const normalize = (s: string) => s.replace(/^\d+[-_.\s]+/, '').toLowerCase().trim();
+    const target = normalize(folderName);
+
+    // Try exact normalized match first
+    for (const f of folders) {
+        if (f.name && normalize(f.name) === target) {
+            return f.id || null;
+        }
+    }
+
+    // Try contains match (folder name contains the request title or vice versa)
+    for (const f of folders) {
+        if (f.name) {
+            const n = normalize(f.name);
+            if (n.includes(target) || target.includes(n)) {
+                return f.id || null;
+            }
+        }
+    }
+
+    return null;
+}
+
+/**
  * Create a folder inside a parent. Returns its ID.
  */
 export async function createFolder(parentId: string, folderName: string): Promise<string> {

@@ -22,7 +22,6 @@ import {
     X,
     Search
 } from 'lucide-react';
-import Image from 'next/image';
 import CustomDropdown from '@/components/CustomDropdown';
 import CustomDatePicker from '@/components/CustomDatePicker';
 import { TaskItem } from '@/lib/data/tasks';
@@ -227,11 +226,10 @@ export default function TasksTable({
                                             <div className="flex items-center gap-1.5 overflow-hidden">
                                                 <div className="w-[46px] h-[46px] rounded bg-shark/40 border border-shark/60 flex items-center justify-center text-[12px] font-black text-[#279da6] shrink-0 overflow-hidden relative">
                                                     {item.request_links?.[0]?.request?.client?.avatar_url ? (
-                                                        <Image
+                                                        <img
                                                             src={item.request_links[0].request.client.avatar_url}
                                                             alt={item.request_links[0].request.client.organization || 'Org'}
-                                                            fill
-                                                            className="object-cover"
+                                                            className="w-full h-full object-cover"
                                                         />
                                                     ) : (
                                                         <span>{item.request_links?.[0]?.request?.client?.organization?.[0] || 'O'}</span>
@@ -289,8 +287,8 @@ export default function TasksTable({
                                                 label: (tm.name || tm.full_name)?.toUpperCase(),
                                                 value: tm.profile_id,
                                                 icon: tm.avatar_url ? (
-                                                    <div className="w-[46px] h-[46px] rounded-full overflow-hidden shrink-0 border border-shark/60 relative">
-                                                        <Image src={tm.avatar_url} alt={tm.name || 'Team Member'} fill className="object-cover" />
+                                                    <div className="w-[46px] h-[46px] rounded-full overflow-hidden shrink-0 border border-shark/60">
+                                                        <img src={tm.avatar_url} alt={tm.name || 'Team Member'} className="w-full h-full object-cover" />
                                                     </div>
                                                 ) : <UserIcon size={20} className="text-[#279da6]" />
                                             }))
@@ -508,11 +506,10 @@ export default function TasksTable({
                                                 <div className="flex items-center gap-3">
                                                     <div className="w-[46px] h-[46px] rounded-full flex items-center justify-center bg-shark/40 border border-shark/60 text-[12px] font-black text-[#279da6] shrink-0 overflow-hidden relative">
                                                         {item.request_links[0].request.client.avatar_url ? (
-                                                            <Image
+                                                            <img
                                                                 src={item.request_links[0].request.client.avatar_url}
                                                                 alt={item.request_links[0].request.client.organization || 'Org'}
-                                                                fill
-                                                                className="object-cover"
+                                                                className="w-full h-full object-cover"
                                                             />
                                                         ) : (
                                                             <span>{item.request_links[0].request.client.organization?.[0] || 'O'}</span>
@@ -583,8 +580,8 @@ export default function TasksTable({
                                                     label: (tm.name || tm.full_name)?.toUpperCase(),
                                                     value: tm.profile_id,
                                                     icon: tm.avatar_url ? (
-                                                        <div className="w-[46px] h-[46px] rounded-full overflow-hidden shrink-0 border border-shark/60 relative">
-                                                            <Image src={tm.avatar_url} alt={tm.name || 'Team Member'} fill className="object-cover" />
+                                                        <div className="w-[46px] h-[46px] rounded-full overflow-hidden shrink-0 border border-shark/60">
+                                                            <img src={tm.avatar_url} alt={tm.name || 'Team Member'} className="w-full h-full object-cover" />
                                                         </div>
                                                     ) : <UserIcon size={20} className="text-[#279da6]" />
                                                 }))
