@@ -89,7 +89,8 @@ export async function POST(request: Request) {
         try {
             const defaultRequestTitle = "00-Updates-Followups";
             const defaultRequestDescription = "This space is dedicated to tracking internal updates, followups, and miscellaneous tasks that aren't specific client requests but still require team action and tracking.";
-            const slug = generateSlug(defaultRequestTitle);
+            const clientLabel = organization || name;
+            const slug = generateSlug(`${clientLabel}-${defaultRequestTitle}`);
 
             await serviceClient
                 .from('requests')
