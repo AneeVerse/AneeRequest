@@ -87,10 +87,42 @@ function err(status: number, message: string) {
     return res(status, { ok: false, error: message });
 }
 
-// ─── Main handler ───
+// ─── GET handler (for bots that can only fetch URLs) ───
+// Usage: GET /api/bot-admin?token=XXX&action=clients.allGrouped&payload={"status":"Active"}
+export async function GET(req: NextRequest) {
+    try {
+        const url = new URL(req.url);
+        const token = url.searchParams.get("token");
+        if (!token || token !== process.env.BOT_ADMIN_TOKEN) {
+            return err(401, "Unauthorized");
+        }
+
+        const action = url.searchParams.get("action");
+        let payload: Record<string, any> = {};
+        const rawPayload = url.searchParams.get("payload");
+        if (rawPayload) {
+            try { payload = JSON.parse(rawPayload); } catch { /* ignore */ }
+        }
+
+        // Also support flat query params as payload keys
+        for (const [key, val] of url.searchParams.entries()) {
+            if (!["token", "action", "payload"].includes(key)) {
+                payload[key] = val;
+            }
+        }
+
+        if (!action) return err(400, "Missing action query param");
+
+        return handleAction(action, payload);
+    } catch (e: any) {
+        console.error("[bot-admin GET] Unhandled error:", e);
+        return res(500, { ok: false, error: e?.message || "Internal error" });
+    }
+}
+
+// ─── POST handler ───
 export async function POST(req: NextRequest) {
     try {
-        // ── Auth ──
         const token = req.headers.get("x-bot-token");
         if (!token || token !== process.env.BOT_ADMIN_TOKEN) {
             return err(401, "Unauthorized");
@@ -102,6 +134,15 @@ export async function POST(req: NextRequest) {
 
         if (!action) return err(400, "Missing action");
 
+        return handleAction(action, payload);
+    } catch (e: any) {
+        console.error("[bot-admin POST] Unhandled error:", e);
+        return res(500, { ok: false, error: e?.message || "Internal error" });
+    }
+}
+
+// ─── Shared action handler ───
+async function handleAction(action: string, payload: Record<string, any>) {
         // ════════════════════════════════════════════
         //  SYSTEM
         // ════════════════════════════════════════════
@@ -577,9 +618,4 @@ export async function POST(req: NextRequest) {
         // ════════════════════════════════════════════
 
         return err(400, `Unknown action: "${action}". Use "schema" to see available actions.`);
-
-    } catch (e: any) {
-        console.error("[bot-admin] Unhandled error:", e);
-        return res(500, { ok: false, error: e?.message || "Internal error" });
-    }
 }
