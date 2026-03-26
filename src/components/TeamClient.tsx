@@ -3,7 +3,8 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 
-import Sidebar from '@/components/Sidebar';
+import DashboardShell from '@/components/DashboardShell';
+import { useDashboard } from '@/context/DashboardContext';
 import Header from '@/components/Header';
 import {
     Search,
@@ -70,8 +71,7 @@ interface TeamClientProps {
 export default function TeamClient({ initialMembers, initialCounts }: TeamClientProps) {
     const router = useRouter();
     const { impersonate, isImpersonating } = useAuth();
-    const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
-    const [isMobileOpen, setIsMobileOpen] = useState(false);
+    const { openMobileMenu } = useDashboard();
     const [activeTab, setActiveTab] = useState('All Members');
     const [panelMode, setPanelMode] = useState<'create' | 'edit'>('create');
     const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
@@ -138,11 +138,6 @@ export default function TeamClient({ initialMembers, initialCounts }: TeamClient
     const inlineInputRef = useRef<HTMLInputElement>(null);
 
     useEffect(() => {
-        // Initial check for mobile to auto-collapse
-        if (window.innerWidth < 1024) {
-            setIsSidebarCollapsed(true);
-        }
-
         if (isCreating) {
             setTimeout(() => inlineInputRef.current?.focus(), 100);
         }
@@ -429,19 +424,11 @@ export default function TeamClient({ initialMembers, initialCounts }: TeamClient
     );
 
     return (
-        <div className={`flex h-screen bg-[#09090B] text-iron font-sans overflow-hidden transition-all duration-500 ${isImpersonating ? 'p-1.5' : ''}`} style={isImpersonating ? { backgroundColor: '#0f2b1a' } : undefined}>
-            <Sidebar
-                isCollapsed={isSidebarCollapsed}
-                isMobileOpen={isMobileOpen}
-                onMobileClose={() => setIsMobileOpen(false)}
-            />
-
-            <div className="flex-1 flex flex-col min-w-0 bg-[#09090B] relative">
-                <div className={`flex-1 flex flex-col min-w-0 bg-[#101011] rounded-t-2xl overflow-hidden border-t border-l border-r mt-2 sm:mt-6 responsive-content-wrapper transition-all duration-500 ${isImpersonating ? 'border-[#22c55e]/60 shadow-[0_0_15px_rgba(34,197,94,0.15),0_0_40px_rgba(34,197,94,0.08),inset_0_0_20px_rgba(34,197,94,0.03)]' : 'border-shark'}`}>
+        <DashboardShell>
                     <div className="border-b border-shark">
                         <Header
 
-                            onMobileMenuToggle={() => setIsMobileOpen(true)}
+                            onMobileMenuToggle={openMobileMenu}
                             label={panelMode === 'edit' ? 'Edit Team Member' : 'Users'}
                             labelIcon={<Users size={20} className="text-[#279da6]" />}
                             onCreate={() => {
@@ -1057,8 +1044,6 @@ export default function TeamClient({ initialMembers, initialCounts }: TeamClient
                             </div>
                         )
                     }
-                </div >
-            </div >
-        </div >
+        </DashboardShell>
     );
 }

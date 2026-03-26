@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
-import Sidebar from '@/components/Sidebar';
+import DashboardShell from '@/components/DashboardShell';
 import Header from '@/components/Header';
 import {
     Search,
@@ -26,6 +26,7 @@ import {
 } from 'lucide-react';
 import { useRouter, useSearchParams, usePathname } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
+import { useDashboard } from '@/context/DashboardContext';
 import CustomDropdown from '@/components/CustomDropdown';
 
 import CustomDateRangePicker from '@/components/CustomDateRangePicker';
@@ -44,8 +45,7 @@ export default function TasksClient({ initialTasks, profiles, teamMembers, reque
     const { user, isImpersonating, profile, viewAsProfile } = useAuth();
     const displayProfile = viewAsProfile || profile;
 
-    const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
-    const [isMobileOpen, setIsMobileOpen] = useState(false);
+    const { openMobileMenu } = useDashboard();
     const searchParams = useSearchParams();
     const pathname = usePathname();
     const initialTabFromUrl = searchParams.get('status')?.toUpperCase();
@@ -139,11 +139,6 @@ export default function TasksClient({ initialTasks, profiles, teamMembers, reque
     };
 
     useEffect(() => {
-        // Initial check for mobile to auto-collapse
-        if (window.innerWidth < 1024) {
-            setIsSidebarCollapsed(true);
-        }
-
         if (isCreating && inlineTaskInputRef.current) {
             inlineTaskInputRef.current.focus();
         }
@@ -444,15 +439,11 @@ export default function TasksClient({ initialTasks, profiles, teamMembers, reque
     );
 
     return (
-        <div className={`flex h-screen bg-[#09090B] text-iron font-sans overflow-hidden transition-all duration-500 ${isImpersonating ? 'p-1.5' : ''}`} style={isImpersonating ? { backgroundColor: '#0f2b1a' } : undefined}>
-            <Sidebar isCollapsed={isSidebarCollapsed} isMobileOpen={isMobileOpen} onMobileClose={() => setIsMobileOpen(false)} />
-
-            <div className="flex-1 flex flex-col min-w-0 bg-[#09090B] relative">
-                <div className={`flex-1 flex flex-col min-w-0 bg-[#101011] rounded-t-2xl overflow-hidden border-t border-l border-r mt-2 sm:mt-6 responsive-content-wrapper transition-all duration-500 ${isImpersonating ? 'border-[#22c55e]/60 shadow-[0_0_15px_rgba(34,197,94,0.15),0_0_40px_rgba(34,197,94,0.08),inset_0_0_20px_rgba(34,197,94,0.03)]' : 'border-shark'}`}>
+        <DashboardShell>
                     <div className="border-b border-shark">
                         <Header
 
-                            onMobileMenuToggle={() => setIsMobileOpen(true)}
+                            onMobileMenuToggle={openMobileMenu}
                             label="Team Tasks"
                             labelIcon={<CheckSquare size={20} className="text-[#279da6]" />}
                             tabs={taskTabs}
@@ -622,8 +613,6 @@ export default function TasksClient({ initialTasks, profiles, teamMembers, reque
                         </div>
 
                     </main>
-                </div>
-            </div>
-        </div>
+        </DashboardShell>
     );
 }

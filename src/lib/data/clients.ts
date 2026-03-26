@@ -18,16 +18,17 @@ export interface ClientItem {
 }
 
 /**
- * Fetches all clients from the database
+ * Fetches all clients from the database.
+ * Joins with profiles for avatar/phone data. Uses clients.last_login directly
+ * instead of calling supabase.auth.admin.listUsers() (which fetched ALL auth users).
  */
 export async function getClients(): Promise<ClientItem[]> {
     const supabase = createServiceClient();
 
-    let clientsRes, authRes, profilesRes;
+    let clientsRes, profilesRes;
     try {
-        [clientsRes, authRes, profilesRes] = await Promise.all([
+        [clientsRes, profilesRes] = await Promise.all([
             supabase.from('clients').select('*').order('created_at', { ascending: false }),
-            supabase.auth.admin.listUsers(),
             supabase.from('profiles').select('id, email, full_name, role, avatar_url, phone, country_code')
         ]);
 
@@ -46,31 +47,35 @@ export async function getClients(): Promise<ClientItem[]> {
         return [];
     }
 
-    const authUsers = authRes.data?.users || [];
     const profiles = profilesRes.data || [];
 
+    // Build a lookup map for O(1) profile matching instead of O(n) per client
+    const profileByEmail = new Map<string, typeof profiles[0]>();
+    for (const p of profiles) {
+        profileByEmail.set(p.email.toLowerCase(), p);
+    }
+
     return (clientsRes.data || []).map(client => {
-        const authUser = authUsers.find(u => u.email?.toLowerCase() === client.email.toLowerCase());
-        const profile = profiles.find(p => p.email.toLowerCase() === client.email.toLowerCase());
+        const profile = profileByEmail.get(client.email.toLowerCase());
         return {
             ...client,
             profile_id: profile?.id || null,
             avatar_url: profile?.avatar_url || client.avatar_url || null,
             phone: (profile as any)?.phone || null,
             country_code: (profile as any)?.country_code || null,
-            last_login: authUser?.last_sign_in_at || client.last_login || null,
+            last_login: client.last_login || null,
             slug: slugify(client.organization || client.name)
         };
     });
 }
 
 /**
- * Fetches request and task counts for all clients
+ * Fetches request and task counts for all clients.
+ * Uses minimal selects — only the columns needed for counting.
  */
 export async function getClientCounts() {
     const supabase = createServiceClient();
 
-    // Fetch all requests and tasks to count by client_link_id
     const [requestsRes, tasksRes] = await Promise.all([
         supabase.from('requests').select('client_link_id'),
         supabase.from('tasks').select('id, task_request_links(request:request_id(client_link_id))')
@@ -86,8 +91,6 @@ export async function getClientCounts() {
     });
 
     tasksRes.data?.forEach((task: any) => {
-        // A task can be linked to multiple requests, but usually one client.
-        // We'll count unique clients per task to avoid double counting if linked to multiple requests of same client. Or just pick first.
         const clientIds = new Set<string>();
         task.task_request_links?.forEach((link: any) => {
             if (link.request?.client_link_id) {

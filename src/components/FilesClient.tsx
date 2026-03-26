@@ -1,7 +1,8 @@
 ﻿'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
-import Sidebar from '@/components/Sidebar';
+import DashboardShell from '@/components/DashboardShell';
+import { useDashboard } from '@/context/DashboardContext';
 import Header from '@/components/Header';
 import FilePreviewModal from '@/components/FilePreviewModal';
 import { usePathname, useRouter } from 'next/navigation';

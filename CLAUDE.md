@@ -34,7 +34,7 @@ No test framework is configured.
 - `src/lib/googleDrive.ts` — Drive API wrapper with OAuth2 (preferred) or service account auth, 60s TTL cache
 - `src/lib/utils.ts` — Slug generation (`slugify`) and resolution (`resolveRequestSlug`, `resolveTaskSlug`)
 - `src/lib/data/` — Server-side data fetching functions (requests, clients, tasks, team, files)
-- `src/proxy.ts` — Middleware for route protection (redirects unauthenticated users to /login)
+- `src/proxy.ts` — Middleware logic for route protection (redirects unauthenticated users to /login); imported by `middleware.ts` at the project root
 - `migrations/` — Supabase SQL migrations (run manually)
 
 ### Routing & Slug Resolution
@@ -44,6 +44,8 @@ Dynamic routes (`/requests/[id]`, `/tasks/[id]`, `/clients/[slug]`) accept both 
 ### Auth & Roles
 
 Four roles: `super_admin`, `admin` (team_role), `team_member`, `client`. Auth context provides `useAuth()` with `profile`, `viewAsProfile` (impersonation), `isImpersonating`. Admins can impersonate users via sessionStorage. API routes filter data by role — clients see only their own requests, non-admin team members see only assigned requests.
+
+The proxy middleware matcher excludes `/api/**` routes entirely — **API routes must implement their own auth and role checks**; the middleware only protects page routes.
 
 ### Supabase Patterns
 
@@ -60,6 +62,15 @@ File storage uses a folder hierarchy: `Root > ClientName > RequestTitle > produc
 `/api/upload` routes files by context:
 - **Request attachments** → Google Drive (structured folders)
 - **Task attachments** → Supabase Storage (`chat-attachments` bucket)
+
+### Bot API Endpoints
+
+Two special API routes exist for external bot/automation consumption:
+
+- `/api/bot-admin` — Full CRUD + Drive operations via POST with JSON body `{ action, ...params }`. Authenticated by `CRON_SECRET` header. Whitelisted tables: `clients`, `requests`, `tasks`, `task_request_links`, `profiles`, `team_members`, `task_messages`, `app_settings`.
+- `/api/bot-read` — Read-only GET endpoint (`?action=clients|requests|tasks|dashboard`). No auth required — exposes only non-sensitive summary data.
+
+> `/api/public-client-snapshot` is marked `⚠️ TEMPORARY` in the source and should be deleted when no longer needed.
 
 ### Environment Variables
 

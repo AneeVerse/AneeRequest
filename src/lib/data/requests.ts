@@ -44,10 +44,9 @@ export interface Client {
 }
 
 /**
- * Fetches requests with role-based filtering
- * @param userId - The ID of the user making the request
- * @param userRole - The role of the user (client, team_member, admin, super_admin)
- * @param impersonateId - Optional ID to impersonate another user
+ * Fetches requests with role-based filtering.
+ * The main query JOINs clients (which already has organization) so we no longer
+ * need secondary queries to re-fetch organization/avatar_url (N+1 fix).
  */
 export async function getRequestsData(
     userId?: string,
@@ -73,17 +72,17 @@ export async function getRequestsData(
         }
     }
 
+    // Main query — client JOIN already returns organization
     const query = supabase
         .from('requests')
         .select(`
             *,
-            client:client_id (id, full_name:name, organization, email),
+            client:client_id (id, full_name:name, organization, email, avatar_url),
             assignee:assigned_to (id, full_name)
         `);
 
     // Apply role-based filtering
     if (activeRole === 'client' && activeProfileId) {
-        // Find the client record for this profile's email
         const { data: profile } = await supabase.from('profiles').select('email').eq('id', activeProfileId).single();
         if (profile?.email) {
             const { data: client } = await supabase.from('clients').select('id').ilike('email', profile.email).maybeSingle();
@@ -94,7 +93,6 @@ export async function getRequestsData(
             }
         }
     } else if (activeRole === 'team_member' && activeProfileId) {
-        // Team members only see assigned requests unless they are admin-role team members
         const { data: teamData } = await supabase
             .from('team_members')
             .select('position')
@@ -114,42 +112,38 @@ export async function getRequestsData(
         return [];
     }
 
-    // Fetch organizations for all clients
+    // Enrich with avatar_url from profiles (if client table doesn't have it)
+    // and generate slugs — done in a single pass with a pre-built lookup map
     const clientEmails = (data || [])
         .map(r => r.client?.email)
         .filter(Boolean) as string[];
 
+    let profileAvatarMap = new Map<string, string>();
     if (clientEmails.length > 0) {
-        const { data: clientsData } = await supabase
-            .from('clients')
-            .select('email, organization')
-            .in('email', clientEmails);
-
         const { data: profilesData } = await supabase
             .from('profiles')
             .select('email, avatar_url')
-            .in('email', clientEmails);
+            .in('email', [...new Set(clientEmails)]);
 
-        if (clientsData) {
-            data?.forEach(r => {
-                if (r.client?.email) {
-                    const c = clientsData.find(cd => cd.email.toLowerCase() === r.client!.email.toLowerCase());
-                    const p = profilesData?.find(pd => pd.email.toLowerCase() === r.client!.email.toLowerCase());
-
-                    if (c) {
-                        (r.client as any).organization = c.organization;
-                        (r.client as any).slug = slugify(c.organization || r.client!.full_name);
-                    } else {
-                        (r.client as any).slug = slugify(r.client!.full_name);
-                    }
-
-                    if (p) {
-                        (r.client as any).avatar_url = p.avatar_url;
-                    }
-                }
-            });
+        if (profilesData) {
+            for (const p of profilesData) {
+                if (p.avatar_url) profileAvatarMap.set(p.email.toLowerCase(), p.avatar_url);
+            }
         }
     }
+
+    // Single pass enrichment
+    data?.forEach(r => {
+        if (r.client) {
+            // Avatar: prefer client table, fall back to profile
+            if (!r.client.avatar_url) {
+                const profileAvatar = profileAvatarMap.get(r.client.email?.toLowerCase());
+                if (profileAvatar) (r.client as any).avatar_url = profileAvatar;
+            }
+            // Slug
+            (r.client as any).slug = slugify(r.client.organization || r.client.full_name);
+        }
+    });
 
     return data || [];
 }
@@ -162,7 +156,7 @@ export async function getProfiles(): Promise<Profile[]> {
 
     const { data, error } = await supabase
         .from('profiles')
-        .select('id, full_name, email, role, avatar_url'); // Added avatar_url
+        .select('id, full_name, email, role, avatar_url');
 
     if (error) {
         console.error('Error fetching profiles:', error);
@@ -205,7 +199,7 @@ export async function getAllRequestsData(
         getRequestsData(userId, userRole, impersonateId),
         getProfiles(),
         getTeamMembers(),
-        getClients() // Fetch all clients
+        getClients()
     ]);
 
     return {

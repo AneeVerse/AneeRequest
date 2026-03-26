@@ -54,6 +54,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             if (session) {
                 setUser(session.user);
                 await fetchProfile(session.user.id, session.user.email);
+                // Update last_login in team_members/clients (fire-and-forget)
+                if (session.user.email) {
+                    fetch('/api/auth/update-login', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ email: session.user.email })
+                    }).catch(() => {});
+                }
             }
             setIsLoading(false);
 
@@ -69,6 +77,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                         // Avoid redundant fetch if INITIAL_SESSION (already handled above)
                         setUser(session.user);
                         await fetchProfile(session.user.id, session.user.email);
+                        // Update last_login on auth state change too
+                        if (session.user.email) {
+                            fetch('/api/auth/update-login', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ email: session.user.email })
+                            }).catch(() => {});
+                        }
                     }
                     setIsLoading(false);
                 }

@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import Sidebar from '@/components/Sidebar';
+import DashboardShell from '@/components/DashboardShell';
 import Header from '@/components/Header';
 import RequestsTable from '@/components/RequestsTable';
 import Charts from '@/components/Charts';
@@ -14,25 +14,18 @@ import {
   Zap,
   Clock
 } from 'lucide-react';
-import { useAuth } from '@/context/AuthContext';
+import { useDashboard } from '@/context/DashboardContext';
 
 export default function DashboardPage() {
-  const { isImpersonating } = useAuth();
-  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
-  const [isMobileOpen, setIsMobileOpen] = useState(false);
+  const { openMobileMenu } = useDashboard();
   const [activeTab, setActiveTab] = useState('Overview');
 
   const overviewTabs = ['Overview', 'Analytics', 'Performance', 'Usage'];
 
   return (
-    <div className={`flex h-screen bg-[#09090B] text-iron font-sans overflow-hidden transition-[padding,background-color] duration-500 ${isImpersonating ? 'p-1.5' : ''}`} style={isImpersonating ? { backgroundColor: '#0f2b1a' } : undefined}>
-      <Sidebar isCollapsed={isSidebarCollapsed} isMobileOpen={isMobileOpen} onMobileClose={() => setIsMobileOpen(false)} />
-
-      <div className="flex-1 flex flex-col min-w-0 bg-[#09090B] relative">
-        <div className={`flex-1 flex flex-col min-w-0 bg-[#101011] rounded-t-2xl overflow-hidden border-t border-l border-r mt-6 responsive-content-wrapper transition-[border-color,box-shadow] duration-500 ${isImpersonating ? 'border-[#22c55e]/60 shadow-[0_0_15px_rgba(34,197,94,0.15),0_0_40px_rgba(34,197,94,0.08),inset_0_0_20px_rgba(34,197,94,0.03)]' : 'border-shark'}`}>
+    <DashboardShell>
           <Header
-
-            onMobileMenuToggle={() => setIsMobileOpen(true)}
+            onMobileMenuToggle={openMobileMenu}
             label="Overview"
             labelIcon={<LayoutDashboard size={20} className="text-santas-gray" />}
             tabs={overviewTabs}
@@ -118,8 +111,6 @@ export default function DashboardPage() {
               </div>
             </div>
           </main>
-        </div>
-      </div>
-    </div>
+    </DashboardShell>
   );
 }

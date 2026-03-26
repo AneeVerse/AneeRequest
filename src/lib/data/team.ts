@@ -18,17 +18,18 @@ export interface TeamMember {
 }
 
 /**
- * Fetches all team members from the database with merged profile data
+ * Fetches all team members from the database with merged profile data.
+ * Uses team_members.last_login directly instead of calling
+ * supabase.auth.admin.listUsers() (which fetched ALL auth users).
  */
 export async function getTeamMembers(): Promise<TeamMember[]> {
     const supabase = createServiceClient();
 
-    let teamRes, profilesRes, authRes;
+    let teamRes, profilesRes;
     try {
-        [teamRes, profilesRes, authRes] = await Promise.all([
+        [teamRes, profilesRes] = await Promise.all([
             supabase.from('team_members').select('*').order('created_at', { ascending: false }),
-            supabase.from('profiles').select('id, email, full_name, role, avatar_url, phone, country_code'),
-            supabase.auth.admin.listUsers()
+            supabase.from('profiles').select('id, email, full_name, role, avatar_url, phone, country_code')
         ]);
 
         if (profilesRes.error && (profilesRes.error.message.includes('column') || profilesRes.error.code === '42703')) {
@@ -42,144 +43,84 @@ export async function getTeamMembers(): Promise<TeamMember[]> {
 
     if (teamRes.error) console.error('Error fetching team members:', teamRes.error);
     if (profilesRes.error) console.error('Error fetching profiles:', profilesRes.error);
-    if (authRes.error) console.error('Error listing auth users:', authRes.error);
 
     const membersData = teamRes.data || [];
     const profiles = profilesRes.data || [];
-    const authUsers = authRes.data?.users || [];
 
-    // Merge by profile_id first, then email (case-insensitive)
+    // Build lookup maps for O(1) matching instead of O(n) per member
+    const profileById = new Map<string, typeof profiles[0]>();
+    const profileByEmail = new Map<string, typeof profiles[0]>();
+    for (const p of profiles) {
+        profileById.set(p.id, p);
+        profileByEmail.set(p.email.toLowerCase(), p);
+    }
+
     return membersData.map(member => {
-        const matchedProfiles = profiles.filter(p =>
-            (member.profile_id && p.id === member.profile_id) ||
-            (p.email.toLowerCase() === member.email.toLowerCase())
-        );
-
-        // Prioritize the profile that has an avatar if there are multiple matches
-        const profile = matchedProfiles.find(p => p.avatar_url) || matchedProfiles[0];
-
-        const matchedAuthUsers = authUsers.filter(u =>
-            (member.profile_id && u.id === member.profile_id) ||
-            u.email?.toLowerCase() === member.email.toLowerCase()
-        );
-        const authUser = matchedAuthUsers.find(u => u.last_sign_in_at) || matchedAuthUsers[0];
-
-        // Fallback for avatar: Profile URL > Auth Metadata URL > null
-        const avatarUrl = profile?.avatar_url || authUser?.user_metadata?.avatar_url || null;
+        // Match by profile_id first, then email
+        const profile = (member.profile_id && profileById.get(member.profile_id))
+            || profileByEmail.get(member.email.toLowerCase())
+            || null;
 
         return {
             ...member,
             profile_id: profile?.id || member.profile_id || null,
-            avatar_url: avatarUrl,
+            avatar_url: profile?.avatar_url || null,
             phone: (profile as any)?.phone || null,
             country_code: (profile as any)?.country_code || null,
             role: profile?.role || member.role || null,
-            last_login: authUser?.last_sign_in_at || member.last_login || null
+            last_login: member.last_login || null
         };
     });
 }
 
 /**
- * Fetches request counts for each team member
+ * Fetches request and task counts + task titles for all team members in 2 queries
+ * (instead of the previous 3 separate full-table scans).
  */
-export async function getTeamMemberRequestCounts(): Promise<Record<string, number>> {
+export async function getTeamMemberCounts(): Promise<{
+    requestCounts: Record<string, number>;
+    taskCounts: Record<string, number>;
+    taskTitles: Record<string, string[]>;
+}> {
     const supabase = createServiceClient();
 
-    const { data, error } = await supabase
-        .from('requests')
-        .select('assigned_to');
-
-    if (error) {
-        console.error('Error fetching request counts:', error);
-        return {};
-    }
-
-    // Count occurrences
-    const countMap: Record<string, number> = {};
-    data?.forEach((req: any) => {
-        if (req.assigned_to) {
-            countMap[req.assigned_to] = (countMap[req.assigned_to] || 0) + 1;
-        }
-    });
-
-    return countMap;
-}
-
-/**
- * Fetches task counts for each team member
- */
-export async function getTeamMemberTaskCounts(): Promise<Record<string, number>> {
-    const supabase = createServiceClient();
-
-    const { data, error } = await supabase
-        .from('tasks')
-        .select('assigned_to');
-
-    if (error) {
-        console.error('Error fetching task counts:', error);
-        return {};
-    }
-
-    const countMap: Record<string, number> = {};
-    data?.forEach((task: any) => {
-        if (task.assigned_to) {
-            countMap[task.assigned_to] = (countMap[task.assigned_to] || 0) + 1;
-        }
-    });
-
-    return countMap;
-}
-
-/**
- * Fetches tasks for each team member
- */
-export async function getTeamMemberTasks(): Promise<Record<string, string[]>> {
-    const supabase = createServiceClient();
-
-    const { data, error } = await supabase
-        .from('tasks')
-        .select('assigned_to, title');
-
-    if (error) {
-        console.error('Error fetching task titles:', error);
-        return {};
-    }
-
-    const taskMap: Record<string, string[]> = {};
-    data?.forEach((task: any) => {
-        if (task.assigned_to) {
-            if (!taskMap[task.assigned_to]) {
-                taskMap[task.assigned_to] = [];
-            }
-            taskMap[task.assigned_to].push(task.title);
-        }
-    });
-
-    return taskMap;
-}
-
-/**
- * Fetches all team data (members + counts) in parallel
- */
-export async function getAllTeamData() {
-    const [members, counts, taskCounts, tasks] = await Promise.all([
-        getTeamMembers(),
-        getTeamMemberRequestCounts(),
-        getTeamMemberTaskCounts(),
-        getTeamMemberTasks(),
+    const [requestsRes, tasksRes] = await Promise.all([
+        supabase.from('requests').select('assigned_to'),
+        supabase.from('tasks').select('assigned_to, title')
     ]);
 
-    return { members, counts, taskCounts, tasks };
+    const requestCounts: Record<string, number> = {};
+    const taskCounts: Record<string, number> = {};
+    const taskTitles: Record<string, string[]> = {};
+
+    requestsRes.data?.forEach((req: any) => {
+        if (req.assigned_to) {
+            requestCounts[req.assigned_to] = (requestCounts[req.assigned_to] || 0) + 1;
+        }
+    });
+
+    tasksRes.data?.forEach((task: any) => {
+        if (task.assigned_to) {
+            taskCounts[task.assigned_to] = (taskCounts[task.assigned_to] || 0) + 1;
+            if (!taskTitles[task.assigned_to]) taskTitles[task.assigned_to] = [];
+            taskTitles[task.assigned_to].push(task.title);
+        }
+    });
+
+    return { requestCounts, taskCounts, taskTitles };
 }
 
 /**
- * Returns a single list of team members enriched with roles and request counts
+ * Returns a single list of team members enriched with roles and request counts.
+ * Combines getTeamMembers() + getTeamMemberCounts() in parallel (2 queries instead of 5).
  */
 export async function getEnrichedTeamMembers() {
-    const { members, counts, taskCounts, tasks } = await getAllTeamData();
+    const [members, counts] = await Promise.all([
+        getTeamMembers(),
+        getTeamMemberCounts()
+    ]);
 
     return members.map(m => {
-        // Normalize role for UI - Prioritize position over generic role
         const rawRole = (m.position || m.role || 'viewer').toLowerCase();
         let uiRole = 'viewer';
         if (rawRole.includes('admin')) uiRole = 'admin';
@@ -188,9 +129,22 @@ export async function getEnrichedTeamMembers() {
         return {
             ...m,
             role: uiRole,
-            request_count: (m.profile_id && counts[m.profile_id]) || 0,
-            task_count: (m.profile_id && taskCounts[m.profile_id]) || 0,
-            tasks: (m.profile_id && tasks[m.profile_id]) || []
+            request_count: (m.profile_id && counts.requestCounts[m.profile_id]) || 0,
+            task_count: (m.profile_id && counts.taskCounts[m.profile_id]) || 0,
+            tasks: (m.profile_id && counts.taskTitles[m.profile_id]) || []
         };
     });
+}
+
+// Keep backward-compatible exports for any code that calls these individually
+export async function getTeamMemberRequestCounts(): Promise<Record<string, number>> {
+    return (await getTeamMemberCounts()).requestCounts;
+}
+
+export async function getTeamMemberTaskCounts(): Promise<Record<string, number>> {
+    return (await getTeamMemberCounts()).taskCounts;
+}
+
+export async function getTeamMemberTasks(): Promise<Record<string, string[]>> {
+    return (await getTeamMemberCounts()).taskTitles;
 }
