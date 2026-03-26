@@ -48,7 +48,7 @@ export async function POST(req: NextRequest) {
             const table = payload.table || "clients";
             const state = payload.state;
 
-            let q = supabase.from(table).select("*").limit(500);
+            let q = supabase.from(table as any).select("*").limit(500);
             if (state) q = q.eq("state", state);
 
             const { data, error } = await q;
@@ -63,7 +63,7 @@ export async function POST(req: NextRequest) {
                 return res(400, { ok: false, error: "payload.table and payload.rows[] required" });
             }
 
-            const { data, error } = await supabase.from(table).insert(rows).select("*");
+            const { data, error } = await supabase.from(table as any).insert(rows).select("*");
             if (error) return res(500, { ok: false, error: error.message });
             return res(200, { ok: true, data });
         }
