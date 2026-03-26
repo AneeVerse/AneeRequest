@@ -36,7 +36,7 @@ export async function POST(req: NextRequest) {
             const activeValue = payload.activeValue || "Ongoing";
 
             const { count, error } = await supabase
-                .from(table)
+                .from(table as any)
                 .select("*", { count: "exact", head: true })
                 .eq(stateColumn, activeValue);
 
@@ -77,7 +77,7 @@ export async function POST(req: NextRequest) {
             }
 
             const { data, error } = await supabase
-                .from(table)
+                .from(table as any)
                 .update(patch)
                 .eq("id", id)
                 .select("*");
