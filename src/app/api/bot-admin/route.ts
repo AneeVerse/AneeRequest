@@ -7,7 +7,7 @@ const supabase = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL as string,
     process.env.SUPABASE_SERVICE_ROLE_KEY as string,
     { auth: { persistSession: false } }
-);
+) as any;
 
 function res(status: number, body: any) {
     return NextResponse.json(body, { status });
