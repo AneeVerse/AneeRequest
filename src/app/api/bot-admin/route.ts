@@ -154,12 +154,10 @@ export async function POST(req: NextRequest) {
 
             let q = supabase.from(table).select(columns, { count: "exact" });
 
-            // Apply filters
             for (const [col, val] of Object.entries(filters)) {
                 if (val === null) {
                     q = q.is(col, null);
                 } else if (typeof val === "object" && val !== null) {
-                    // Support operators: { column: { op: "ilike", value: "%term%" } }
                     const op = val.op as string;
                     const v = val.value;
                     if (op === "ilike") q = q.ilike(col, v);
@@ -399,7 +397,6 @@ export async function POST(req: NextRequest) {
             const name = payload.name as string;
             if (!parentId || !name) return err(400, "payload.parent_id and payload.name required");
 
-            // Check if folder already exists
             const existing = await findFolder(parentId, name);
             if (existing) {
                 return res(200, { ok: true, data: { folder_id: existing, already_existed: true } });
