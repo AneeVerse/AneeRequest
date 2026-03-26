@@ -117,7 +117,7 @@ export async function POST(req: NextRequest) {
             const allActions = [
                 "ping", "schema",
                 "db.select", "db.insert", "db.update", "db.upsert", "db.delete", "db.rpc",
-                "clients.list", "clients.countActive",
+                "clients.list", "clients.allGrouped", "clients.countActive",
                 "requests.list", "tasks.list",
                 "auth.listUsers", "auth.getUser", "auth.createUser", "auth.updateUser", "auth.deleteUser",
                 "google.ping", "drive.listRoot", "drive.listFolder", "drive.createFolder",
@@ -301,6 +301,30 @@ export async function POST(req: NextRequest) {
             const { data, error } = await q;
             if (error) return err(500, error.message);
             return res(200, { ok: true, data: data || [] });
+        }
+
+        // ── clients.allGrouped ── (returns all clients grouped by status)
+        if (action === "clients.allGrouped") {
+            const { data, error } = await supabase
+                .from("clients")
+                .select("*")
+                .order("organization", { ascending: true })
+                .limit(1000);
+            if (error) return err(500, error.message);
+
+            const grouped: Record<string, any[]> = { Ongoing: [], Leads: [], Closed: [], Archive: [] };
+            for (const c of data || []) {
+                const bucket = grouped[c.status] ?? (grouped[c.status] = []);
+                bucket.push(c);
+            }
+            return res(200, {
+                ok: true,
+                data: {
+                    total: (data || []).length,
+                    counts: Object.fromEntries(Object.entries(grouped).map(([k, v]) => [k, v.length])),
+                    grouped,
+                },
+            });
         }
 
         // ── clients.countActive ──
