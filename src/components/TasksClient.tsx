@@ -208,7 +208,7 @@ export default function TasksClient({ initialTasks, profiles, teamMembers, reque
         } else if (activeTab === 'COMPLETED') {
             matchesTab = !is00Request && task.status === 'Done';
         } else if (activeTab === 'ALL') {
-            matchesTab = !is00Request;
+            matchesTab = true;
         } else if (activeTab === '00') {
             matchesTab = is00Request && task.status !== 'Done';
         } else if (activeTab === '00-C') {
@@ -287,7 +287,7 @@ export default function TasksClient({ initialTasks, profiles, teamMembers, reque
 
                 if (tab === 'ACTIVE') return !is00Request && ['Todo', 'In Progress', 'Review'].includes(task.status || '');
                 if (tab === 'COMPLETED') return !is00Request && task.status === 'Done';
-                if (tab === 'ALL') return !is00Request;
+                if (tab === 'ALL') return true;
                 if (tab === '00') return is00Request && task.status !== 'Done';
                 if (tab === '00-C') return is00Request && task.status === 'Done';
                 return true;
