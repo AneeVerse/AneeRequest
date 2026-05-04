@@ -246,3 +246,10 @@ select option {
     border-right: none !important;
   }
 }
+/* Hide native password reveal/clear buttons (Edge ms-reveal, IE clear) */
+input[type="password"]::-ms-reveal,
+input[type="password"]::-ms-clear,
+input.no-native-reveal::-ms-reveal,
+input.no-native-reveal::-ms-clear {
+  display: none !important;
+}

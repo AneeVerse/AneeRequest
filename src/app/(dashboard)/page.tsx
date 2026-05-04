@@ -1,7 +1,6 @@
 'use client';
 
 import React, { useState } from 'react';
-import DashboardShell from '@/components/DashboardShell';
 import Header from '@/components/Header';
 import RequestsTable from '@/components/RequestsTable';
 import Charts from '@/components/Charts';
@@ -23,7 +22,7 @@ export default function DashboardPage() {
   const overviewTabs = ['Overview', 'Analytics', 'Performance', 'Usage'];
 
   return (
-    <DashboardShell>
+    <>
           <Header
             onMobileMenuToggle={openMobileMenu}
             label="Overview"
@@ -111,6 +110,6 @@ export default function DashboardPage() {
               </div>
             </div>
           </main>
-    </DashboardShell>
+    </>
   );
 }

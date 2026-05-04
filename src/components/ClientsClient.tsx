@@ -2,7 +2,6 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import DashboardShell from '@/components/DashboardShell';
 import { useDashboard } from '@/context/DashboardContext';
 import Header from '@/components/Header';
 import {
@@ -550,7 +549,7 @@ export default function ClientsClient({ initialClients }: ClientsClientProps) {
     );
 
     return (
-        <DashboardShell>
+        <>
                     <div className="border-b border-shark">
                         <Header
 
@@ -1152,6 +1151,6 @@ export default function ClientsClient({ initialClients }: ClientsClientProps) {
                         </div>
                     )
                 }
-        </DashboardShell>
+        </>
     );
 }

@@ -1,7 +1,6 @@
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
-import DashboardShell from '@/components/DashboardShell';
 import Header from '@/components/Header';
 import {
     Search,
@@ -439,7 +438,7 @@ export default function TasksClient({ initialTasks, profiles, teamMembers, reque
     );
 
     return (
-        <DashboardShell>
+        <>
                     <div className="border-b border-shark">
                         <Header
 
@@ -613,6 +612,6 @@ export default function TasksClient({ initialTasks, profiles, teamMembers, reque
                         </div>
 
                     </main>
-        </DashboardShell>
+        </>
     );
 }

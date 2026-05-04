@@ -3,7 +3,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import Image from 'next/image';
-import DashboardShell from '@/components/DashboardShell';
 import { useDashboard } from '@/context/DashboardContext';
 import Header from '@/components/Header';
 import {
@@ -43,7 +42,8 @@ import {
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/context/AuthContext';
 import ImpersonationWarning from '@/components/ImpersonationWarning';
-import FilePreviewModal from '@/components/FilePreviewModal';
+import dynamic from 'next/dynamic';
+const FilePreviewModal = dynamic(() => import('@/components/FilePreviewModal'), { ssr: false });
 import CustomDropdown from '@/components/CustomDropdown';
 import CustomDatePicker from '@/components/CustomDatePicker';
 import { formatDate, formatTime } from '@/lib/dateUtils';
@@ -635,7 +635,7 @@ export default function TaskDetailsPage() {
 
     return (
         <>
-            <DashboardShell>
+            <>
 
                         {/* Header */}
                         <div className="border-b border-shark">
@@ -1185,7 +1185,7 @@ export default function TaskDetailsPage() {
                                 </div>
                             </div>
                         </div>
-            </DashboardShell>
+            </>
 
             {/* Delete Confirmation Modal */}
             {

@@ -13,6 +13,28 @@ export default function LoginPage() {
     const [showPassword, setShowPassword] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    const [info, setInfo] = useState<string | null>(null);
+
+    const handleForgotPassword = async () => {
+        setError(null);
+        setInfo(null);
+        if (!email) {
+            setError('Enter your email above first, then click Forgot.');
+            return;
+        }
+        setIsLoading(true);
+        try {
+            const { error: resetError } = await supabase.auth.resetPasswordForEmail(email, {
+                redirectTo: `${window.location.origin}/reset-password`,
+            });
+            if (resetError) throw resetError;
+            setInfo(`Password reset email sent to ${email}. Check your inbox.`);
+        } catch (err: any) {
+            setError(err.message || 'Failed to send reset email');
+        } finally {
+            setIsLoading(false);
+        }
+    };
 
     const handleLogin = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -78,6 +100,12 @@ export default function LoginPage() {
                                 {error}
                             </div>
                         )}
+                        {info && (
+                            <div className="bg-emerald-500/5 border border-emerald-500/20 text-emerald-400 text-[11px] font-bold p-3 rounded-xl flex items-center gap-2">
+                                <ShieldCheck size={14} />
+                                {info}
+                            </div>
+                        )}
 
                         <div className="space-y-1.5">
                             <label className="text-[10px] font-bold text-santas-gray uppercase tracking-widest ml-1">
@@ -98,7 +126,7 @@ export default function LoginPage() {
                                 <label className="text-[10px] font-bold text-santas-gray uppercase tracking-widest">
                                     Password
                                 </label>
-                                <button type="button" className="text-[10px] font-bold text-[#279da6] hover:text-[#279da6]/80 transition-colors uppercase tracking-widest">
+                                <button type="button" onClick={handleForgotPassword} disabled={isLoading} className="text-[10px] font-bold text-[#279da6] hover:text-[#279da6]/80 transition-colors uppercase tracking-widest disabled:opacity-50">
                                     Forgot?
                                 </button>
                             </div>
@@ -109,7 +137,7 @@ export default function LoginPage() {
                                     placeholder="••••••••"
                                     value={password}
                                     onChange={(e) => setPassword(e.target.value)}
-                                    className="w-full bg-[#09090B] border border-shark/80 rounded-xl py-3 px-4 text-sm text-iron focus:outline-none focus:border-[#279da6]/60 focus:ring-1 focus:ring-[#279da6]/20 transition-all placeholder:text-storm-gray/40"
+                                    className="no-native-reveal w-full bg-[#09090B] border border-shark/80 rounded-xl py-3 pl-4 pr-12 text-sm text-iron focus:outline-none focus:border-[#279da6]/60 focus:ring-1 focus:ring-[#279da6]/20 transition-all placeholder:text-storm-gray/40"
                                 />
                                 <button
                                     type="button"

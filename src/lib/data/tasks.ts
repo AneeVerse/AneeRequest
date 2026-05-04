@@ -59,7 +59,7 @@ export async function getTasksData() {
                     id,
                     slug,
                     title,
-                    client:client_id (id, full_name:name, email, organization, avatar_url)
+                    client:client_id (id, full_name:name, email, organization)
                 )
             )
         `)

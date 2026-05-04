@@ -2,7 +2,6 @@
 
 import React, { useState, useEffect } from 'react';
 import Image from 'next/image';
-import DashboardShell from '@/components/DashboardShell';
 import { useDashboard } from '@/context/DashboardContext';
 import { useAuth } from '@/context/AuthContext';
 import {
@@ -252,14 +251,14 @@ export default function AccountPage() {
     };
 
     return (
-        <DashboardShell>
+        <>
 
                     {/* Header */}
                     <div className="h-14 lg:h-16 flex items-center justify-between px-3 sm:px-6 lg:px-8 bg-black/20 shrink-0 border-b border-shark/40">
                         <div className="flex items-center gap-2 lg:gap-4">
                             {/* Mobile hamburger */}
                             <button
-                                onClick={() => setIsMobileOpen(true)}
+                                onClick={openMobileMenu}
                                 className="p-2 hover:bg-white/5 rounded-xl text-storm-gray hover:text-white transition-all lg:hidden"
                             >
                                 <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="4" x2="20" y1="12" y2="12" /><line x1="4" x2="20" y1="6" y2="6" /><line x1="4" x2="20" y1="18" y2="18" /></svg>
@@ -553,8 +552,6 @@ export default function AccountPage() {
                             )}
                         </div>
                     </main>
-                </div>
-            </div>
-        </div>
+        </>
     );
 }

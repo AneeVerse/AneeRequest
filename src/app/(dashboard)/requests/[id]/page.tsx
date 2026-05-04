@@ -2,7 +2,6 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
-import DashboardShell from '@/components/DashboardShell';
 import { useDashboard } from '@/context/DashboardContext';
 import Header from '@/components/Header';
 import {
@@ -17,7 +16,8 @@ import {
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/context/AuthContext';
 import ImpersonationWarning from '@/components/ImpersonationWarning';
-import FilePreviewModal from '@/components/FilePreviewModal';
+import dynamic from 'next/dynamic';
+const FilePreviewModal = dynamic(() => import('@/components/FilePreviewModal'), { ssr: false });
 import { TaskItem } from '@/lib/data/tasks';
 import { formatDate } from '@/lib/dateUtils';
 
@@ -27,8 +27,8 @@ import RequestMessages from '@/components/requests/RequestMessages';
 import RequestSidebar from '@/components/requests/RequestSidebar';
 import TasksTab from '@/components/requests/TasksTab';
 import FilesTab from '@/components/requests/FilesTab';
-import LinkFolderModal from '@/components/requests/LinkFolderModal';
-import DeleteModal from '@/components/requests/DeleteModal';
+const LinkFolderModal = dynamic(() => import('@/components/requests/LinkFolderModal'), { ssr: false });
+const DeleteModal = dynamic(() => import('@/components/requests/DeleteModal'), { ssr: false });
 
 interface Message {
     id: string;
@@ -557,7 +557,7 @@ export default function RequestDetailsPage() {
 
     return (
         <>
-            <DashboardShell>
+            <>
 
                         <RequestHeader
                             isMobileOpen={false}
@@ -699,7 +699,7 @@ export default function RequestDetailsPage() {
                                 setIsDeleteModalOpen={setIsDeleteModalOpen}
                             />
                         </div>
-            </DashboardShell>
+            </>
 
             <LinkFolderModal
                 isOpen={isLinkModalOpen}

@@ -3,7 +3,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 
-import DashboardShell from '@/components/DashboardShell';
 import { useDashboard } from '@/context/DashboardContext';
 import Header from '@/components/Header';
 import {
@@ -424,7 +423,7 @@ export default function TeamClient({ initialMembers, initialCounts }: TeamClient
     );
 
     return (
-        <DashboardShell>
+        <>
                     <div className="border-b border-shark">
                         <Header
 
@@ -1044,6 +1043,6 @@ export default function TeamClient({ initialMembers, initialCounts }: TeamClient
                             </div>
                         )
                     }
-        </DashboardShell>
+        </>
     );
 }

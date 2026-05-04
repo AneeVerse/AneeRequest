@@ -4,7 +4,8 @@ import React, { useState, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import Image from 'next/image';
 import { Camera, Loader2, X, Trash2, Link2, Upload, Globe } from 'lucide-react';
-import ImageCropModal from './ImageCropModal';
+import dynamic from 'next/dynamic';
+const ImageCropModal = dynamic(() => import('./ImageCropModal'), { ssr: false });
 
 interface AvatarUploadProps {
     currentAvatarUrl?: string | null;

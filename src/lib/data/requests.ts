@@ -77,7 +77,7 @@ export async function getRequestsData(
         .from('requests')
         .select(`
             *,
-            client:client_id (id, full_name:name, organization, email, avatar_url),
+            client:client_id (id, full_name:name, organization, email),
             assignee:assigned_to (id, full_name)
         `);
 

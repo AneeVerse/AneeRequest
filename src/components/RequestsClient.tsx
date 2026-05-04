@@ -1,7 +1,6 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import DashboardShell from '@/components/DashboardShell';
 import { useDashboard } from '@/context/DashboardContext';
 import Header from '@/components/Header';
 import {
@@ -26,7 +25,8 @@ import {
 } from 'lucide-react';
 import { useRouter, useSearchParams, usePathname } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
-import ChatDrawer from '@/components/ChatDrawer';
+import dynamic from 'next/dynamic';
+const ChatDrawer = dynamic(() => import('@/components/ChatDrawer'), { ssr: false });
 import RequestsTable from '@/components/RequestsTable';
 import CustomDropdown from '@/components/CustomDropdown';
 import CustomDateRangePicker from '@/components/CustomDateRangePicker';
@@ -425,7 +425,7 @@ export default function RequestsClient({
     );
 
     return (
-        <DashboardShell>
+        <>
                     <div className="border-b border-shark">
                         <Header
 
@@ -569,6 +569,6 @@ export default function RequestsClient({
                 requestId={selectedRequest?.id || ''}
                 requestTitle={selectedRequest?.title || ''}
             />
-        </DashboardShell>
+        </>
     );
 }

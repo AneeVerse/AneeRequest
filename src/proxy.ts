@@ -35,11 +35,12 @@ export async function proxy(request: NextRequest) {
 
     // Route protection
     const isLoginPage = request.nextUrl.pathname === '/login';
+    const isResetPage = request.nextUrl.pathname === '/reset-password';
     const isPublicAsset = request.nextUrl.pathname.startsWith('/_next') ||
         request.nextUrl.pathname.startsWith('/images') ||
         request.nextUrl.pathname.startsWith('/api/auth');
 
-    if (!user && !isLoginPage && !isPublicAsset) {
+    if (!user && !isLoginPage && !isResetPage && !isPublicAsset) {
         return NextResponse.redirect(new URL('/login', request.url));
     }
 
