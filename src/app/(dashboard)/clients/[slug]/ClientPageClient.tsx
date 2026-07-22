@@ -75,6 +75,7 @@ import ClientHeader from '@/components/clients/ClientHeader';
 import ClientRequestsTab from '@/components/clients/ClientRequestsTab';
 import ClientTasksTab from '@/components/clients/ClientTasksTab';
 import ClientDriveTab from '@/components/clients/ClientDriveTab';
+import ClientInvoicesTab from '@/components/clients/ClientInvoicesTab';
 import ClientSettingsTab from '@/components/clients/ClientSettingsTab';
 
 interface ClientPageClientProps {
@@ -95,9 +96,16 @@ export default function ClientPageClient({
   const { profile, viewAsProfile, isImpersonating } = useAuth();
   const displayProfile = viewAsProfile || profile;
   const isSuperAdmin = displayProfile?.role === 'super_admin';
+  const isAdminRole = displayProfile?.role === 'admin' || isSuperAdmin;
+  const invoiceSections = displayProfile?.accessible_sections || [];
+  const canSeeInvoices =
+    isAdminRole ||
+    (displayProfile?.role === 'team_member' &&
+      (invoiceSections.includes('invoices') || displayProfile?.team_role === 'admin'));
 
-  const tabs = ['Requests', 'Tasks', 'Drive', 'Settings'].filter(tab => {
+  const tabs = ['Requests', 'Tasks', 'Invoices', 'Drive', 'Settings'].filter(tab => {
     if (tab === 'Drive' && !isSuperAdmin) return false;
+    if (tab === 'Invoices' && !canSeeInvoices) return false;
     return true;
   });
 
@@ -158,6 +166,10 @@ export default function ClientPageClient({
   const [settingsConfirmPassword, setSettingsConfirmPassword] = useState('');
   const [isUpdating, setIsUpdating] = useState(false);
   const [showSettingsPassword, setShowSettingsPassword] = useState(false);
+  const [billingAddress, setBillingAddress] = useState('');
+  const [billingStateCode, setBillingStateCode] = useState('27');
+  const [clientGstin, setClientGstin] = useState('');
+  const [isSavingBilling, setIsSavingBilling] = useState(false);
   const [status, setStatus] = useState<{ type: 'success' | 'error', message: string } | null>(null);
 
   // Modal States
@@ -208,6 +220,8 @@ export default function ClientPageClient({
     } else if (activeTab === 'Tasks') {
       setIsCreatingTask(!isCreatingTask);
       setIsCreatingRequest(false);
+    } else if (activeTab === 'Invoices' && client?.id) {
+      router.push(`/invoices/new?client_id=${client.id}`);
     }
   };
 
@@ -295,6 +309,9 @@ export default function ClientPageClient({
   useEffect(() => {
     if (client) {
       setSettingsEmail(client.email);
+      setBillingAddress((client as any).billing_address || '');
+      setBillingStateCode((client as any).billing_state_code || '27');
+      setClientGstin((client as any).gstin || '');
       setFolderInput(client.drive_folder_id || '');
       if (client.drive_folder_id && !isDriveBrowsing) {
         // Validate to get name + auto-browse
@@ -782,6 +799,41 @@ export default function ClientPageClient({
     }
   }, [theme]);
 
+  const handleSaveBilling = async () => {
+    if (!client) return;
+    setIsSavingBilling(true);
+    try {
+      const stateName =
+        billingStateCode === '27'
+          ? 'Maharashtra'
+          : undefined;
+      const { INDIAN_STATES } = await import('@/lib/invoiceUtils');
+      const matched = INDIAN_STATES.find((s) => s.code === billingStateCode);
+      const response = await fetch('/api/clients', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id: client.id,
+          billing_address: billingAddress,
+          billing_state: matched?.name || stateName || 'Maharashtra',
+          billing_state_code: billingStateCode,
+          gstin: clientGstin,
+        }),
+      });
+      if (response.ok) {
+        setStatus({ type: 'success', message: 'Billing details saved!' });
+        mutate('/api/clients');
+      } else {
+        const err = await response.json();
+        setStatus({ type: 'error', message: err.error || 'Failed to save billing' });
+      }
+    } catch {
+      setStatus({ type: 'error', message: 'Failed to save billing details.' });
+    } finally {
+      setIsSavingBilling(false);
+    }
+  };
+
   const handleSettingsSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!client) return;
@@ -1014,6 +1066,10 @@ export default function ClientPageClient({
                 />
               )}
 
+              {activeTab === 'Invoices' && client && (
+                <ClientInvoicesTab clientId={client.id} />
+              )}
+
               {activeTab === 'Drive' && (
                 <ClientDriveTab
                   isDriveBrowsing={isDriveBrowsing}
@@ -1081,6 +1137,14 @@ export default function ClientPageClient({
                   handleRemoveClientFolder={handleRemoveClientFolder}
                   setActiveTab={setActiveTab}
                   browseDriveFolder={browseDriveFolder}
+                  billingAddress={billingAddress}
+                  setBillingAddress={setBillingAddress}
+                  billingStateCode={billingStateCode}
+                  setBillingStateCode={setBillingStateCode}
+                  clientGstin={clientGstin}
+                  setClientGstin={setClientGstin}
+                  isSavingBilling={isSavingBilling}
+                  handleSaveBilling={handleSaveBilling}
                 />
               )}
             </div>

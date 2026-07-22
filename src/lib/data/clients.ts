@@ -15,6 +15,10 @@ export interface ClientItem {
     website?: string | null;
     slug: string;
     avatar_url?: string | null;
+    billing_address?: string | null;
+    billing_state?: string | null;
+    billing_state_code?: string | null;
+    gstin?: string | null;
 }
 
 /**

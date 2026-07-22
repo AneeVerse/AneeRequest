@@ -22,7 +22,8 @@ import {
     Link2,
     Check,
     RefreshCw,
-    Building
+    Building,
+    Receipt
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import ImpersonationWarning from '@/components/ImpersonationWarning';
@@ -54,6 +55,17 @@ export default function AccountPage() {
     const [isSavingFolder, setIsSavingFolder] = useState(false);
     const [folderStatus, setFolderStatus] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
 
+    // Invoice seller settings (super_admin / admin)
+    const [invoiceCompany, setInvoiceCompany] = useState('Aneeverse');
+    const [invoiceAddress, setInvoiceAddress] = useState('');
+    const [invoicePhone, setInvoicePhone] = useState('');
+    const [invoiceWebsite, setInvoiceWebsite] = useState('https://www.aneeverse.com/');
+    const [invoiceGstin, setInvoiceGstin] = useState('');
+    const [invoiceGstRate, setInvoiceGstRate] = useState('18');
+    const [invoiceSac, setInvoiceSac] = useState('998361');
+    const [isSavingInvoice, setIsSavingInvoice] = useState(false);
+    const [invoiceStatus, setInvoiceStatus] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+
     useEffect(() => {
         if (displayProfile) {
             setFullName(displayProfile.full_name || '');
@@ -63,23 +75,22 @@ export default function AccountPage() {
         }
     }, [displayProfile]);
 
-    // Fetch current root folder on mount (super_admin only)
+    // Fetch current root folder + invoice settings on mount (staff admins)
     useEffect(() => {
-        if (displayProfile?.role === 'super_admin') {
-            fetchCurrentRootFolder();
+        if (displayProfile?.role === 'super_admin' || displayProfile?.role === 'admin') {
+            fetchAppSettings();
         }
     }, [displayProfile?.role]);
 
-    const fetchCurrentRootFolder = async () => {
+    const fetchAppSettings = async () => {
         try {
             const res = await fetch('/api/settings');
             if (res.ok) {
                 const settings = await res.json();
                 const folderId = settings.drive_root_folder_id;
-                if (folderId) {
+                if (folderId && displayProfile?.role === 'super_admin') {
                     setCurrentRootFolderId(folderId);
                     setRootFolderInput(folderId);
-                    // Validate to get the folder name
                     const valRes = await fetch('/api/drive/validate', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
@@ -90,9 +101,53 @@ export default function AccountPage() {
                         if (valData.valid) setCurrentRootFolderName(valData.folderName);
                     }
                 }
+                if (settings.invoice_company_name) setInvoiceCompany(settings.invoice_company_name);
+                if (settings.invoice_address) setInvoiceAddress(settings.invoice_address);
+                if (settings.invoice_phone) setInvoicePhone(settings.invoice_phone);
+                if (settings.invoice_website) setInvoiceWebsite(settings.invoice_website);
+                if (settings.invoice_gstin) setInvoiceGstin(settings.invoice_gstin);
+                if (settings.invoice_gst_rate) setInvoiceGstRate(settings.invoice_gst_rate);
+                if (settings.invoice_sac_code) setInvoiceSac(settings.invoice_sac_code);
             }
         } catch (e) {
-            console.error('Failed to fetch root folder:', e);
+            console.error('Failed to fetch settings:', e);
+        }
+    };
+
+    const fetchCurrentRootFolder = fetchAppSettings;
+
+    const handleSaveInvoiceSettings = async () => {
+        setIsSavingInvoice(true);
+        setInvoiceStatus(null);
+        try {
+            const pairs: [string, string][] = [
+                ['invoice_company_name', invoiceCompany.trim()],
+                ['invoice_address', invoiceAddress.trim()],
+                ['invoice_phone', invoicePhone.trim()],
+                ['invoice_website', invoiceWebsite.trim()],
+                ['invoice_gstin', invoiceGstin.trim().toUpperCase()],
+                ['invoice_gst_rate', invoiceGstRate.trim() || '18'],
+                ['invoice_sac_code', invoiceSac.trim() || '998361'],
+                ['invoice_state', 'Maharashtra'],
+                ['invoice_state_code', '27'],
+            ];
+            for (const [key, value] of pairs) {
+                if (!value) continue;
+                const res = await fetch('/api/settings', {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ key, value }),
+                });
+                if (!res.ok) {
+                    const err = await res.json();
+                    throw new Error(err.error || `Failed to save ${key}`);
+                }
+            }
+            setInvoiceStatus({ type: 'success', message: 'Invoice seller details saved' });
+        } catch (e: any) {
+            setInvoiceStatus({ type: 'error', message: e.message || 'Failed to save' });
+        } finally {
+            setIsSavingInvoice(false);
         }
     };
 
@@ -484,6 +539,102 @@ export default function AccountPage() {
                                     </button>
                                 </div>
                             </form>
+
+                            {/* Invoice Seller Details — Admin / Super Admin */}
+                            {(displayProfile?.role === 'super_admin' || displayProfile?.role === 'admin') && (
+                                <div className="bg-[#18181B] border border-shark/60 rounded-[2.5rem] p-10 space-y-8 animate-fade-in shadow-xl">
+                                    <h3 className="text-[11px] font-black text-storm-gray uppercase tracking-[0.3em] flex items-center gap-3">
+                                        <Receipt size={14} className="text-[#279da6]" /> Invoice — Seller Details
+                                    </h3>
+
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                                        <div className="space-y-2">
+                                            <label className="text-[9px] font-black text-storm-gray uppercase tracking-[0.25em] ml-2">Company Name</label>
+                                            <input
+                                                type="text"
+                                                value={invoiceCompany}
+                                                onChange={(e) => setInvoiceCompany(e.target.value)}
+                                                className="w-full bg-[#09090B] border border-shark/50 rounded-2xl py-3.5 px-4 text-sm text-iron focus:outline-none focus:border-[#279da6]/50 font-bold"
+                                            />
+                                        </div>
+                                        <div className="space-y-2">
+                                            <label className="text-[9px] font-black text-storm-gray uppercase tracking-[0.25em] ml-2">Phone</label>
+                                            <input
+                                                type="text"
+                                                value={invoicePhone}
+                                                onChange={(e) => setInvoicePhone(e.target.value)}
+                                                className="w-full bg-[#09090B] border border-shark/50 rounded-2xl py-3.5 px-4 text-sm text-iron focus:outline-none focus:border-[#279da6]/50 font-bold"
+                                            />
+                                        </div>
+                                        <div className="space-y-2 md:col-span-2">
+                                            <label className="text-[9px] font-black text-storm-gray uppercase tracking-[0.25em] ml-2">Address</label>
+                                            <textarea
+                                                value={invoiceAddress}
+                                                onChange={(e) => setInvoiceAddress(e.target.value)}
+                                                rows={3}
+                                                className="w-full bg-[#09090B] border border-shark/50 rounded-2xl py-3.5 px-4 text-sm text-iron focus:outline-none focus:border-[#279da6]/50 font-bold resize-none"
+                                            />
+                                        </div>
+                                        <div className="space-y-2">
+                                            <label className="text-[9px] font-black text-storm-gray uppercase tracking-[0.25em] ml-2">Website</label>
+                                            <input
+                                                type="text"
+                                                value={invoiceWebsite}
+                                                onChange={(e) => setInvoiceWebsite(e.target.value)}
+                                                className="w-full bg-[#09090B] border border-shark/50 rounded-2xl py-3.5 px-4 text-sm text-iron focus:outline-none focus:border-[#279da6]/50 font-bold"
+                                            />
+                                        </div>
+                                        <div className="space-y-2">
+                                            <label className="text-[9px] font-black text-storm-gray uppercase tracking-[0.25em] ml-2">GSTIN (update when ready)</label>
+                                            <input
+                                                type="text"
+                                                value={invoiceGstin}
+                                                onChange={(e) => setInvoiceGstin(e.target.value.toUpperCase())}
+                                                className="w-full bg-[#09090B] border border-shark/50 rounded-2xl py-3.5 px-4 text-sm text-iron focus:outline-none focus:border-[#279da6]/50 font-bold tracking-wider"
+                                                placeholder="27AAAAA0000A1Z5"
+                                            />
+                                        </div>
+                                        <div className="space-y-2">
+                                            <label className="text-[9px] font-black text-storm-gray uppercase tracking-[0.25em] ml-2">GST Rate %</label>
+                                            <input
+                                                type="text"
+                                                value={invoiceGstRate}
+                                                onChange={(e) => setInvoiceGstRate(e.target.value)}
+                                                className="w-full bg-[#09090B] border border-shark/50 rounded-2xl py-3.5 px-4 text-sm text-iron focus:outline-none focus:border-[#279da6]/50 font-bold"
+                                            />
+                                        </div>
+                                        <div className="space-y-2">
+                                            <label className="text-[9px] font-black text-storm-gray uppercase tracking-[0.25em] ml-2">Default SAC</label>
+                                            <input
+                                                type="text"
+                                                value={invoiceSac}
+                                                onChange={(e) => setInvoiceSac(e.target.value)}
+                                                className="w-full bg-[#09090B] border border-shark/50 rounded-2xl py-3.5 px-4 text-sm text-iron focus:outline-none focus:border-[#279da6]/50 font-bold"
+                                            />
+                                        </div>
+                                    </div>
+
+                                    {invoiceStatus && (
+                                        <div className={`flex items-center gap-3 px-5 py-3 rounded-xl border text-xs font-bold uppercase tracking-tight ${invoiceStatus.type === 'success'
+                                            ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400'
+                                            : 'bg-rose-500/10 border-rose-500/20 text-rose-400'
+                                            }`}>
+                                            {invoiceStatus.type === 'success' ? <CheckCircle2 size={14} /> : <AlertCircle size={14} />}
+                                            {invoiceStatus.message}
+                                        </div>
+                                    )}
+
+                                    <button
+                                        type="button"
+                                        onClick={handleSaveInvoiceSettings}
+                                        disabled={isSavingInvoice}
+                                        className="px-8 py-3 bg-[#279da6] hover:bg-[#279da6]/90 text-white rounded-2xl text-[11px] font-black uppercase tracking-[0.2em] transition-all shadow-xl shadow-[#279da6]/30 active:scale-95 disabled:opacity-50 flex items-center gap-3"
+                                    >
+                                        {isSavingInvoice ? <Loader2 size={14} className="animate-spin" /> : <Receipt size={14} />}
+                                        {isSavingInvoice ? 'Saving...' : 'Save Invoice Details'}
+                                    </button>
+                                </div>
+                            )}
 
                             {/* Google Drive Root Folder — Super Admin Only */}
                             {displayProfile?.role === 'super_admin' && (

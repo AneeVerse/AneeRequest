@@ -253,3 +253,28 @@ input.no-native-reveal::-ms-reveal,
 input.no-native-reveal::-ms-clear {
   display: none !important;
 }
+
+/* Invoice print / PDF */
+@media print {
+  body * {
+    visibility: hidden !important;
+  }
+  #invoice-print-sheet,
+  #invoice-print-sheet * {
+    visibility: visible !important;
+  }
+  #invoice-print-sheet {
+    position: absolute !important;
+    left: 0 !important;
+    top: 0 !important;
+    width: 100% !important;
+    max-width: none !important;
+    margin: 0 !important;
+    box-shadow: none !important;
+    background: white !important;
+  }
+  @page {
+    size: A4;
+    margin: 12mm;
+  }
+}

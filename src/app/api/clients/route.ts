@@ -127,7 +127,11 @@ export async function POST(request: Request) {
 export async function PATCH(request: Request) {
     try {
         const body = await request.json();
-        const { id, name, organization, email, password, oldEmail, drive_folder_id, status, avatarUrl, website, phone, country_code } = body;
+        const {
+            id, name, organization, email, password, oldEmail, drive_folder_id, status,
+            avatarUrl, website, phone, country_code,
+            billing_address, billing_state, billing_state_code, gstin,
+        } = body;
 
         if (!id) {
             return NextResponse.json({ error: "Missing client ID" }, { status: 400 });
@@ -142,6 +146,10 @@ export async function PATCH(request: Request) {
         if (email) updateData.email = email;
         if (status) updateData.status = status;
         if (drive_folder_id !== undefined) updateData.drive_folder_id = drive_folder_id || null;
+        if (billing_address !== undefined) updateData.billing_address = billing_address || null;
+        if (billing_state !== undefined) updateData.billing_state = billing_state || null;
+        if (billing_state_code !== undefined) updateData.billing_state_code = billing_state_code || null;
+        if (gstin !== undefined) updateData.gstin = gstin || null;
 
         let clientData;
         if (Object.keys(updateData).length > 0) {

@@ -72,7 +72,7 @@ export default function ClientHeader({
                 onCreate={
                     activeTab === 'Drive'
                         ? () => setIsNewMenuOpen(!isNewMenuOpen)
-                        : (activeTab === 'Requests' || activeTab === 'Tasks')
+                        : (activeTab === 'Requests' || activeTab === 'Tasks' || activeTab === 'Invoices')
                             ? handleCreateNew
                             : undefined
                 }

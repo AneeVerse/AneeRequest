@@ -1,8 +1,9 @@
 'use client';
 
 import React from 'react';
-import { Building, Mail, Calendar, Shield, MessageSquare, CreditCard, Clock, Eye, EyeOff, Loader2, HardDrive, FolderOpen, Link2, RefreshCw, Trash2, CheckCircle2, AlertCircle } from 'lucide-react';
+import { Building, Mail, Calendar, Shield, MessageSquare, CreditCard, Clock, Eye, EyeOff, Loader2, HardDrive, FolderOpen, Link2, RefreshCw, Trash2, CheckCircle2, AlertCircle, Receipt } from 'lucide-react';
 import { formatDate } from '@/lib/dateUtils';
+import { INDIAN_STATES } from '@/lib/invoiceUtils';
 
 interface ClientSettingsTabProps {
     client: any;
@@ -28,6 +29,14 @@ interface ClientSettingsTabProps {
     handleRemoveClientFolder: () => void;
     setActiveTab: (tab: string) => void;
     browseDriveFolder: (id: string, name: string) => void;
+    billingAddress: string;
+    setBillingAddress: (val: string) => void;
+    billingStateCode: string;
+    setBillingStateCode: (val: string) => void;
+    clientGstin: string;
+    setClientGstin: (val: string) => void;
+    isSavingBilling: boolean;
+    handleSaveBilling: () => void;
 }
 
 export default function ClientSettingsTab({
@@ -53,7 +62,15 @@ export default function ClientSettingsTab({
     handleSaveClientFolder,
     handleRemoveClientFolder,
     setActiveTab,
-    browseDriveFolder
+    browseDriveFolder,
+    billingAddress,
+    setBillingAddress,
+    billingStateCode,
+    setBillingStateCode,
+    clientGstin,
+    setClientGstin,
+    isSavingBilling,
+    handleSaveBilling,
 }: ClientSettingsTabProps) {
     return (
         <div className="max-w-5xl animate-fade-in space-y-8">
@@ -277,6 +294,76 @@ export default function ClientSettingsTab({
                             )}
                         </div>
                     </div>
+                </div>
+            </div>
+
+            {/* Billing / Invoice details */}
+            <div className="bg-[#18181B] border border-shark rounded-3xl p-8 shadow-2xl">
+                <div className="flex items-center gap-4 mb-8">
+                    <div className="w-12 h-12 rounded-2xl bg-[#279da6]/10 flex items-center justify-center text-[#279da6]">
+                        <Receipt size={24} />
+                    </div>
+                    <div>
+                        <h2 className="text-xl font-black text-iron tracking-tight uppercase">Billing Details</h2>
+                        <p className="text-xs font-bold text-santas-gray uppercase tracking-widest">
+                            Used on GST / Non-GST invoices
+                        </p>
+                    </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="space-y-2 md:col-span-2">
+                        <label className="text-[10px] font-black text-storm-gray uppercase tracking-[0.2em]">
+                            Billing Address
+                        </label>
+                        <textarea
+                            value={billingAddress}
+                            onChange={(e) => setBillingAddress(e.target.value)}
+                            rows={3}
+                            className="w-full bg-[#09090B] border border-shark/60 rounded-2xl py-3 px-4 text-sm text-iron focus:outline-none focus:border-[#279da6]/60 transition-all font-bold resize-none"
+                            placeholder="Street, city, PIN…"
+                        />
+                    </div>
+                    <div className="space-y-2">
+                        <label className="text-[10px] font-black text-storm-gray uppercase tracking-[0.2em]">
+                            State
+                        </label>
+                        <select
+                            value={billingStateCode}
+                            onChange={(e) => setBillingStateCode(e.target.value)}
+                            className="w-full bg-[#09090B] border border-shark/60 rounded-2xl py-3 px-4 text-sm text-iron focus:outline-none focus:border-[#279da6]/60 transition-all font-bold"
+                        >
+                            {INDIAN_STATES.map((s) => (
+                                <option key={s.code} value={s.code}>
+                                    {s.name} ({s.code})
+                                </option>
+                            ))}
+                        </select>
+                    </div>
+                    <div className="space-y-2">
+                        <label className="text-[10px] font-black text-storm-gray uppercase tracking-[0.2em]">
+                            Client GSTIN
+                        </label>
+                        <input
+                            type="text"
+                            value={clientGstin}
+                            onChange={(e) => setClientGstin(e.target.value.toUpperCase())}
+                            className="w-full bg-[#09090B] border border-shark/60 rounded-2xl py-3 px-4 text-sm text-iron focus:outline-none focus:border-[#279da6]/60 transition-all font-bold tracking-wider"
+                            placeholder="Optional — for GST invoices"
+                        />
+                    </div>
+                </div>
+
+                <div className="pt-6 flex justify-end">
+                    <button
+                        type="button"
+                        onClick={handleSaveBilling}
+                        disabled={isSavingBilling}
+                        className="px-8 py-3 bg-[#279da6] text-white rounded-2xl text-xs font-black uppercase tracking-widest hover:bg-[#279da6]/90 transition-all shadow-lg shadow-[#279da6]/20 disabled:opacity-50 flex items-center gap-2"
+                    >
+                        {isSavingBilling ? <Loader2 size={14} className="animate-spin" /> : null}
+                        {isSavingBilling ? 'Saving...' : 'Save Billing'}
+                    </button>
                 </div>
             </div>
         </div>

@@ -571,6 +571,7 @@ export default function TeamClient({ initialMembers, initialCounts }: TeamClient
                                                             { id: 'requests', label: 'Requests', icon: MessageSquare },
                                                             { id: 'tasks', label: 'Tasks', icon: CheckSquare },
                                                             { id: 'files', label: 'Files', icon: FolderOpen },
+                                                            { id: 'invoices', label: 'Invoices', icon: FileText },
                                                             { id: 'clients', label: 'Clients', icon: Users },
                                                             { id: 'team', label: 'Team', icon: UserCog },
                                                         ].map((section) => (

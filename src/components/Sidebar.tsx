@@ -16,6 +16,7 @@ import {
     Settings,
     LogOut,
     FolderOpen,
+    Receipt,
     MoreHorizontal,
     AlertTriangle,
     X,
@@ -139,6 +140,7 @@ export default function Sidebar({ isCollapsed, isMobileOpen = false, onMobileClo
         { name: 'Requests', icon: MessageSquare, path: '/requests', id: 'requests' },
         { name: 'Tasks', icon: CheckSquare, path: '/tasks', isInternalOnly: true, id: 'tasks' },
         { name: 'DRIVE', icon: FolderOpen, path: '/files', id: 'files' },
+        { name: 'INVOICES', icon: Receipt, path: '/invoices', id: 'invoices' },
         { name: 'Users', icon: Users, path: '/clients', id: 'users' },
     ];
 
@@ -149,6 +151,7 @@ export default function Sidebar({ isCollapsed, isMobileOpen = false, onMobileClo
         if (item.id === 'requests' && !sections.includes('requests')) return false;
         if (item.id === 'tasks' && !sections.includes('tasks')) return false;
         if (item.id === 'files' && !sections.includes('files')) return false;
+        if (item.id === 'invoices' && !sections.includes('invoices')) return false;
         if (item.id === 'users') {
             if (!isInternal) return false;
             if (!sections.includes('clients') && !sections.includes('team')) return false;
